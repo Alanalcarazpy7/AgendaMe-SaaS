@@ -1,50 +1,34 @@
-﻿import Link from "next/link";
+﻿import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { SignOutButton } from "@/components/dashboard/sign-out-button";
-import { Separator } from "@/components/ui/separator";
+import { DashboardMobileMenu } from "@/components/dashboard/dashboard-mobile-menu";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/auth/login");
+  }
+
   return (
-    <main className="min-h-screen bg-muted/40">
-      <div className="grid min-h-screen lg:grid-cols-[280px_1fr]">
-        <aside className="hidden border-r bg-background lg:flex lg:flex-col">
-          <div className="p-6">
-            <Link href="/dashboard" className="block">
-              <p className="text-2xl font-bold tracking-tight">AgendaMe</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Panel del negocio
-              </p>
-            </Link>
-          </div>
-
-          <Separator />
-
-          <DashboardSidebar />
-
-          <div className="border-t p-4">
-            <SignOutButton />
-          </div>
-        </aside>
-
-        <section className="flex min-w-0 flex-col">
-          <header className="flex h-16 items-center justify-between border-b bg-background px-4 lg:px-8">
-            <div>
-              <p className="text-sm text-muted-foreground">AgendaMe</p>
-              <p className="font-semibold">Dashboard</p>
-            </div>
-
-            <div className="lg:hidden">
-              <SignOutButton />
-            </div>
-          </header>
-
-          <div className="flex-1 p-4 lg:p-8">{children}</div>
-        </section>
+    <div className="min-h-screen bg-background lg:flex">
+      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:block lg:w-72">
+        <DashboardSidebar userEmail={user.email ?? ""} />
       </div>
-    </main>
+
+      <div className="min-w-0 flex-1 lg:pl-72">
+        <DashboardMobileMenu userEmail={user.email ?? ""} />
+
+        <main className="p-4 lg:p-6">{children}</main>
+      </div>
+    </div>
   );
 }
