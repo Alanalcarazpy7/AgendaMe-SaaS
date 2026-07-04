@@ -284,7 +284,7 @@ export function ReservaPublicaForm({
               <h2 className="text-xl font-bold">Elegí un servicio</h2>
             </div>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="mt-5 grid items-start gap-4 sm:grid-cols-2">
               {servicios.map((servicio) => {
                 const activo = servicio.id === servicioId;
                 const colorServicio = servicio.color ?? colorMarca;
@@ -362,7 +362,7 @@ export function ReservaPublicaForm({
               <h2 className="text-xl font-bold">Elegí fecha y horario</h2>
             </div>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="mt-5 grid items-start gap-4 sm:grid-cols-2">
               <div>
                 <label className="text-sm font-medium">Fecha</label>
                 <Input
@@ -435,7 +435,7 @@ export function ReservaPublicaForm({
           <section className="rounded-3xl border bg-background p-6 shadow-sm">
             <h2 className="text-xl font-bold">Tus datos</h2>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="mt-5 grid items-start gap-4 sm:grid-cols-2">
               <div>
                 <label className="text-sm font-medium">Nombre completo</label>
                 <Input

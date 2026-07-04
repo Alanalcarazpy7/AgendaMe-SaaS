@@ -23,7 +23,7 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
   const { data: negocio, error: negocioError } = await supabase
     .from("negocios")
     .select(
-      "id, nombre, slug, descripcion, telefono, direccion, logo_url, color_primario, color_secundario, color_acento, estado"
+      "id, nombre, slug, descripcion, telefono, direccion, logo_url, banner_url, color_primario, color_secundario, color_acento, estado"
     )
     .eq("slug", slug)
     .eq("estado", "activo")
@@ -100,6 +100,23 @@ export default async function ReservarPage({ params }: ReservarPageProps) {
                 "hsl(var(--primary))",
             }}
           />
+
+          {negocio.banner_url && (
+            <div className="relative h-44 w-full overflow-hidden bg-black sm:h-48">
+              <img
+                src={negocio.banner_url}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 h-full w-full scale-105 object-cover opacity-100 blur-sm"
+              />
+              <div className="absolute inset-0 bg-black/25" />
+              <img
+                src={negocio.banner_url}
+                alt={negocio.nombre}
+                className="relative z-10 h-full w-full object-contain"
+              />
+            </div>
+          )}
 
           <div className="p-8">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">

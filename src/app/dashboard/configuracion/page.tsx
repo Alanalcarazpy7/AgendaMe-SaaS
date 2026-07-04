@@ -1,4 +1,5 @@
-﻿import { IntervaloReservaCard } from "@/components/configuracion/intervalo-reserva-card";
+﻿import { BrandingNegocioCard } from "@/components/configuracion/branding-negocio-card";
+import { IntervaloReservaCard } from "@/components/configuracion/intervalo-reserva-card";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -69,6 +70,8 @@ export default async function ConfiguracionPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
+      <BrandingNegocioCard />
+
       <IntervaloReservaCard />
       <section>
         <h1 className="text-3xl font-bold tracking-tight">Configuración</h1>

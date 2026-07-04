@@ -58,7 +58,11 @@ const menuItems = [
   },
 ];
 
-export function DashboardMobileMenu({ userEmail }: DashboardMobileMenuProps) {
+export function DashboardMobileMenu({
+  userEmail,
+  negocioNombre,
+  negocioLogoUrl,
+}: DashboardMobileMenuProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -91,11 +95,27 @@ export function DashboardMobileMenu({ userEmail }: DashboardMobileMenuProps) {
 
           <div className="absolute left-0 top-0 flex h-full w-[84%] max-w-sm flex-col bg-background shadow-2xl">
             <div className="flex items-center justify-between border-b p-5">
-              <div>
-                <p className="text-2xl font-bold leading-none">AgendaMe</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Panel del negocio
-                </p>
+              <div className="flex items-center gap-3">
+                {negocioLogoUrl ? (
+                  <img
+                    src={negocioLogoUrl}
+                    alt={negocioNombre ?? "Negocio"}
+                    className="h-12 w-12 rounded-2xl border object-cover"
+                  />
+                ) : (
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-lg font-bold text-primary-foreground">
+                    {(negocioNombre ?? "A").slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+
+                <div className="min-w-0">
+                  <p className="truncate text-2xl font-bold leading-none">
+                    {negocioNombre ?? "AgendaMe"}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Panel del negocio
+                  </p>
+                </div>
               </div>
 
               <button

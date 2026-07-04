@@ -55,17 +55,37 @@ const menuItems = [
   },
 ];
 
-export function DashboardSidebar({ userEmail }: DashboardSidebarProps) {
+export function DashboardSidebar({
+  userEmail,
+  negocioNombre,
+  negocioLogoUrl,
+}: DashboardSidebarProps) {
   const pathname = usePathname();
 
   return (
     <aside className="flex h-full flex-col border-r bg-background">
       <div className="border-b p-6">
-        <Link href="/dashboard" className="block">
-          <p className="text-2xl font-bold tracking-tight">AgendaMe</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Panel del negocio
-          </p>
+        <Link href="/dashboard" className="flex items-center gap-3">
+          {negocioLogoUrl ? (
+            <img
+              src={negocioLogoUrl}
+              alt={negocioNombre ?? "Negocio"}
+              className="h-12 w-12 rounded-2xl border object-cover"
+            />
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-lg font-bold text-primary-foreground">
+              {(negocioNombre ?? "A").slice(0, 1).toUpperCase()}
+            </div>
+          )}
+
+          <div className="min-w-0">
+            <p className="truncate text-xl font-bold tracking-tight">
+              {negocioNombre ?? "AgendaMe"}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Panel del negocio
+            </p>
+          </div>
         </Link>
       </div>
 
