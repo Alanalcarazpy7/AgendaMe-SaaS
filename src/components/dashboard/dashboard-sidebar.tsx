@@ -3,18 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   BellRing,
   BriefcaseBusiness,
   CalendarDays,
+  Crown,
   Home,
   Scissors,
   Settings,
   Users,
+  X,
 } from "lucide-react";
+import { useState } from "react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 
 type DashboardSidebarProps = {
   userEmail?: string;
+  negocioNombre?: string;
+  negocioLogoUrl?: string | null;
+  planClave?: string | null;
 };
 
 const menuItems = [
@@ -32,6 +39,12 @@ const menuItems = [
     label: "Citas",
     href: "/dashboard/citas",
     icon: CalendarDays,
+  },
+  {
+    label: "Reportes",
+    href: "/dashboard/reportes",
+    icon: BarChart3,
+    premiumDesde: "basico",
   },
   {
     label: "Clientes",
@@ -55,12 +68,21 @@ const menuItems = [
   },
 ];
 
+function esPlanGratis(planClave?: string | null) {
+  const clave = String(planClave ?? "gratis").toLowerCase();
+  return clave === "gratis" || clave === "free";
+}
+
 export function DashboardSidebar({
   userEmail,
   negocioNombre,
   negocioLogoUrl,
+  planClave,
 }: DashboardSidebarProps) {
   const pathname = usePathname();
+  const [premiumModalOpen, setPremiumModalOpen] = useState(false);
+
+  const planGratis = esPlanGratis(planClave);
 
   return (
     <aside className="flex h-full flex-col border-r bg-background">
@@ -92,10 +114,29 @@ export function DashboardSidebar({
       <nav className="flex-1 space-y-1 p-4">
         {menuItems.map((item) => {
           const Icon = item.icon;
+          const bloqueado = item.premiumDesde === "basico" && planGratis;
           const activo =
             item.href === "/dashboard"
               ? pathname === "/dashboard"
               : pathname.startsWith(item.href);
+
+          if (bloqueado) {
+            return (
+              <button
+                key={item.href}
+                type="button"
+                onClick={() => setPremiumModalOpen(true)}
+                className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-yellow-50 hover:text-yellow-800"
+              >
+                <span className="flex items-center">
+                  <Icon className="mr-3 h-4 w-4" />
+                  {item.label}
+                </span>
+
+                <Crown className="h-4 w-4 text-yellow-600" />
+              </button>
+            );
+          }
 
           return (
             <Link
@@ -123,6 +164,54 @@ export function DashboardSidebar({
 
         <SignOutButton variant="ghost" className="w-full justify-start" />
       </div>
+
+      {premiumModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-3xl border bg-background p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-yellow-100 text-yellow-700">
+                <Crown className="h-6 w-6" />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPremiumModalOpen(false)}
+                className="rounded-xl border p-2 transition hover:bg-muted"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <h2 className="mt-5 text-2xl font-bold">
+              Reportes disponibles desde el Plan Básico
+            </h2>
+
+            <p className="mt-2 text-sm text-muted-foreground">
+              Activá reportes para ver ingresos estimados, servicios más
+              reservados, citas por estado, clientes frecuentes y métricas para
+              tomar mejores decisiones.
+            </p>
+
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <Link
+                href="/dashboard/planes"
+                onClick={() => setPremiumModalOpen(false)}
+                className="inline-flex h-10 flex-1 items-center justify-center rounded-xl bg-foreground px-4 text-sm font-semibold text-background"
+              >
+                Mejorar plan
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => setPremiumModalOpen(false)}
+                className="inline-flex h-10 flex-1 items-center justify-center rounded-xl border px-4 text-sm font-semibold transition hover:bg-muted"
+              >
+                Ahora no
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

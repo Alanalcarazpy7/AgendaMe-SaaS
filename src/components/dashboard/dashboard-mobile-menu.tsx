@@ -4,9 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   BellRing,
   BriefcaseBusiness,
   CalendarDays,
+  Crown,
   Home,
   Menu,
   Scissors,
@@ -18,6 +20,9 @@ import { SignOutButton } from "@/components/auth/sign-out-button";
 
 type DashboardMobileMenuProps = {
   userEmail?: string;
+  negocioNombre?: string;
+  negocioLogoUrl?: string | null;
+  planClave?: string | null;
 };
 
 const menuItems = [
@@ -35,6 +40,12 @@ const menuItems = [
     label: "Citas",
     href: "/dashboard/citas",
     icon: CalendarDays,
+  },
+  {
+    label: "Reportes",
+    href: "/dashboard/reportes",
+    icon: BarChart3,
+    premiumDesde: "basico",
   },
   {
     label: "Clientes",
@@ -58,19 +69,30 @@ const menuItems = [
   },
 ];
 
+function esPlanGratis(planClave?: string | null) {
+  const clave = String(planClave ?? "gratis").toLowerCase();
+  return clave === "gratis" || clave === "free";
+}
+
 export function DashboardMobileMenu({
   userEmail,
   negocioNombre,
   negocioLogoUrl,
+  planClave,
 }: DashboardMobileMenuProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [premiumModalOpen, setPremiumModalOpen] = useState(false);
+
+  const planGratis = esPlanGratis(planClave);
 
   return (
     <>
       <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur lg:hidden">
         <Link href="/dashboard">
-          <p className="text-lg font-bold leading-none">AgendaMe</p>
+          <p className="max-w-[210px] truncate text-lg font-bold leading-none">
+            {negocioNombre ?? "AgendaMe"}
+          </p>
           <p className="mt-1 text-xs text-muted-foreground">Dashboard</p>
         </Link>
 
@@ -131,10 +153,32 @@ export function DashboardMobileMenu({
             <nav className="flex-1 space-y-1 p-4">
               {menuItems.map((item) => {
                 const Icon = item.icon;
+                const bloqueado = item.premiumDesde === "basico" && planGratis;
                 const activo =
                   item.href === "/dashboard"
                     ? pathname === "/dashboard"
                     : pathname.startsWith(item.href);
+
+                if (bloqueado) {
+                  return (
+                    <button
+                      key={item.href}
+                      type="button"
+                      onClick={() => {
+                        setPremiumModalOpen(true);
+                        setOpen(false);
+                      }}
+                      className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-sm font-medium text-muted-foreground transition hover:bg-yellow-50 hover:text-yellow-800"
+                    >
+                      <span className="flex items-center">
+                        <Icon className="mr-3 h-4 w-4" />
+                        {item.label}
+                      </span>
+
+                      <Crown className="h-4 w-4 text-yellow-600" />
+                    </button>
+                  );
+                }
 
                 return (
                   <Link
@@ -162,6 +206,53 @@ export function DashboardMobileMenu({
               )}
 
               <SignOutButton variant="outline" className="w-full justify-center" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {premiumModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-3xl border bg-background p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-yellow-100 text-yellow-700">
+                <Crown className="h-6 w-6" />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPremiumModalOpen(false)}
+                className="rounded-xl border p-2 transition hover:bg-muted"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <h2 className="mt-5 text-2xl font-bold">
+              Reportes disponibles desde el Plan Básico
+            </h2>
+
+            <p className="mt-2 text-sm text-muted-foreground">
+              Activá reportes para ver ingresos estimados, servicios más
+              reservados y métricas para tomar mejores decisiones.
+            </p>
+
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <Link
+                href="/dashboard/planes"
+                onClick={() => setPremiumModalOpen(false)}
+                className="inline-flex h-10 flex-1 items-center justify-center rounded-xl bg-foreground px-4 text-sm font-semibold text-background"
+              >
+                Mejorar plan
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => setPremiumModalOpen(false)}
+                className="inline-flex h-10 flex-1 items-center justify-center rounded-xl border px-4 text-sm font-semibold transition hover:bg-muted"
+              >
+                Ahora no
+              </button>
             </div>
           </div>
         </div>
