@@ -1,17 +1,8 @@
 ﻿import { redirect } from "next/navigation";
-import { DashboardMobileMenu } from "@/components/dashboard/dashboard-mobile-menu";
-import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
-type DashboardLayoutProps = {
-  children: React.ReactNode;
-};
-
-export default async function DashboardLayout({ children }: DashboardLayoutProps) {
+export async function getDashboardPlanContext() {
   const authSupabase = await createClient();
 
   const {
@@ -38,12 +29,16 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
 
   const { data: negocio, error: negocioError } = await supabase
     .from("negocios")
-    .select("nombre, logo_url")
+    .select("id, nombre")
     .eq("id", membresia.negocio_id)
     .maybeSingle();
 
   if (negocioError) {
     throw new Error(negocioError.message);
+  }
+
+  if (!negocio) {
+    redirect("/onboarding/negocio");
   }
 
   const { data: suscripcionActual, error: suscripcionError } = await supabase
@@ -60,11 +55,12 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
   }
 
   let planClave = "gratis";
+  let planNombre = "Gratis";
 
   if (suscripcionActual?.plan_id) {
     const { data: plan, error: planError } = await supabase
       .from("planes_saas")
-      .select("clave")
+      .select("clave, nombre")
       .eq("id", suscripcionActual.plan_id)
       .maybeSingle();
 
@@ -73,31 +69,13 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
     }
 
     planClave = plan?.clave ?? "gratis";
+    planNombre = plan?.nombre ?? "Gratis";
   }
 
-  return (
-    <div className="min-h-screen bg-muted/30">
-      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:block lg:w-72">
-        <DashboardSidebar
-          userEmail={user.email ?? undefined}
-          negocioNombre={negocio?.nombre ?? "AgendaMe"}
-          negocioLogoUrl={negocio?.logo_url ?? null}
-          planClave={planClave}
-        />
-      </div>
-
-      <DashboardMobileMenu
-        userEmail={user.email ?? undefined}
-        negocioNombre={negocio?.nombre ?? "AgendaMe"}
-        negocioLogoUrl={negocio?.logo_url ?? null}
-        planClave={planClave}
-      />
-
-      <main className="lg:pl-72">
-        <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
-          {children}
-        </div>
-      </main>
-    </div>
-  );
+  return {
+    user,
+    negocio,
+    planClave,
+    planNombre,
+  };
 }

@@ -1,4 +1,5 @@
-﻿import Link from "next/link";
+﻿import { PlanesPublicosSection } from "@/components/planes/planes-publicos-section";
+import Link from "next/link";
 
 export default function HomePage() {
   return (
@@ -33,6 +34,7 @@ export default function HomePage() {
           </Link>
         </div>
       </section>
+          <PlanesPublicosSection />
     </main>
   );
 }

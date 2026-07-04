@@ -1,0 +1,124 @@
+﻿import { PremiumFeaturePage } from "@/components/premium/premium-feature-page";
+import { RecordatoriosPanel } from "@/components/recordatorios/recordatorios-panel";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { getDashboardPlanContext } from "@/lib/planes/get-dashboard-plan-context";
+import { nivelPlan } from "@/lib/planes/plan-access";
+
+type Relacion<T> = T | T[] | null;
+
+type CitaRaw = {
+  id: string;
+  fecha: string;
+  hora_inicio: string;
+  estado: string;
+  seguimiento_token: string;
+  clientes: Relacion<{
+    nombre_completo: string;
+    telefono: string | null;
+  }>;
+  servicios: Relacion<{
+    nombre: string;
+  }>;
+  empleados: Relacion<{
+    nombre: string;
+  }>;
+};
+
+function obtenerObjeto<T>(valor: Relacion<T>): T | null {
+  if (!valor) return null;
+  return Array.isArray(valor) ? valor[0] ?? null : valor;
+}
+
+function hoyAsuncion() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Asuncion",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const year = parts.find((part) => part.type === "year")?.value ?? "";
+  const month = parts.find((part) => part.type === "month")?.value ?? "";
+  const day = parts.find((part) => part.type === "day")?.value ?? "";
+
+  return `${year}-${month}-${day}`;
+}
+
+function sumarDias(fecha: string, dias: number) {
+  const date = new Date(`${fecha}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + dias);
+
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+export default async function RecordatoriosPage() {
+  const { negocio, planClave } = await getDashboardPlanContext();
+  const activo = nivelPlan(planClave) >= 2;
+
+  if (!activo) {
+    return (
+      <PremiumFeaturePage
+        titulo="Recordatorios"
+        descripcion="Reducí ausencias enviando recordatorios a tus clientes antes de sus citas."
+        desde="Plan Profesional"
+        activo={false}
+        estadoActivoTitulo=""
+        estadoActivoDescripcion=""
+      />
+    );
+  }
+
+  const supabase = createServiceRoleClient();
+
+  const desde = hoyAsuncion();
+  const hasta = sumarDias(desde, 7);
+
+  const { data, error } = await supabase
+    .from("citas")
+    .select(
+      `
+      id,
+      fecha,
+      hora_inicio,
+      estado,
+      seguimiento_token,
+      clientes (
+        nombre_completo,
+        telefono
+      ),
+      servicios (
+        nombre
+      ),
+      empleados (
+        nombre
+      )
+    `
+    )
+    .eq("negocio_id", negocio.id)
+    .gte("fecha", desde)
+    .lte("fecha", hasta)
+    .in("estado", ["pendiente", "confirmada"])
+    .order("fecha", { ascending: true })
+    .order("hora_inicio", { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const citas = ((data ?? []) as CitaRaw[]).map((cita) => ({
+    id: cita.id,
+    fecha: cita.fecha,
+    hora_inicio: cita.hora_inicio,
+    estado: cita.estado,
+    seguimiento_token: cita.seguimiento_token,
+    cliente: obtenerObjeto(cita.clientes),
+    servicio: obtenerObjeto(cita.servicios),
+    empleado: obtenerObjeto(cita.empleados),
+  }));
+
+  return <RecordatoriosPanel citas={citas} />;
+}
