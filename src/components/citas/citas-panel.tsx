@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useMemo, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { CalendarPlus, ChevronLeft, ChevronRight, Plus, Save } from "lucide-react";
 import {
   CitaDialog,
@@ -11,6 +11,7 @@ import {
 } from "@/components/citas/cita-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SeguimientoActions } from "@/components/reservas/seguimiento-actions";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,7 @@ export type CitaItem = {
   hora_fin: string;
   estado: "pendiente" | "confirmada" | "cancelada" | "completada" | "no_asistio";
   created_at: string;
+  seguimiento_token?: string | null;
 };
 
 type CitasPanelProps = {
@@ -37,6 +39,9 @@ type CitasPanelProps = {
   servicios: ServicioCitaItem[];
   empleados: EmpleadoCitaItem[];
   empleadoServicios: EmpleadoServicioCitaItem[];
+  initialFecha?: string;
+  initialHora?: string;
+  highlightCitaId?: string;
 };
 
 const START_HOUR = 7;
@@ -65,6 +70,33 @@ const meses = [
   "Noviembre",
   "Diciembre",
 ];
+
+function todayIso() {
+  const date = new Date();
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 10);
+}
+
+function nowTime() {
+  const date = new Date();
+  return `${String(date.getHours()).padStart(2, "0")}:${String(
+    date.getMinutes()
+  ).padStart(2, "0")}`;
+}
+
+function esFechaHoraPasada(fecha: string, horaValor: string) {
+  const hoy = todayIso();
+
+  if (fecha < hoy) return true;
+  if (fecha > hoy) return false;
+
+  return horaAMinutos(horaValor) <= horaAMinutos(nowTime());
+}
+
+function fechaLocalDesdeIso(fecha: string) {
+  const [year, month, day] = fecha.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
 
 function toIsoDate(date: Date) {
   const copia = new Date(date);
@@ -140,8 +172,8 @@ function estadoClass(estado: CitaItem["estado"]) {
 }
 
 function estadoLabel(estado: CitaItem["estado"]) {
-  if (estado === "no_asistio") return "no asistió";
-  return estado;
+  if (estado === "no_asistio") return "No asistió";
+  return estado.charAt(0).toUpperCase() + estado.slice(1);
 }
 
 function intervalosSeCruzan(a: CitaItem, b: CitaItem) {
@@ -207,10 +239,17 @@ export function CitasPanel({
   servicios,
   empleados,
   empleadoServicios,
+  initialFecha,
+  initialHora,
+  highlightCitaId,
 }: CitasPanelProps) {
   const hoy = new Date();
 
-  const [fechaBase, setFechaBase] = useState(new Date());
+  const [fechaBase, setFechaBase] = useState(() =>
+    initialFecha ? fechaLocalDesdeIso(initialFecha) : new Date()
+  );
+
+  const calendarioScrollRef = useRef<HTMLDivElement | null>(null);
   const [empleadoFiltro, setEmpleadoFiltro] = useState("todos");
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -219,8 +258,14 @@ export function CitasPanel({
 
   const [detalleOpen, setDetalleOpen] = useState(false);
   const [citaSeleccionada, setCitaSeleccionada] = useState<CitaItem | null>(null);
+
+  const [detalleClienteId, setDetalleClienteId] = useState("");
+  const [detalleServicioId, setDetalleServicioId] = useState("");
+  const [detalleEmpleadoId, setDetalleEmpleadoId] = useState("");
   const [detalleFecha, setDetalleFecha] = useState("");
   const [detalleHora, setDetalleHora] = useState("");
+  const [detalleEstado, setDetalleEstado] = useState<CitaItem["estado"]>("pendiente");
+
   const [guardandoCambio, setGuardandoCambio] = useState(false);
 
   const inicioSemana = startOfWeekSunday(fechaBase);
@@ -234,6 +279,30 @@ export function CitasPanel({
   const anios = crearAnios(hoy.getFullYear());
 
   const timelineHeight = (END_HOUR - START_HOUR) * 60 * PX_PER_MINUTE;
+
+  // Sincronizar calendario con fecha recibida por URL.
+  useEffect(() => {
+    if (!initialFecha) return;
+    setFechaBase(fechaLocalDesdeIso(initialFecha));
+  }, [initialFecha]);
+
+  useEffect(() => {
+    if (!highlightCitaId) return;
+
+    const timer = window.setTimeout(() => {
+      const element = document.getElementById(`cita-${highlightCitaId}`);
+
+      if (element) {
+        element.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+          inline: "center",
+        });
+      }
+    }, 700);
+
+    return () => window.clearTimeout(timer);
+  }, [highlightCitaId, initialFecha, initialHora, fechaBase]);
 
   const clientesMap = useMemo(() => {
     return new Map(clientes.map((cliente) => [cliente.id, cliente]));
@@ -259,7 +328,48 @@ export function CitasPanel({
     });
   }, [citas, diasSemana, empleadoFiltro]);
 
+  const empleadosDetalleDisponibles = useMemo(() => {
+    if (!detalleServicioId) return empleados;
+
+    const empleadosIds = new Set(
+      empleadoServicios
+        .filter((relacion) => relacion.servicio_id === detalleServicioId)
+        .map((relacion) => relacion.empleado_id)
+    );
+
+    return empleados.filter((empleado) => empleadosIds.has(empleado.id));
+  }, [detalleServicioId, empleados, empleadoServicios]);
+
+  const servicioDetalleSeleccionado = detalleServicioId
+    ? serviciosMap.get(detalleServicioId)
+    : null;
+
+  function obtenerEmpleadosPorServicio(servicioId: string) {
+    const empleadosIds = new Set(
+      empleadoServicios
+        .filter((relacion) => relacion.servicio_id === servicioId)
+        .map((relacion) => relacion.empleado_id)
+    );
+
+    return empleados.filter((empleado) => empleadosIds.has(empleado.id));
+  }
+
+  function cambiarServicioDetalle(servicioId: string) {
+    setDetalleServicioId(servicioId);
+
+    const disponibles = obtenerEmpleadosPorServicio(servicioId);
+
+    if (!disponibles.some((empleado) => empleado.id === detalleEmpleadoId)) {
+      setDetalleEmpleadoId(disponibles[0]?.id ?? "");
+    }
+  }
+
   function abrirNuevaCita(fecha: string, horaInicio: string) {
+    if (esFechaHoraPasada(fecha, horaInicio)) {
+      alert("No podés crear una cita en una fecha u hora que ya pasó.");
+      return;
+    }
+
     setFechaSeleccionada(fecha);
     setHoraSeleccionada(horaInicio);
     setModalOpen(true);
@@ -267,8 +377,12 @@ export function CitasPanel({
 
   function abrirDetalle(cita: CitaItem) {
     setCitaSeleccionada(cita);
+    setDetalleClienteId(cita.cliente_id);
+    setDetalleServicioId(cita.servicio_id);
+    setDetalleEmpleadoId(cita.empleado_id);
     setDetalleFecha(cita.fecha);
     setDetalleHora(hora(cita.hora_inicio));
+    setDetalleEstado(cita.estado);
     setDetalleOpen(true);
   }
 
@@ -323,6 +437,34 @@ export function CitasPanel({
     } finally {
       setGuardandoCambio(false);
     }
+  }
+
+  function guardarCambiosPrincipales() {
+    if (!citaSeleccionada) return;
+
+    if (!detalleClienteId) {
+      alert("Seleccioná un cliente.");
+      return;
+    }
+
+    if (!detalleServicioId) {
+      alert("Seleccioná un servicio.");
+      return;
+    }
+
+    if (!detalleEmpleadoId) {
+      alert("Seleccioná un empleado para la cita.");
+      return;
+    }
+
+    actualizarCita(citaSeleccionada.id, {
+      clienteId: detalleClienteId,
+      servicioId: detalleServicioId,
+      empleadoId: detalleEmpleadoId,
+      fecha: detalleFecha,
+      horaInicio: detalleHora,
+      estado: detalleEstado,
+    });
   }
 
   const tituloMes = capitalizar(
@@ -466,7 +608,7 @@ export function CitasPanel({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div ref={calendarioScrollRef} className="overflow-x-auto">
           <div className="min-w-[1420px]">
             <div className="sticky top-0 z-20 grid grid-cols-[76px_repeat(7,minmax(185px,1fr))] border-b bg-background">
               <div className="border-r px-3 py-2 text-xs font-medium text-muted-foreground">
@@ -567,6 +709,7 @@ export function CitasPanel({
                       return (
                         <button
                           key={cita.id}
+                          id={`cita-${cita.id}`}
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
@@ -576,6 +719,10 @@ export function CitasPanel({
                           style={{
                             top,
                             height,
+                            boxShadow:
+                              highlightCitaId === cita.id
+                                ? "0 0 0 3px rgba(37, 99, 235, 0.35), 0 12px 30px rgba(37, 99, 235, 0.18)"
+                                : undefined,
                             left: `calc(${layout.left} + 6px)`,
                             width: `calc(${layout.width} - 12px)`,
                             borderLeftWidth: 5,
@@ -630,55 +777,106 @@ export function CitasPanel({
       />
 
       <Dialog open={detalleOpen} onOpenChange={setDetalleOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Detalles de la cita</DialogTitle>
+            <DialogTitle>Editar cita</DialogTitle>
             <DialogDescription>
-              Información completa del turno seleccionado.
+              Cambiá cliente, servicio, empleado, fecha, hora o estado.
             </DialogDescription>
           </DialogHeader>
 
           {citaSeleccionada && (
             <div className="space-y-5">
               <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Cliente</p>
-                  <p className="font-semibold">
-                    {citaDetalleCliente?.nombre_completo ?? "Cliente no encontrado"}
-                  </p>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Cliente</p>
+                  <select
+                    value={detalleClienteId}
+                    onChange={(event) => setDetalleClienteId(event.target.value)}
+                    className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  >
+                    <option value="">Seleccionar cliente</option>
+                    {clientes.map((cliente) => (
+                      <option key={cliente.id} value={cliente.id}>
+                        {cliente.nombre_completo}
+                      </option>
+                    ))}
+                  </select>
+
                   {citaDetalleCliente?.telefono && (
-                    <p className="text-sm text-muted-foreground">
-                      {citaDetalleCliente.telefono}
+                    <p className="text-xs text-muted-foreground">
+                      Actual: {citaDetalleCliente.telefono}
                     </p>
                   )}
                 </div>
 
-                <div>
-                  <p className="text-sm text-muted-foreground">Servicio</p>
-                  <p className="font-semibold">
-                    {citaDetalleServicio?.nombre ?? "Servicio no encontrado"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {citaDetalleServicio?.duracion_minutos ?? "-"} min ·{" "}
-                    {formatearPrecio(citaDetalleServicio?.precio ?? null)}
-                  </p>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Servicio</p>
+                  <select
+                    value={detalleServicioId}
+                    onChange={(event) => cambiarServicioDetalle(event.target.value)}
+                    className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  >
+                    <option value="">Seleccionar servicio</option>
+                    {servicios.map((servicio) => (
+                      <option key={servicio.id} value={servicio.id}>
+                        {servicio.nombre}
+                      </option>
+                    ))}
+                  </select>
+
+                  {servicioDetalleSeleccionado && (
+                    <p className="text-xs text-muted-foreground">
+                      {servicioDetalleSeleccionado.duracion_minutos} min ·{" "}
+                      {formatearPrecio(servicioDetalleSeleccionado.precio ?? null)}
+                    </p>
+                  )}
                 </div>
 
-                <div>
-                  <p className="text-sm text-muted-foreground">Empleado</p>
-                  <p className="font-semibold">
-                    {citaDetalleEmpleado?.nombre ?? "Empleado no encontrado"}
-                  </p>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Empleado asignado</p>
+                  <select
+                    value={detalleEmpleadoId}
+                    onChange={(event) => setDetalleEmpleadoId(event.target.value)}
+                    className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  >
+                    <option value="">Seleccionar empleado</option>
+                    {empleadosDetalleDisponibles.map((empleado) => (
+                      <option key={empleado.id} value={empleado.id}>
+                        {empleado.nombre}
+                      </option>
+                    ))}
+                  </select>
+
+                  {empleadosDetalleDisponibles.length === 0 && (
+                    <p className="text-xs text-red-600">
+                      No hay empleados asignados a este servicio.
+                    </p>
+                  )}
                 </div>
 
-                <div>
-                  <p className="text-sm text-muted-foreground">Estado</p>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Estado de la cita</p>
+                  <select
+                    value={detalleEstado}
+                    onChange={(event) =>
+                      setDetalleEstado(event.target.value as CitaItem["estado"])
+                    }
+                    className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  >
+                    <option value="pendiente">Pendiente</option>
+                    <option value="confirmada">Confirmada</option>
+                    <option value="completada">Completada</option>
+                    <option value="no_asistio">No asistió</option>
+                    <option value="cancelada">Cancelada</option>
+                  </select>
+
                   <span
-                    className={`mt-1 inline-flex rounded-full px-2 py-1 text-xs font-medium ${estadoClass(
-                      citaSeleccionada.estado
+                    className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${estadoClass(
+                      detalleEstado
                     )}`}
                   >
-                    {estadoLabel(citaSeleccionada.estado)}
+                    {estadoLabel(detalleEstado)}
                   </span>
                 </div>
               </div>
@@ -688,6 +886,7 @@ export function CitasPanel({
                   <p className="text-sm font-medium">Fecha</p>
                   <Input
                     type="date"
+                    min={todayIso()}
                     value={detalleFecha}
                     onChange={(event) => setDetalleFecha(event.target.value)}
                   />
@@ -706,7 +905,9 @@ export function CitasPanel({
                   <p className="text-sm text-muted-foreground">
                     Actual: {formatearFecha(citaSeleccionada.fecha)},{" "}
                     {hora(citaSeleccionada.hora_inicio)} -{" "}
-                    {hora(citaSeleccionada.hora_fin)}
+                    {hora(citaSeleccionada.hora_fin)} ·{" "}
+                    {citaDetalleServicio?.nombre ?? "Servicio"} ·{" "}
+                    {citaDetalleEmpleado?.nombre ?? "Empleado"}
                   </p>
                 </div>
 
@@ -715,18 +916,33 @@ export function CitasPanel({
                     type="button"
                     variant="outline"
                     disabled={guardandoCambio}
-                    onClick={() =>
-                      actualizarCita(citaSeleccionada.id, {
-                        fecha: detalleFecha,
-                        horaInicio: detalleHora,
-                      })
-                    }
+                    onClick={guardarCambiosPrincipales}
                   >
                     <Save className="mr-2 h-4 w-4" />
-                    Guardar fecha y hora
+                    Guardar cambios
                   </Button>
                 </div>
               </div>
+
+              {citaSeleccionada.seguimiento_token && (
+                <div className="rounded-2xl border bg-muted/30 p-4">
+                  <p className="text-sm font-medium">
+                    Enviar estado al cliente
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Copiá o enviá por WhatsApp el link para que el cliente consulte
+                    si su reserva está pendiente, confirmada, cancelada o completada.
+                  </p>
+
+                  <div className="mt-3">
+                    <SeguimientoActions
+                      token={citaSeleccionada.seguimiento_token}
+                      telefono={citaDetalleCliente?.telefono ?? null}
+                      label="Copiar link"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="flex flex-wrap gap-2 border-t pt-4">
                 {citaSeleccionada.estado === "pendiente" && (

@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BellRing,
+  BriefcaseBusiness,
   CalendarDays,
   Home,
   Scissors,
   Settings,
   Users,
-  BriefcaseBusiness,
 } from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 
@@ -21,6 +22,16 @@ const menuItems = [
     label: "Inicio",
     href: "/dashboard",
     icon: Home,
+  },
+  {
+    label: "Reservas",
+    href: "/dashboard/reservas",
+    icon: BellRing,
+  },
+  {
+    label: "Citas",
+    href: "/dashboard/citas",
+    icon: CalendarDays,
   },
   {
     label: "Clientes",
@@ -38,11 +49,6 @@ const menuItems = [
     icon: BriefcaseBusiness,
   },
   {
-    label: "Citas",
-    href: "/dashboard/citas",
-    icon: CalendarDays,
-  },
-  {
     label: "Configuración",
     href: "/dashboard/configuracion",
     icon: Settings,
@@ -57,7 +63,9 @@ export function DashboardSidebar({ userEmail }: DashboardSidebarProps) {
       <div className="border-b p-6">
         <Link href="/dashboard" className="block">
           <p className="text-2xl font-bold tracking-tight">AgendaMe</p>
-          <p className="mt-1 text-sm text-muted-foreground">Panel del negocio</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Panel del negocio
+          </p>
         </Link>
       </div>
 
@@ -71,7 +79,7 @@ export function DashboardSidebar({ userEmail }: DashboardSidebarProps) {
 
           return (
             <Link
-              key={item.label}
+              key={item.href}
               href={item.href}
               className={`flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                 activo

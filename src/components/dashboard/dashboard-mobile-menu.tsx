@@ -4,13 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BellRing,
+  BriefcaseBusiness,
   CalendarDays,
   Home,
   Menu,
   Scissors,
   Settings,
   Users,
-  BriefcaseBusiness,
   X,
 } from "lucide-react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
@@ -24,6 +25,16 @@ const menuItems = [
     label: "Inicio",
     href: "/dashboard",
     icon: Home,
+  },
+  {
+    label: "Reservas",
+    href: "/dashboard/reservas",
+    icon: BellRing,
+  },
+  {
+    label: "Citas",
+    href: "/dashboard/citas",
+    icon: CalendarDays,
   },
   {
     label: "Clientes",
@@ -41,11 +52,6 @@ const menuItems = [
     icon: BriefcaseBusiness,
   },
   {
-    label: "Citas",
-    href: "/dashboard/citas",
-    icon: CalendarDays,
-  },
-  {
     label: "Configuración",
     href: "/dashboard/configuracion",
     icon: Settings,
@@ -60,14 +66,14 @@ export function DashboardMobileMenu({ userEmail }: DashboardMobileMenuProps) {
     <>
       <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur lg:hidden">
         <Link href="/dashboard">
-          <p className="text-lg font-bold">AgendaMe</p>
-          <p className="text-xs text-muted-foreground">Dashboard</p>
+          <p className="text-lg font-bold leading-none">AgendaMe</p>
+          <p className="mt-1 text-xs text-muted-foreground">Dashboard</p>
         </Link>
 
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded-xl border p-2"
+          className="rounded-xl border bg-background p-2 shadow-sm"
           aria-label="Abrir menú"
         >
           <Menu className="h-5 w-5" />
@@ -83,11 +89,13 @@ export function DashboardMobileMenu({ userEmail }: DashboardMobileMenuProps) {
             aria-label="Cerrar menú"
           />
 
-          <div className="absolute left-0 top-0 flex h-full w-[82%] max-w-sm flex-col bg-background shadow-2xl">
+          <div className="absolute left-0 top-0 flex h-full w-[84%] max-w-sm flex-col bg-background shadow-2xl">
             <div className="flex items-center justify-between border-b p-5">
               <div>
-                <p className="text-2xl font-bold">AgendaMe</p>
-                <p className="text-sm text-muted-foreground">Panel del negocio</p>
+                <p className="text-2xl font-bold leading-none">AgendaMe</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Panel del negocio
+                </p>
               </div>
 
               <button
@@ -110,7 +118,7 @@ export function DashboardMobileMenu({ userEmail }: DashboardMobileMenuProps) {
 
                 return (
                   <Link
-                    key={item.label}
+                    key={item.href}
                     href={item.href}
                     onClick={() => setOpen(false)}
                     className={`flex items-center rounded-xl px-3 py-3 text-sm font-medium transition ${

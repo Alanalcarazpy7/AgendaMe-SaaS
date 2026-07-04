@@ -1,4 +1,5 @@
-﻿import { redirect } from "next/navigation";
+﻿import { ServiciosImagenesPanel } from "@/components/servicios/servicios-imagenes-panel";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ServiciosPanel } from "@/components/servicios/servicios-panel";
 import type { ServicioItem } from "@/components/servicios/servicio-dialog";
@@ -45,5 +46,13 @@ export default async function ServiciosPage() {
 
   const servicios = (serviciosData ?? []) as ServicioItem[];
 
-  return <ServiciosPanel servicios={servicios} />;
+  return (
+    <>
+      <ServiciosPanel servicios={servicios} />
+
+      <div className="mt-6">
+        <ServiciosImagenesPanel />
+      </div>
+    </>
+  );
 }

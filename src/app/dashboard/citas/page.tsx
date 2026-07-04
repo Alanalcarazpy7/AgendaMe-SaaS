@@ -1,9 +1,6 @@
 ﻿import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import {
-  CitasPanel,
-  type CitaItem,
-} from "@/components/citas/citas-panel";
+import { CitasPanel, type CitaItem } from "@/components/citas/citas-panel";
 import type {
   ClienteCitaItem,
   EmpleadoCitaItem,
@@ -11,7 +8,17 @@ import type {
   ServicioCitaItem,
 } from "@/components/citas/cita-dialog";
 
-export default async function CitasPage() {
+type CitasPageProps = {
+  searchParams?: Promise<{
+    fecha?: string;
+    hora?: string;
+    cita?: string;
+  }>;
+};
+
+export default async function CitasPage({ searchParams }: CitasPageProps) {
+  const filtros = (await searchParams) ?? {};
+
   const supabase = await createClient();
 
   const {
@@ -22,83 +29,88 @@ export default async function CitasPage() {
     redirect("/auth/login");
   }
 
-  const { data: membresias, error: membresiaError } = await supabase
+  const { data: membresia, error: membresiaError } = await supabase
     .from("negocio_usuarios")
     .select("negocio_id")
     .eq("usuario_id", user.id)
     .eq("activo", true)
-    .limit(1);
+    .limit(1)
+    .single();
 
-  if (membresiaError) {
-    throw new Error(membresiaError.message);
-  }
-
-  const membresia = membresias?.[0];
-
-  if (!membresia) {
+  if (membresiaError || !membresia) {
     redirect("/onboarding/negocio");
   }
 
   const [
-    { data: clientesData, error: clientesError },
-    { data: serviciosData, error: serviciosError },
-    { data: empleadosData, error: empleadosError },
-    { data: relacionesData, error: relacionesError },
-    { data: citasData, error: citasError },
+    { data: clientes, error: clientesError },
+    { data: servicios, error: serviciosError },
+    { data: empleados, error: empleadosError },
+    { data: citas, error: citasError },
   ] = await Promise.all([
     supabase
       .from("clientes")
-      .select("id, nombre_completo, telefono, estado")
+      .select("id, nombre_completo, telefono, email")
       .eq("negocio_id", membresia.negocio_id)
+      .eq("estado", "activo")
       .order("nombre_completo", { ascending: true }),
 
     supabase
       .from("servicios")
-      .select("id, nombre, duracion_minutos, precio, color, estado")
+      .select("id, nombre, descripcion, duracion_minutos, precio, color")
       .eq("negocio_id", membresia.negocio_id)
+      .eq("estado", "activo")
       .order("nombre", { ascending: true }),
 
     supabase
       .from("empleados")
-      .select("id, nombre, color_calendario, estado")
+      .select("id, nombre, color_calendario")
       .eq("negocio_id", membresia.negocio_id)
+      .eq("estado", "activo")
       .order("nombre", { ascending: true }),
 
     supabase
-      .from("empleado_servicios")
-      .select("empleado_id, servicio_id"),
-
-    supabase
       .from("citas")
-      .select("id, cliente_id, servicio_id, empleado_id, fecha, hora_inicio, hora_fin, estado, created_at")
+      .select("id, cliente_id, servicio_id, empleado_id, fecha, hora_inicio, hora_fin, estado, seguimiento_token, created_at")
       .eq("negocio_id", membresia.negocio_id)
-      .order("fecha", { ascending: false })
-      .order("hora_inicio", { ascending: false }),
+      .order("fecha", { ascending: true })
+      .order("hora_inicio", { ascending: true }),
   ]);
 
   if (clientesError) throw new Error(clientesError.message);
   if (serviciosError) throw new Error(serviciosError.message);
   if (empleadosError) throw new Error(empleadosError.message);
-  if (relacionesError) throw new Error(relacionesError.message);
   if (citasError) throw new Error(citasError.message);
 
-  const clientes = (clientesData ?? []) as ClienteCitaItem[];
-  const servicios = (serviciosData ?? []) as ServicioCitaItem[];
-  const empleados = (empleadosData ?? []) as EmpleadoCitaItem[];
-  const citas = (citasData ?? []) as CitaItem[];
-
-  const empleadosIds = empleados.map((empleado) => empleado.id);
-  const empleadoServicios = ((relacionesData ?? []) as EmpleadoServicioCitaItem[]).filter(
-    (relacion) => empleadosIds.includes(relacion.empleado_id)
+  const empleadosIds = ((empleados ?? []) as EmpleadoCitaItem[]).map(
+    (empleado) => empleado.id
   );
+
+  let empleadoServicios: EmpleadoServicioCitaItem[] = [];
+
+  if (empleadosIds.length > 0) {
+    const { data: relaciones, error: relacionesError } = await supabase
+      .from("empleado_servicios")
+      .select("empleado_id, servicio_id")
+      .in("empleado_id", empleadosIds);
+
+    if (relacionesError) {
+      throw new Error(relacionesError.message);
+    }
+
+    empleadoServicios = (relaciones ?? []) as EmpleadoServicioCitaItem[];
+  }
 
   return (
     <CitasPanel
-      citas={citas}
-      clientes={clientes}
-      servicios={servicios}
-      empleados={empleados}
+      key={`${filtros.fecha ?? "hoy"}-${filtros.hora ?? "sin-hora"}-${filtros.cita ?? "sin-cita"}`}
+      citas={(citas ?? []) as CitaItem[]}
+      clientes={(clientes ?? []) as ClienteCitaItem[]}
+      servicios={(servicios ?? []) as ServicioCitaItem[]}
+      empleados={(empleados ?? []) as EmpleadoCitaItem[]}
       empleadoServicios={empleadoServicios}
+      initialFecha={filtros.fecha}
+      initialHora={filtros.hora}
+      highlightCitaId={filtros.cita}
     />
   );
 }
