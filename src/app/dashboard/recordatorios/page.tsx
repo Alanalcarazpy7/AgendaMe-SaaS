@@ -10,16 +10,23 @@ type CitaRaw = {
   id: string;
   fecha: string;
   hora_inicio: string;
+  hora_fin: string;
   estado: string;
-  seguimiento_token: string;
+  seguimiento_token: string | null;
+  sucursal_id: string | null;
   clientes: Relacion<{
     nombre_completo: string;
     telefono: string | null;
+    email?: string | null;
   }>;
   servicios: Relacion<{
     nombre: string;
   }>;
   empleados: Relacion<{
+    nombre: string;
+  }>;
+  sucursales: Relacion<{
+    id: string;
     nombre: string;
   }>;
 };
@@ -89,16 +96,23 @@ export default async function RecordatoriosPage() {
       id,
       fecha,
       hora_inicio,
+      hora_fin,
       estado,
       seguimiento_token,
+      sucursal_id,
       clientes (
         nombre_completo,
-        telefono
+        telefono,
+        email
       ),
       servicios (
         nombre
       ),
       empleados (
+        nombre
+      ),
+      sucursales (
+        id,
         nombre
       )
     `
@@ -118,16 +132,38 @@ export default async function RecordatoriosPage() {
     throw new Error(error.message);
   }
 
-  const citas = ((data ?? []) as CitaRaw[]).map((cita) => ({
-    id: cita.id,
-    fecha: cita.fecha,
-    hora_inicio: cita.hora_inicio,
-    estado: cita.estado,
-    seguimiento_token: cita.seguimiento_token,
-    cliente: obtenerObjeto(cita.clientes),
-    servicio: obtenerObjeto(cita.servicios),
-    empleado: obtenerObjeto(cita.empleados),
-  }));
+  const citas = ((data ?? []) as CitaRaw[]).map((cita) => {
+    const sucursal = obtenerObjeto(cita.sucursales);
 
-  return <RecordatoriosPanel citas={citas} />;
+    return {
+      id: cita.id,
+      fecha: cita.fecha,
+      hora_inicio: cita.hora_inicio,
+      hora_fin: cita.hora_fin,
+      estado: cita.estado,
+      seguimiento_token: cita.seguimiento_token,
+      sucursal_id: cita.sucursal_id,
+      sucursal,
+      cliente: obtenerObjeto(cita.clientes),
+      servicio: obtenerObjeto(cita.servicios),
+      empleado: obtenerObjeto(cita.empleados),
+    };
+  });
+
+  const sucursalesMap = new Map<string, { id: string; nombre: string }>();
+
+  for (const cita of citas) {
+    if (cita.sucursal?.id) {
+      sucursalesMap.set(cita.sucursal.id, cita.sucursal);
+    }
+  }
+
+  return (
+    <RecordatoriosPanel
+      citas={citas}
+      scope={access.scope}
+      sucursalNombre={access.sucursalNombre}
+      sucursales={Array.from(sucursalesMap.values())}
+    />
+  );
 }
