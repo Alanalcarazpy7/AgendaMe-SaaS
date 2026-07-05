@@ -125,7 +125,7 @@ export default async function DashboardPlanesPage() {
   } = await authSupabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/login");
+    redirect("/login");
   }
 
   const supabase = createServiceRoleClient();
@@ -139,7 +139,7 @@ export default async function DashboardPlanesPage() {
     .maybeSingle();
 
   if (membresiaError || !membresia) {
-    redirect("/onboarding/negocio");
+    redirect("/sin-acceso?motivo=no_access");
   }
 
   const anio = Number(parteFechaAsuncion("year"));
@@ -231,7 +231,7 @@ export default async function DashboardPlanesPage() {
   ]);
 
   if (!negocio) {
-    redirect("/onboarding/negocio");
+    redirect("/sin-acceso?motivo=no_access");
   }
 
   const suscripcion = suscripcionData as SuscripcionRaw | null;

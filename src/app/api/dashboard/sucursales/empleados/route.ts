@@ -1,50 +1,71 @@
 ﻿import { NextResponse } from "next/server";
-import { requireDashboardAccess } from "@/lib/dashboard/access-context";
+import { resolveDashboardAccess } from "@/lib/dashboard/access-context";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-
-type Payload = {
-  empleadoId?: string;
-  sucursalId?: string;
-};
 
 function limpiar(valor: unknown) {
   return String(valor ?? "").trim();
 }
 
+async function requireAdminEmpresarial() {
+  const access = await resolveDashboardAccess();
+
+  if (!access.ok) {
+    return {
+      ok: false as const,
+      response: NextResponse.json(
+        { error: "No autenticado o sin acceso." },
+        { status: 401 }
+      ),
+    };
+  }
+
+  if (!access.puedeGestionarSucursales || !access.puedeVerTodo) {
+    return {
+      ok: false as const,
+      response: NextResponse.json(
+        { error: "Solo el admin empresarial puede asignar empleados a sucursales." },
+        { status: 403 }
+      ),
+    };
+  }
+
+  return {
+    ok: true as const,
+    access,
+  };
+}
+
 export async function GET() {
   try {
-    const access = await requireDashboardAccess();
+    const guard = await requireAdminEmpresarial();
 
-    if (!access.puedeGestionarSucursales) {
-      return NextResponse.json(
-        { error: "No tenés permiso para gestionar empleados por sucursal." },
-        { status: 403 }
-      );
-    }
+    if (!guard.ok) return guard.response;
 
     const supabase = createServiceRoleClient();
 
-    const { data, error } = await supabase
-      .from("empleados")
-      .select(
-        `
-        id,
-        nombre,
-        email,
-        telefono,
-        estado,
-        sucursal_id,
-        sucursales (
-          nombre
-        )
-      `
-      )
-      .eq("negocio_id", access.negocio.id)
-      .order("nombre", { ascending: true });
+    const [{ data: empleados, error: empleadosError }, { data: sucursales, error: sucursalesError }] =
+      await Promise.all([
+        supabase
+          .from("empleados")
+          .select("id, nombre, email, telefono, estado, sucursal_id")
+          .eq("negocio_id", guard.access.negocio.id)
+          .order("nombre", { ascending: true }),
 
-    if (error) throw new Error(error.message);
+        supabase
+          .from("sucursales")
+          .select("id, nombre, estado, es_principal")
+          .eq("negocio_id", guard.access.negocio.id)
+          .order("es_principal", { ascending: false })
+          .order("created_at", { ascending: true }),
+      ]);
 
-    return NextResponse.json({ empleados: data ?? [] });
+    if (empleadosError) throw new Error(empleadosError.message);
+    if (sucursalesError) throw new Error(sucursalesError.message);
+
+    return NextResponse.json({
+      empleados: empleados ?? [],
+      sucursales: sucursales ?? [],
+    });
   } catch (error) {
     console.error("Error listando empleados por sucursal:", error);
 
@@ -57,19 +78,19 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    const access = await requireDashboardAccess();
+    const guard = await requireAdminEmpresarial();
 
-    if (!access.puedeGestionarSucursales) {
-      return NextResponse.json(
-        { error: "No tenés permiso para asignar empleados a sucursales." },
-        { status: 403 }
-      );
-    }
+    if (!guard.ok) return guard.response;
 
-    const body = (await request.json()) as Payload;
+    const body = await request.json();
 
-    const empleadoId = limpiar(body.empleadoId);
-    const sucursalId = limpiar(body.sucursalId);
+    const empleadoId = limpiar(
+      body.empleado_id ?? body.empleadoId ?? body.id
+    );
+
+    const sucursalId = limpiar(
+      body.sucursal_id ?? body.sucursalId
+    );
 
     if (!empleadoId) {
       return NextResponse.json(
@@ -80,7 +101,7 @@ export async function PATCH(request: Request) {
 
     if (!sucursalId) {
       return NextResponse.json(
-        { error: "Seleccioná una sucursal." },
+        { error: "Falta la sucursal." },
         { status: 400 }
       );
     }
@@ -89,34 +110,40 @@ export async function PATCH(request: Request) {
 
     const { data: empleado, error: empleadoError } = await supabase
       .from("empleados")
-      .select("id")
+      .select("id, negocio_id")
       .eq("id", empleadoId)
-      .eq("negocio_id", access.negocio.id)
+      .eq("negocio_id", guard.access.negocio.id)
       .maybeSingle();
 
     if (empleadoError) throw new Error(empleadoError.message);
 
     if (!empleado) {
       return NextResponse.json(
-        { error: "Empleado no encontrado." },
+        { error: "El empleado no existe o no pertenece a este negocio." },
         { status: 404 }
       );
     }
 
     const { data: sucursal, error: sucursalError } = await supabase
       .from("sucursales")
-      .select("id")
+      .select("id, negocio_id, estado")
       .eq("id", sucursalId)
-      .eq("negocio_id", access.negocio.id)
-      .eq("estado", "activo")
+      .eq("negocio_id", guard.access.negocio.id)
       .maybeSingle();
 
     if (sucursalError) throw new Error(sucursalError.message);
 
     if (!sucursal) {
       return NextResponse.json(
-        { error: "Sucursal no encontrada o inactiva." },
+        { error: "La sucursal no existe o no pertenece a este negocio." },
         { status: 404 }
+      );
+    }
+
+    if (sucursal.estado !== "activo") {
+      return NextResponse.json(
+        { error: "No podés asignar empleados a una sucursal inactiva." },
+        { status: 400 }
       );
     }
 
@@ -124,21 +151,20 @@ export async function PATCH(request: Request) {
       .from("empleados")
       .update({
         sucursal_id: sucursalId,
-        updated_at: new Date().toISOString(),
       })
       .eq("id", empleadoId)
-      .eq("negocio_id", access.negocio.id);
+      .eq("negocio_id", guard.access.negocio.id);
 
     if (error) throw new Error(error.message);
 
     return NextResponse.json({
-      message: "Empleado asignado a la sucursal correctamente.",
+      message: "Empleado asignado correctamente.",
     });
   } catch (error) {
     console.error("Error asignando empleado a sucursal:", error);
 
     return NextResponse.json(
-      { error: "No se pudo asignar el empleado." },
+      { error: "No se pudo asignar el empleado a la sucursal." },
       { status: 500 }
     );
   }

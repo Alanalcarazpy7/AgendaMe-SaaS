@@ -1,116 +1,198 @@
-﻿import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { CitasPanel, type CitaItem } from "@/components/citas/citas-panel";
-import type {
-  ClienteCitaItem,
-  EmpleadoCitaItem,
-  EmpleadoServicioCitaItem,
-  ServicioCitaItem,
-} from "@/components/citas/cita-dialog";
+﻿import { CitasPanel } from "@/components/citas/citas-panel";
+import { requireDashboardAccess } from "@/lib/dashboard/access-context";
+import { applySucursalScope, requirePermission } from "@/lib/dashboard/scope-helpers";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
-type CitasPageProps = {
-  searchParams?: Promise<{
-    fecha?: string;
-    hora?: string;
-    cita?: string;
-  }>;
-};
+type Relacion<T> = T | T[] | null;
 
-export default async function CitasPage({ searchParams }: CitasPageProps) {
-  const filtros = (await searchParams) ?? {};
+function obtenerObjeto<T>(valor: Relacion<T>): T | null {
+  if (!valor) return null;
+  return Array.isArray(valor) ? valor[0] ?? null : valor;
+}
 
-  const supabase = await createClient();
+export default async function CitasPage() {
+  const access = await requireDashboardAccess();
+  requirePermission(access, "puedeGestionarCitas");
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const supabase = createServiceRoleClient();
 
-  if (!user) {
-    redirect("/auth/login");
-  }
+  let citasQuery = supabase
+    .from("citas")
+    .select(
+      `
+      id,
+      negocio_id,
+      sucursal_id,
+      cliente_id,
+      servicio_id,
+      empleado_id,
+      fecha,
+      hora_inicio,
+      hora_fin,
+      estado,
+      precio,
+      notas,
+      origen,
+      seguimiento_token,
+      created_at,
+      clientes (
+        id,
+        nombre_completo,
+        telefono,
+        email
+      ),
+      servicios (
+        id,
+        nombre,
+        duracion_minutos,
+        precio,
+        color
+      ),
+      empleados (
+        id,
+        nombre,
+        color_calendario,
+        sucursal_id
+      ),
+      sucursales (
+        id,
+        nombre
+      )
+    `
+    )
+    .eq("negocio_id", access.negocio.id)
+    .order("fecha", { ascending: true })
+    .order("hora_inicio", { ascending: true });
 
-  const { data: membresia, error: membresiaError } = await supabase
-    .from("negocio_usuarios")
-    .select("negocio_id")
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1)
-    .single();
+  citasQuery = applySucursalScope(citasQuery, access);
 
-  if (membresiaError || !membresia) {
-    redirect("/onboarding/negocio");
+  let empleadosQuery = supabase
+    .from("empleados")
+    .select(
+      `
+      id,
+      nombre,
+      email,
+      telefono,
+      color_calendario,
+      estado,
+      sucursal_id,
+      empleado_servicios (
+        servicio_id
+      ),
+      horarios_empleado (
+        id,
+        dia_semana,
+        activo,
+        hora_inicio,
+        hora_fin,
+        descanso_inicio,
+        descanso_fin
+      )
+    `
+    )
+    .eq("negocio_id", access.negocio.id)
+    .eq("estado", "activo")
+    .order("nombre", { ascending: true });
+
+  empleadosQuery = applySucursalScope(empleadosQuery, access);
+
+  let clientes: any[] = [];
+
+  if (access.scope === "sucursal" && access.sucursalId) {
+    const { data: clientesSucursal, error: clientesSucursalError } = await supabase
+      .from("cliente_sucursales")
+      .select(
+        `
+        clientes (
+          id,
+          nombre_completo,
+          telefono,
+          email,
+          estado
+        )
+      `
+      )
+      .eq("negocio_id", access.negocio.id)
+      .eq("sucursal_id", access.sucursalId);
+
+    if (clientesSucursalError) {
+      throw new Error(clientesSucursalError.message);
+    }
+
+    clientes = (clientesSucursal ?? [])
+      .map((row: any) => obtenerObjeto(row.clientes))
+      .filter(Boolean)
+      .filter((cliente: any) => cliente.estado === "activo");
+  } else {
+    const { data: clientesData, error: clientesError } = await supabase
+      .from("clientes")
+      .select("id, nombre_completo, telefono, email, estado")
+      .eq("negocio_id", access.negocio.id)
+      .eq("estado", "activo")
+      .order("nombre_completo", { ascending: true });
+
+    if (clientesError) {
+      throw new Error(clientesError.message);
+    }
+
+    clientes = clientesData ?? [];
   }
 
   const [
-    { data: clientes, error: clientesError },
-    { data: servicios, error: serviciosError },
-    { data: empleados, error: empleadosError },
     { data: citas, error: citasError },
+    { data: empleados, error: empleadosError },
+    { data: servicios, error: serviciosError },
   ] = await Promise.all([
-    supabase
-      .from("clientes")
-      .select("id, nombre_completo, telefono, email")
-      .eq("negocio_id", membresia.negocio_id)
-      .eq("estado", "activo")
-      .order("nombre_completo", { ascending: true }),
+    citasQuery,
+
+    empleadosQuery,
 
     supabase
       .from("servicios")
-      .select("id, nombre, descripcion, duracion_minutos, precio, color")
-      .eq("negocio_id", membresia.negocio_id)
+      .select("id, nombre, duracion_minutos, precio, color, estado")
+      .eq("negocio_id", access.negocio.id)
       .eq("estado", "activo")
       .order("nombre", { ascending: true }),
-
-    supabase
-      .from("empleados")
-      .select("id, nombre, color_calendario")
-      .eq("negocio_id", membresia.negocio_id)
-      .eq("estado", "activo")
-      .order("nombre", { ascending: true }),
-
-    supabase
-      .from("citas")
-      .select("id, cliente_id, servicio_id, empleado_id, fecha, hora_inicio, hora_fin, estado, seguimiento_token, created_at")
-      .eq("negocio_id", membresia.negocio_id)
-      .order("fecha", { ascending: true })
-      .order("hora_inicio", { ascending: true }),
   ]);
 
-  if (clientesError) throw new Error(clientesError.message);
-  if (serviciosError) throw new Error(serviciosError.message);
-  if (empleadosError) throw new Error(empleadosError.message);
   if (citasError) throw new Error(citasError.message);
+  if (empleadosError) throw new Error(empleadosError.message);
+  if (serviciosError) throw new Error(serviciosError.message);
 
-  const empleadosIds = ((empleados ?? []) as EmpleadoCitaItem[]).map(
-    (empleado) => empleado.id
-  );
+  const empleadosNormalizados = (empleados ?? []).map((empleado: any) => {
+    const servicioIds = (empleado.empleado_servicios ?? [])
+      .map((item: any) => item.servicio_id)
+      .filter(Boolean);
 
-  let empleadoServicios: EmpleadoServicioCitaItem[] = [];
+    const horarios = empleado.horarios_empleado ?? [];
 
-  if (empleadosIds.length > 0) {
-    const { data: relaciones, error: relacionesError } = await supabase
-      .from("empleado_servicios")
-      .select("empleado_id, servicio_id")
-      .in("empleado_id", empleadosIds);
+    return {
+      ...empleado,
+      servicio_ids: servicioIds,
+      servicios_ids: servicioIds,
+      horarios,
+      horarios_empleado: horarios,
+      empleado_servicios: empleado.empleado_servicios ?? [],
+    };
+  });
 
-    if (relacionesError) {
-      throw new Error(relacionesError.message);
-    }
-
-    empleadoServicios = (relaciones ?? []) as EmpleadoServicioCitaItem[];
-  }
+  const empleadoServicios = empleadosNormalizados.flatMap((empleado: any) => {
+    return (empleado.empleado_servicios ?? [])
+      .map((relacion: any) => ({
+        empleado_id: empleado.id,
+        servicio_id: relacion.servicio_id,
+      }))
+      .filter((relacion: any) => relacion.empleado_id && relacion.servicio_id);
+  });
 
   return (
     <CitasPanel
-      key={`${filtros.fecha ?? "hoy"}-${filtros.hora ?? "sin-hora"}-${filtros.cita ?? "sin-cita"}`}
-      citas={(citas ?? []) as CitaItem[]}
-      clientes={(clientes ?? []) as ClienteCitaItem[]}
-      servicios={(servicios ?? []) as ServicioCitaItem[]}
-      empleados={(empleados ?? []) as EmpleadoCitaItem[]}
+      citas={citas ?? []}
+      clientes={clientes}
+      servicios={servicios ?? []}
+      empleados={empleadosNormalizados}
       empleadoServicios={empleadoServicios}
-      initialFecha={filtros.fecha}
-      initialHora={filtros.hora}
-      highlightCitaId={filtros.cita}
     />
   );
 }

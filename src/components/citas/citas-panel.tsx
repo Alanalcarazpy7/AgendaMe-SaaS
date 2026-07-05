@@ -38,7 +38,7 @@ type CitasPanelProps = {
   clientes: ClienteCitaItem[];
   servicios: ServicioCitaItem[];
   empleados: EmpleadoCitaItem[];
-  empleadoServicios: EmpleadoServicioCitaItem[];
+  empleadoServicios?: EmpleadoServicioCitaItem[];
   initialFecha?: string;
   initialHora?: string;
   highlightCitaId?: string;

@@ -27,7 +27,7 @@ export default async function ConfiguracionPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/login");
+    redirect("/login");
   }
 
   const { data: membresias, error: membresiaError } = await supabase
@@ -55,7 +55,7 @@ export default async function ConfiguracionPage() {
   const membresia = membresias?.[0];
 
   if (!membresia) {
-    redirect("/onboarding/negocio");
+    redirect("/sin-acceso?motivo=no_access");
   }
 
   const negocio = Array.isArray(membresia.negocios)

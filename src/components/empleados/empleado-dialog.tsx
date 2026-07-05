@@ -211,6 +211,8 @@ export function EmpleadoDialog({
           telefono,
           color,
           serviciosIds: serviciosSeleccionados,
+          servicio_ids: serviciosSeleccionados,
+          servicios_ids: serviciosSeleccionados,
           horarios,
         }),
       });

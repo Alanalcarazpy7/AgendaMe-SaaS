@@ -160,7 +160,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           {isRegistro ? (
             <>
               ¿Ya tenés cuenta?{" "}
-              <Link href="/auth/login" className="font-medium text-primary">
+              <Link href="/login" className="font-medium text-primary">
                 Iniciar sesión
               </Link>
             </>

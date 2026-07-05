@@ -10,7 +10,7 @@ export default async function OnboardingNegocioPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/login");
+    redirect("/login");
   }
 
   const { data: negocios } = await supabase

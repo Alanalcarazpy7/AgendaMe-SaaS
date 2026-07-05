@@ -1,6 +1,8 @@
 ﻿import { EmpleadosPanel } from "@/components/empleados/empleados-panel";
+import { SucursalEmpleadosPanel } from "@/components/sucursales/sucursal-empleados-panel";
 import { requireDashboardAccess } from "@/lib/dashboard/access-context";
 import { applySucursalScope, requirePermission } from "@/lib/dashboard/scope-helpers";
+import { nivelPlan } from "@/lib/planes/plan-access";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 export default async function EmpleadosPage() {
@@ -8,6 +10,9 @@ export default async function EmpleadosPage() {
   requirePermission(access, "puedeGestionarEmpleados");
 
   const supabase = createServiceRoleClient();
+
+  const mostrarAsignacionSucursal =
+    access.scope === "global" && nivelPlan(access.planClave) >= 3;
 
   let empleadosQuery = supabase
     .from("empleados")
@@ -58,6 +63,21 @@ export default async function EmpleadosPage() {
   if (empleadosError) throw new Error(empleadosError.message);
   if (serviciosError) throw new Error(serviciosError.message);
 
+  let sucursales: any[] = [];
+
+  if (mostrarAsignacionSucursal) {
+    const { data: sucursalesData, error: sucursalesError } = await supabase
+      .from("sucursales")
+      .select("id, nombre, estado, es_principal")
+      .eq("negocio_id", access.negocio.id)
+      .order("es_principal", { ascending: false })
+      .order("created_at", { ascending: true });
+
+    if (sucursalesError) throw new Error(sucursalesError.message);
+
+    sucursales = sucursalesData ?? [];
+  }
+
   const empleadosNormalizados = (empleados ?? []).map((empleado: any) => {
     const servicioIds = (empleado.empleado_servicios ?? [])
       .map((item: any) => item.servicio_id)
@@ -65,21 +85,54 @@ export default async function EmpleadosPage() {
 
     return {
       ...empleado,
-
-      // Compatibilidad con el panel actual
       servicio_ids: servicioIds,
       servicios_ids: servicioIds,
-
-      // Compatibilidad con horarios
       horarios: empleado.horarios_empleado ?? [],
       horarios_empleado: empleado.horarios_empleado ?? [],
     };
   });
 
   return (
-    <EmpleadosPanel
-      empleados={empleadosNormalizados}
-      servicios={servicios ?? []}
-    />
+    <div className="space-y-5">
+      <section className="rounded-3xl border bg-background p-5 shadow-sm">
+        <p className="text-sm text-muted-foreground">Empleados de agenda</p>
+
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">
+          Empleados que atienden citas
+        </h1>
+
+        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+          Estos empleados se usan para la agenda, horarios, servicios,
+          disponibilidad y reportes. Crear un empleado acá no le da acceso
+          automático al sistema.
+        </p>
+
+        {mostrarAsignacionSucursal ? (
+          <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+            <strong>Plan Empresarial:</strong> además de crear empleados, podés
+            asignarlos a una sucursal desde esta misma vista.
+          </div>
+        ) : (
+          <div className="mt-4 rounded-2xl border bg-muted/30 p-4 text-sm text-muted-foreground">
+            En planes no empresariales, los empleados se asignan automáticamente
+            a la sucursal principal interna del negocio.
+          </div>
+        )}
+      </section>
+
+      {mostrarAsignacionSucursal && (
+        <SucursalEmpleadosPanel
+          sucursales={sucursales}
+          initialSucursales={sucursales}
+          empleados={empleadosNormalizados}
+          initialEmpleados={empleadosNormalizados}
+        />
+      )}
+
+      <EmpleadosPanel
+        empleados={empleadosNormalizados}
+        servicios={servicios ?? []}
+      />
+    </div>
   );
 }

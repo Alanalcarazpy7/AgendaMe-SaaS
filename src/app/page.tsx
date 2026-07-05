@@ -27,7 +27,7 @@ export default function HomePage() {
           </Link>
 
           <Link
-            href="/auth/login"
+            href="/login"
             className="inline-flex h-11 items-center justify-center rounded-md border bg-background px-8 text-sm font-medium shadow-sm transition hover:bg-accent hover:text-accent-foreground"
           >
             Iniciar sesión

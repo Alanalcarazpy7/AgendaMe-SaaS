@@ -13,7 +13,7 @@ export default function PlanesPage() {
 
           <div className="flex items-center gap-2">
             <Link
-              href="/auth/login"
+              href="/login"
               className="rounded-xl border px-4 py-2 text-sm font-semibold transition hover:bg-muted"
             >
               Iniciar sesión

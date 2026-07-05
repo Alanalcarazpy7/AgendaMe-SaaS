@@ -4,308 +4,231 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
-  BellRing,
+  Bell,
   BriefcaseBusiness,
   Building2,
-  CalendarDays,
-  CreditCard,
-  Crown,
-  FileDown,
+  CalendarCheck2,
+  CalendarClock,
+  Download,
   Home,
-  MessageSquareText,
-  Scissors,
+  LayoutDashboard,
   Settings,
+  Store,
+  UserCircle2,
   Users,
-  X,
 } from "lucide-react";
-import { useState } from "react";
-import { SignOutButton } from "@/components/auth/sign-out-button";
-import { nivelPlan } from "@/lib/planes/plan-access";
+import type {
+  DashboardAccessRole,
+  DashboardAccessScope,
+} from "@/lib/dashboard/access-context";
+import { SignOutButton } from "@/components/dashboard/sign-out-button";
 
-type AccessRole =
-  | "admin_global"
-  | "gerente_sucursal"
-  | "recepcionista_sucursal"
-  | "empleado_sucursal";
-
-type AccessScope = "global" | "sucursal";
-
-type DashboardSidebarProps = {
+type Props = {
   userEmail?: string;
-  negocioNombre?: string;
+  userName?: string;
+  userAvatarUrl?: string | null;
+  userColor?: string | null;
+  negocioNombre: string;
   negocioLogoUrl?: string | null;
-  planClave?: string | null;
-  accessRole?: AccessRole;
-  accessScope?: AccessScope;
-  scopeLabel?: string;
+  planClave: string;
+  accessRole: DashboardAccessRole;
+  accessScope: DashboardAccessScope;
+  scopeLabel: string;
 };
 
-type PremiumModalInfo = {
-  label: string;
-  desde: string;
-  descripcion: string;
-};
+function rolLabel(rol: DashboardAccessRole) {
+  const labels: Record<DashboardAccessRole, string> = {
+    admin_global: "Admin",
+    gerente_sucursal: "Gerente",
+    recepcionista_sucursal: "Recepción",
+    empleado_sucursal: "Personal",
+  };
 
-const menuItems = [
-  {
-    label: "Inicio",
-    href: "/dashboard",
-    icon: Home,
-    roles: ["admin_global", "gerente_sucursal", "recepcionista_sucursal", "empleado_sucursal"],
-  },
-  {
-    label: "Reservas",
-    href: "/dashboard/reservas",
-    icon: BellRing,
-    roles: ["admin_global", "gerente_sucursal", "recepcionista_sucursal"],
-  },
-  {
-    label: "Citas",
-    href: "/dashboard/citas",
-    icon: CalendarDays,
-    roles: ["admin_global", "gerente_sucursal", "recepcionista_sucursal", "empleado_sucursal"],
-  },
-  {
-    label: "Reportes",
-    href: "/dashboard/reportes",
-    icon: BarChart3,
-    requiredLevel: 1,
-    desde: "Plan Básico",
-    descripcion: "Reportes de ingresos, citas por estado y servicios más reservados.",
-    roles: ["admin_global", "gerente_sucursal"],
-  },
-  {
-    label: "Clientes",
-    href: "/dashboard/clientes",
-    icon: Users,
-    roles: ["admin_global", "gerente_sucursal", "recepcionista_sucursal"],
-  },
-  {
-    label: "Servicios",
-    href: "/dashboard/servicios",
-    icon: Scissors,
-    roles: ["admin_global"],
-  },
-  {
-    label: "Empleados",
-    href: "/dashboard/empleados",
-    icon: BriefcaseBusiness,
-    roles: ["admin_global", "gerente_sucursal"],
-  },
-  {
-    label: "Planes",
-    href: "/dashboard/planes",
-    icon: CreditCard,
-    roles: ["admin_global"],
-  },
-  {
-    label: "Configuración",
-    href: "/dashboard/configuracion",
-    icon: Settings,
-    roles: ["admin_global"],
-  },
-];
+  return labels[rol] ?? rol;
+}
 
-const premiumItems = [
-  {
-    label: "Exportar CSV",
-    href: "/dashboard/exportar",
-    icon: FileDown,
-    requiredLevel: 2,
-    branchRequiredLevel: 3,
-    desde: "Plan Profesional",
-    descripcion: "Exportá datos de citas, clientes y reportes.",
-    roles: ["admin_global", "gerente_sucursal"],
-  },
-  {
-    label: "Recordatorios",
-    href: "/dashboard/recordatorios",
-    icon: MessageSquareText,
-    requiredLevel: 2,
-    branchRequiredLevel: 3,
-    desde: "Plan Profesional",
-    descripcion: "Enviá recordatorios a clientes antes de sus citas.",
-    roles: ["admin_global", "gerente_sucursal", "recepcionista_sucursal"],
-  },
-  {
-    label: "Sucursales",
-    href: "/dashboard/sucursales",
-    icon: Building2,
-    requiredLevel: 3,
-    desde: "Plan Empresarial",
-    descripcion: "Gestioná múltiples ubicaciones o sucursales.",
-    roles: ["admin_global"],
-  },
-];
+function iniciales(nombre?: string, email?: string) {
+  const base = (nombre || email || "Usuario").trim();
+  const partes = base.replace(/@.*/, "").split(/\s+/).filter(Boolean);
+
+  if (partes.length >= 2) {
+    return `${partes[0][0]}${partes[1][0]}`.toUpperCase();
+  }
+
+  return base.slice(0, 2).toUpperCase();
+}
+
+function canSee(
+  item:
+    | "inicio"
+    | "reservas"
+    | "citas"
+    | "clientes"
+    | "empleados"
+    | "servicios"
+    | "reportes"
+    | "exportar"
+    | "recordatorios"
+    | "sucursales"
+    | "planes"
+    | "configuracion",
+  rol: DashboardAccessRole,
+  scope: DashboardAccessScope,
+  planClave: string
+) {
+  const global = scope === "global";
+  const empresarial = planClave === "empresarial";
+  const profesional = planClave === "profesional" || empresarial;
+  const basico = planClave === "basico" || profesional;
+
+  if (item === "inicio") return true;
+
+  if (global) {
+    if (item === "reportes") return basico;
+    if (item === "exportar") return profesional;
+    if (item === "recordatorios") return profesional;
+    if (item === "sucursales") return empresarial;
+    return true;
+  }
+
+  if (rol === "gerente_sucursal") {
+    return [
+      "inicio",
+      "reservas",
+      "citas",
+      "clientes",
+      "empleados",
+      "reportes",
+      "exportar",
+      "recordatorios",
+    ].includes(item);
+  }
+
+  if (rol === "recepcionista_sucursal") {
+    return ["inicio", "reservas", "citas", "clientes", "recordatorios"].includes(item);
+  }
+
+  if (rol === "empleado_sucursal") {
+    return ["inicio", "citas"].includes(item);
+  }
+
+  return false;
+}
 
 export function DashboardSidebar({
   userEmail,
+  userName,
+  userAvatarUrl,
+  userColor,
   negocioNombre,
   negocioLogoUrl,
   planClave,
-  accessRole = "admin_global",
-  accessScope = "global",
-  scopeLabel = "Todas las sucursales",
-}: DashboardSidebarProps) {
+  accessRole,
+  accessScope,
+  scopeLabel,
+}: Props) {
   const pathname = usePathname();
-  const [premiumInfo, setPremiumInfo] = useState<PremiumModalInfo | null>(null);
-  const nivelActual = nivelPlan(planClave);
+  const nombreVisible = userName || userEmail?.split("@")[0] || "Usuario";
 
-  function puedeVerItem(item: any) {
-    return item.roles.includes(accessRole);
-  }
-
-  function renderItem(item: any) {
-    if (!puedeVerItem(item)) return null;
-
-    const Icon = item.icon;
-
-    const requiredLevel =
-      accessScope === "sucursal" && item.branchRequiredLevel
-        ? item.branchRequiredLevel
-        : item.requiredLevel;
-
-    const bloqueado =
-      typeof requiredLevel === "number" && nivelActual < requiredLevel;
-
-    const activo =
-      item.href === "/dashboard"
-        ? pathname === "/dashboard"
-        : pathname.startsWith(item.href);
-
-    if (bloqueado) {
-      return (
-        <button
-          key={item.href}
-          type="button"
-          onClick={() =>
-            setPremiumInfo({
-              label: item.label,
-              desde: item.desde,
-              descripcion: item.descripcion,
-            })
-          }
-          className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-yellow-50 hover:text-yellow-800"
-        >
-          <span className="flex items-center">
-            <Icon className="mr-3 h-4 w-4" />
-            {item.label}
-          </span>
-
-          <Crown className="h-4 w-4 text-yellow-600" />
-        </button>
-      );
-    }
-
-    return (
-      <Link
-        key={item.href}
-        href={item.href}
-        className={`flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-          activo
-            ? "bg-primary text-primary-foreground"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-        }`}
-      >
-        <Icon className="mr-3 h-4 w-4" />
-        {item.label}
-      </Link>
-    );
-  }
+  const navItems = [
+    { key: "inicio" as const, label: "Inicio", href: "/dashboard", icon: Home },
+    { key: "reservas" as const, label: "Reservas", href: "/dashboard/reservas", icon: CalendarClock },
+    { key: "citas" as const, label: "Citas", href: "/dashboard/citas", icon: CalendarCheck2 },
+    { key: "clientes" as const, label: "Clientes", href: "/dashboard/clientes", icon: Users },
+    { key: "empleados" as const, label: "Empleados", href: "/dashboard/empleados", icon: BriefcaseBusiness },
+    { key: "servicios" as const, label: "Servicios", href: "/dashboard/servicios", icon: Store },
+    { key: "reportes" as const, label: "Reportes", href: "/dashboard/reportes", icon: BarChart3 },
+    { key: "exportar" as const, label: "Exportar", href: "/dashboard/exportar", icon: Download },
+    { key: "recordatorios" as const, label: "Recordatorios", href: "/dashboard/recordatorios", icon: Bell },
+    { key: "sucursales" as const, label: "Sucursales", href: "/dashboard/sucursales", icon: Building2 },
+    { key: "planes" as const, label: "Planes", href: "/dashboard/planes", icon: LayoutDashboard },
+    { key: "configuracion" as const, label: "Configuración", href: "/dashboard/configuracion", icon: Settings },
+  ].filter((item) => canSee(item.key, accessRole, accessScope, planClave));
 
   return (
     <aside className="flex h-full flex-col border-r bg-background">
-      <div className="border-b p-6">
+      <div className="border-b p-5">
         <Link href="/dashboard" className="flex items-center gap-3">
           {negocioLogoUrl ? (
             <img
               src={negocioLogoUrl}
-              alt={negocioNombre ?? "Negocio"}
-              className="h-12 w-12 rounded-2xl border object-cover"
+              alt={negocioNombre}
+              className="h-10 w-10 rounded-2xl border object-cover"
             />
           ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-lg font-bold text-primary-foreground">
-              {(negocioNombre ?? "A").slice(0, 1).toUpperCase()}
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-foreground text-xs font-bold text-background">
+              {iniciales(negocioNombre)}
             </div>
           )}
 
           <div className="min-w-0">
-            <p className="truncate text-xl font-bold tracking-tight">
-              {negocioNombre ?? "AgendaMe"}
-            </p>
-            <p className="mt-1 truncate text-sm text-muted-foreground">
-              {scopeLabel}
+            <p className="truncate text-sm font-bold">{negocioNombre}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {accessScope === "global" ? "Todas las sucursales" : scopeLabel}
             </p>
           </div>
         </Link>
       </div>
 
-      <nav className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-1">{menuItems.map(renderItem)}</div>
+      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const active =
+            item.href === "/dashboard"
+              ? pathname === "/dashboard"
+              : pathname.startsWith(item.href);
 
-        <div className="mt-5 border-t pt-4">
-          <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Premium
-          </p>
-          <div className="space-y-1">{premiumItems.map(renderItem)}</div>
-        </div>
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition ${
+                active
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
 
-      <div className="border-t p-4">
-        {userEmail && (
-          <p className="mb-3 truncate text-xs text-muted-foreground">
-            {userEmail}
-          </p>
-        )}
-
-        <SignOutButton variant="ghost" className="w-full justify-start" />
-      </div>
-
-      {premiumInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-3xl border bg-background p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-yellow-100 text-yellow-700">
-                <Crown className="h-6 w-6" />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setPremiumInfo(null)}
-                className="rounded-xl border p-2 transition hover:bg-muted"
-              >
-                <X className="h-4 w-4" />
-              </button>
+      <div className="border-t p-3">
+        <Link
+          href="/dashboard/mi-cuenta"
+          className={`mb-3 flex items-center gap-3 rounded-2xl border p-2.5 transition hover:bg-muted ${
+            pathname === "/dashboard/mi-cuenta" ? "bg-muted" : "bg-background"
+          }`}
+        >
+          {userAvatarUrl ? (
+            <img
+              src={userAvatarUrl}
+              alt={nombreVisible}
+              className="h-9 w-9 rounded-full border object-cover"
+            />
+          ) : (
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+              style={{ backgroundColor: userColor ?? "#111827" }}
+            >
+              {iniciales(nombreVisible, userEmail)}
             </div>
+          )}
 
-            <h2 className="mt-5 text-2xl font-bold">
-              {premiumInfo.label} disponible desde {premiumInfo.desde}
-            </h2>
-
-            <p className="mt-2 text-sm text-muted-foreground">
-              {premiumInfo.descripcion}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-bold">{nombreVisible}</p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {rolLabel(accessRole)} · Mi cuenta
             </p>
-
-            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-              <Link
-                href="/dashboard/planes"
-                onClick={() => setPremiumInfo(null)}
-                className="inline-flex h-10 flex-1 items-center justify-center rounded-xl bg-foreground px-4 text-sm font-semibold text-background"
-              >
-                Mejorar plan
-              </Link>
-
-              <button
-                type="button"
-                onClick={() => setPremiumInfo(null)}
-                className="inline-flex h-10 flex-1 items-center justify-center rounded-xl border px-4 text-sm font-semibold transition hover:bg-muted"
-              >
-                Ahora no
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+
+          <UserCircle2 className="h-4 w-4 text-muted-foreground" />
+        </Link>
+
+        <SignOutButton />
+      </div>
     </aside>
   );
 }

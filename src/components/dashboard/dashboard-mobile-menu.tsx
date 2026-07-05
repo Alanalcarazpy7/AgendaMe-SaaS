@@ -5,351 +5,334 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
-  BellRing,
+  Bell,
   BriefcaseBusiness,
   Building2,
-  CalendarDays,
-  CreditCard,
-  Crown,
-  FileDown,
+  CalendarCheck2,
+  CalendarClock,
+  Download,
   Home,
+  LayoutDashboard,
   Menu,
-  MessageSquareText,
-  Scissors,
   Settings,
+  Store,
+  UserCircle2,
   Users,
   X,
 } from "lucide-react";
-import { SignOutButton } from "@/components/auth/sign-out-button";
-import { nivelPlan } from "@/lib/planes/plan-access";
+import type {
+  DashboardAccessRole,
+  DashboardAccessScope,
+} from "@/lib/dashboard/access-context";
+import { SignOutButton } from "@/components/dashboard/sign-out-button";
 
-type AccessRole =
-  | "admin_global"
-  | "gerente_sucursal"
-  | "recepcionista_sucursal"
-  | "empleado_sucursal";
-
-type AccessScope = "global" | "sucursal";
-
-type DashboardMobileMenuProps = {
+type Props = {
   userEmail?: string;
-  negocioNombre?: string;
+  userName?: string;
+  negocioNombre: string;
   negocioLogoUrl?: string | null;
-  planClave?: string | null;
-  accessRole?: AccessRole;
-  accessScope?: AccessScope;
-  scopeLabel?: string;
+  planClave: string;
+  accessRole: DashboardAccessRole;
+  accessScope: DashboardAccessScope;
+  scopeLabel: string;
 };
 
-type PremiumModalInfo = {
-  label: string;
-  desde: string;
-  descripcion: string;
-};
+function rolLabel(rol: DashboardAccessRole) {
+  const labels: Record<DashboardAccessRole, string> = {
+    admin_global: "Admin global",
+    gerente_sucursal: "Gerente de sucursal",
+    recepcionista_sucursal: "Recepcionista",
+    empleado_sucursal: "Personal de sucursal",
+  };
 
-const menuItems = [
-  {
-    label: "Inicio",
-    href: "/dashboard",
-    icon: Home,
-    roles: ["admin_global", "gerente_sucursal", "recepcionista_sucursal", "empleado_sucursal"],
-  },
-  {
-    label: "Reservas",
-    href: "/dashboard/reservas",
-    icon: BellRing,
-    roles: ["admin_global", "gerente_sucursal", "recepcionista_sucursal"],
-  },
-  {
-    label: "Citas",
-    href: "/dashboard/citas",
-    icon: CalendarDays,
-    roles: ["admin_global", "gerente_sucursal", "recepcionista_sucursal", "empleado_sucursal"],
-  },
-  {
-    label: "Reportes",
-    href: "/dashboard/reportes",
-    icon: BarChart3,
-    requiredLevel: 1,
-    desde: "Plan Básico",
-    descripcion: "Reportes de ingresos, citas por estado y servicios más reservados.",
-    roles: ["admin_global", "gerente_sucursal"],
-  },
-  {
-    label: "Clientes",
-    href: "/dashboard/clientes",
-    icon: Users,
-    roles: ["admin_global", "gerente_sucursal", "recepcionista_sucursal"],
-  },
-  {
-    label: "Servicios",
-    href: "/dashboard/servicios",
-    icon: Scissors,
-    roles: ["admin_global"],
-  },
-  {
-    label: "Empleados",
-    href: "/dashboard/empleados",
-    icon: BriefcaseBusiness,
-    roles: ["admin_global", "gerente_sucursal"],
-  },
-  {
-    label: "Planes",
-    href: "/dashboard/planes",
-    icon: CreditCard,
-    roles: ["admin_global"],
-  },
-  {
-    label: "Configuración",
-    href: "/dashboard/configuracion",
-    icon: Settings,
-    roles: ["admin_global"],
-  },
-];
+  return labels[rol] ?? rol;
+}
 
-const premiumItems = [
-  {
-    label: "Exportar CSV",
-    href: "/dashboard/exportar",
-    icon: FileDown,
-    requiredLevel: 2,
-    branchRequiredLevel: 3,
-    desde: "Plan Profesional",
-    descripcion: "Exportá datos de citas, clientes y reportes.",
-    roles: ["admin_global", "gerente_sucursal"],
-  },
-  {
-    label: "Recordatorios",
-    href: "/dashboard/recordatorios",
-    icon: MessageSquareText,
-    requiredLevel: 2,
-    branchRequiredLevel: 3,
-    desde: "Plan Profesional",
-    descripcion: "Enviá recordatorios a clientes antes de sus citas.",
-    roles: ["admin_global", "gerente_sucursal", "recepcionista_sucursal"],
-  },
-  {
-    label: "Sucursales",
-    href: "/dashboard/sucursales",
-    icon: Building2,
-    requiredLevel: 3,
-    desde: "Plan Empresarial",
-    descripcion: "Gestioná múltiples ubicaciones o sucursales.",
-    roles: ["admin_global"],
-  },
-];
+function iniciales(nombre?: string, email?: string) {
+  const base = (nombre || email || "Usuario").trim();
+
+  const partes = base
+    .replace(/@.*/, "")
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (partes.length >= 2) {
+    return `${partes[0][0]}${partes[1][0]}`.toUpperCase();
+  }
+
+  return base.slice(0, 2).toUpperCase();
+}
+
+function canSee(
+  item:
+    | "inicio"
+    | "reservas"
+    | "citas"
+    | "clientes"
+    | "empleados"
+    | "servicios"
+    | "reportes"
+    | "exportar"
+    | "recordatorios"
+    | "sucursales"
+    | "planes"
+    | "configuracion",
+  rol: DashboardAccessRole,
+  scope: DashboardAccessScope,
+  planClave: string
+) {
+  const global = scope === "global";
+  const empresarial = planClave === "empresarial";
+  const profesional = planClave === "profesional" || empresarial;
+  const basico = planClave === "basico" || profesional;
+
+  if (item === "inicio") return true;
+
+  if (global) {
+    if (item === "reportes") return basico;
+    if (item === "exportar") return profesional;
+    if (item === "recordatorios") return profesional;
+    if (item === "sucursales") return empresarial;
+    return true;
+  }
+
+  if (rol === "gerente_sucursal") {
+    return [
+      "inicio",
+      "reservas",
+      "citas",
+      "clientes",
+      "empleados",
+      "reportes",
+      "exportar",
+      "recordatorios",
+    ].includes(item);
+  }
+
+  if (rol === "recepcionista_sucursal") {
+    return ["inicio", "reservas", "citas", "clientes", "recordatorios"].includes(item);
+  }
+
+  if (rol === "empleado_sucursal") {
+    return ["inicio", "citas"].includes(item);
+  }
+
+  return false;
+}
 
 export function DashboardMobileMenu({
   userEmail,
+  userName,
   negocioNombre,
   negocioLogoUrl,
   planClave,
-  accessRole = "admin_global",
-  accessScope = "global",
-  scopeLabel = "Todas las sucursales",
-}: DashboardMobileMenuProps) {
-  const pathname = usePathname();
+  accessRole,
+  accessScope,
+  scopeLabel,
+}: Props) {
   const [open, setOpen] = useState(false);
-  const [premiumInfo, setPremiumInfo] = useState<PremiumModalInfo | null>(null);
-  const nivelActual = nivelPlan(planClave);
+  const pathname = usePathname();
 
-  function puedeVerItem(item: any) {
-    return item.roles.includes(accessRole);
-  }
+  const nombreVisible = userName || userEmail?.split("@")[0] || "Usuario";
 
-  function renderItem(item: any) {
-    if (!puedeVerItem(item)) return null;
-
-    const Icon = item.icon;
-
-    const requiredLevel =
-      accessScope === "sucursal" && item.branchRequiredLevel
-        ? item.branchRequiredLevel
-        : item.requiredLevel;
-
-    const bloqueado =
-      typeof requiredLevel === "number" && nivelActual < requiredLevel;
-
-    const activo =
-      item.href === "/dashboard"
-        ? pathname === "/dashboard"
-        : pathname.startsWith(item.href);
-
-    if (bloqueado) {
-      return (
-        <button
-          key={item.href}
-          type="button"
-          onClick={() => {
-            setPremiumInfo({
-              label: item.label,
-              desde: item.desde,
-              descripcion: item.descripcion,
-            });
-            setOpen(false);
-          }}
-          className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-sm font-medium text-muted-foreground transition hover:bg-yellow-50 hover:text-yellow-800"
-        >
-          <span className="flex items-center">
-            <Icon className="mr-3 h-4 w-4" />
-            {item.label}
-          </span>
-
-          <Crown className="h-4 w-4 text-yellow-600" />
-        </button>
-      );
-    }
-
-    return (
-      <Link
-        key={item.href}
-        href={item.href}
-        onClick={() => setOpen(false)}
-        className={`flex items-center rounded-xl px-3 py-3 text-sm font-medium transition ${
-          activo
-            ? "bg-primary text-primary-foreground"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-        }`}
-      >
-        <Icon className="mr-3 h-4 w-4" />
-        {item.label}
-      </Link>
-    );
-  }
+  const navItems = [
+    {
+      key: "inicio" as const,
+      label: "Inicio",
+      href: "/dashboard",
+      icon: Home,
+    },
+    {
+      key: "reservas" as const,
+      label: "Reservas",
+      href: "/dashboard/reservas",
+      icon: CalendarClock,
+    },
+    {
+      key: "citas" as const,
+      label: "Citas",
+      href: "/dashboard/citas",
+      icon: CalendarCheck2,
+    },
+    {
+      key: "clientes" as const,
+      label: "Clientes",
+      href: "/dashboard/clientes",
+      icon: Users,
+    },
+    {
+      key: "empleados" as const,
+      label: "Empleados",
+      href: "/dashboard/empleados",
+      icon: BriefcaseBusiness,
+    },
+    {
+      key: "servicios" as const,
+      label: "Servicios",
+      href: "/dashboard/servicios",
+      icon: Store,
+    },
+    {
+      key: "reportes" as const,
+      label: "Reportes",
+      href: "/dashboard/reportes",
+      icon: BarChart3,
+    },
+    {
+      key: "exportar" as const,
+      label: "Exportar",
+      href: "/dashboard/exportar",
+      icon: Download,
+    },
+    {
+      key: "recordatorios" as const,
+      label: "Recordatorios",
+      href: "/dashboard/recordatorios",
+      icon: Bell,
+    },
+    {
+      key: "sucursales" as const,
+      label: "Sucursales",
+      href: "/dashboard/sucursales",
+      icon: Building2,
+    },
+    {
+      key: "planes" as const,
+      label: "Planes",
+      href: "/dashboard/planes",
+      icon: LayoutDashboard,
+    },
+    {
+      key: "configuracion" as const,
+      label: "Configuración",
+      href: "/dashboard/configuracion",
+      icon: Settings,
+    },
+  ].filter((item) => canSee(item.key, accessRole, accessScope, planClave));
 
   return (
     <>
-      <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur lg:hidden">
-        <Link href="/dashboard">
-          <p className="max-w-[210px] truncate text-lg font-bold leading-none">
-            {negocioNombre ?? "AgendaMe"}
-          </p>
-          <p className="mt-1 truncate text-xs text-muted-foreground">
-            {scopeLabel}
-          </p>
-        </Link>
+      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur lg:hidden">
+        <div className="flex h-16 items-center justify-between px-4">
+          <Link href="/dashboard" className="flex min-w-0 items-center gap-3">
+            {negocioLogoUrl ? (
+              <img
+                src={negocioLogoUrl}
+                alt={negocioNombre}
+                className="h-9 w-9 rounded-xl border object-cover"
+              />
+            ) : (
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-foreground text-xs font-bold text-background">
+                {iniciales(negocioNombre)}
+              </div>
+            )}
 
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="rounded-xl border bg-background p-2 shadow-sm"
-          aria-label="Abrir menú"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold">{negocioNombre}</p>
+              <p className="truncate text-xs text-muted-foreground">{scopeLabel}</p>
+            </div>
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border"
+            aria-label="Abrir menú"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        </div>
       </header>
 
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/40"
             onClick={() => setOpen(false)}
             aria-label="Cerrar menú"
           />
 
-          <div className="absolute left-0 top-0 flex h-full w-[84%] max-w-sm flex-col bg-background shadow-2xl">
-            <div className="flex items-center justify-between border-b p-5">
-              <div className="flex min-w-0 items-center gap-3">
-                {negocioLogoUrl ? (
-                  <img
-                    src={negocioLogoUrl}
-                    alt={negocioNombre ?? "Negocio"}
-                    className="h-12 w-12 rounded-2xl border object-cover"
-                  />
-                ) : (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-lg font-bold text-primary-foreground">
-                    {(negocioNombre ?? "A").slice(0, 1).toUpperCase()}
-                  </div>
-                )}
-
-                <div className="min-w-0">
-                  <p className="truncate text-2xl font-bold leading-none">
-                    {negocioNombre ?? "AgendaMe"}
-                  </p>
-                  <p className="mt-1 truncate text-sm text-muted-foreground">
-                    {scopeLabel}
-                  </p>
-                </div>
+          <aside className="absolute right-0 top-0 flex h-full w-[88%] max-w-sm flex-col bg-background shadow-xl">
+            <div className="flex items-center justify-between border-b p-4">
+              <div>
+                <p className="text-sm font-bold">Menú</p>
+                <p className="text-xs text-muted-foreground">{negocioNombre}</p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-xl border p-2"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border"
                 aria-label="Cerrar menú"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <nav className="flex-1 overflow-y-auto p-4">
-              <div className="space-y-1">{menuItems.map(renderItem)}</div>
+            <div className="border-b p-4">
+              <Link
+                href="/dashboard/mi-cuenta"
+                onClick={() => setOpen(false)}
+                className={`flex items-center gap-3 rounded-2xl border p-3 transition hover:bg-muted ${
+                  pathname === "/dashboard/mi-cuenta" ? "bg-muted" : "bg-background"
+                }`}
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold">
+                  {iniciales(nombreVisible, userEmail)}
+                </div>
 
-              <div className="mt-5 border-t pt-4">
-                <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Premium
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold">{nombreVisible}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {userEmail ?? "Sin correo"}
+                  </p>
+                  <p className="mt-1 truncate text-xs font-medium text-muted-foreground">
+                    {rolLabel(accessRole)}
+                  </p>
+                </div>
+
+                <UserCircle2 className="h-5 w-5 text-muted-foreground" />
+              </Link>
+
+              <div className="mt-3 rounded-2xl bg-muted/40 p-3 text-xs">
+                <p className="text-muted-foreground">Vista actual</p>
+                <p className="mt-1 font-semibold">
+                  {accessScope === "global" ? "Todas las sucursales" : scopeLabel}
                 </p>
-                <div className="space-y-1">{premiumItems.map(renderItem)}</div>
               </div>
+            </div>
+
+            <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const active =
+                  item.href === "/dashboard"
+                    ? pathname === "/dashboard"
+                    : pathname.startsWith(item.href);
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition ${
+                      active
+                        ? "bg-foreground text-background"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
             </nav>
 
             <div className="border-t p-4">
-              {userEmail && (
-                <p className="mb-3 truncate text-xs text-muted-foreground">
-                  {userEmail}
-                </p>
-              )}
-
-              <SignOutButton variant="outline" className="w-full justify-center" />
+              <SignOutButton />
             </div>
-          </div>
-        </div>
-      )}
-
-      {premiumInfo && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-3xl border bg-background p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-yellow-100 text-yellow-700">
-                <Crown className="h-6 w-6" />
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setPremiumInfo(null)}
-                className="rounded-xl border p-2 transition hover:bg-muted"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <h2 className="mt-5 text-2xl font-bold">
-              {premiumInfo.label} disponible desde {premiumInfo.desde}
-            </h2>
-
-            <p className="mt-2 text-sm text-muted-foreground">
-              {premiumInfo.descripcion}
-            </p>
-
-            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-              <Link
-                href="/dashboard/planes"
-                onClick={() => setPremiumInfo(null)}
-                className="inline-flex h-10 flex-1 items-center justify-center rounded-xl bg-foreground px-4 text-sm font-semibold text-background"
-              >
-                Mejorar plan
-              </Link>
-
-              <button
-                type="button"
-                onClick={() => setPremiumInfo(null)}
-                className="inline-flex h-10 flex-1 items-center justify-center rounded-xl border px-4 text-sm font-semibold transition hover:bg-muted"
-              >
-                Ahora no
-              </button>
-            </div>
-          </div>
+          </aside>
         </div>
       )}
     </>

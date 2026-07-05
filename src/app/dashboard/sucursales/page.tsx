@@ -1,5 +1,5 @@
-﻿import { PremiumFeaturePage } from "@/components/premium/premium-feature-page";
-import { SucursalEmpleadosPanel } from "@/components/sucursales/sucursal-empleados-panel";
+﻿import { redirect } from "next/navigation";
+import { PremiumFeaturePage } from "@/components/premium/premium-feature-page";
 import { SucursalUsuariosPanel } from "@/components/sucursales/sucursal-usuarios-panel";
 import { SucursalesPanel } from "@/components/sucursales/sucursales-panel";
 import { requireDashboardAccess } from "@/lib/dashboard/access-context";
@@ -13,8 +13,8 @@ export default async function SucursalesPage() {
   if (nivelPlan(access.planClave) < 3) {
     return (
       <PremiumFeaturePage
-        titulo="Múltiples sucursales"
-        descripcion="Gestioná varias ubicaciones o sucursales desde una misma cuenta de AgendaMe."
+        titulo="Sucursales"
+        descripcion="Gestioná múltiples sucursales y usuarios con acceso limitado al dashboard."
         desde="Plan Empresarial"
         activo={false}
         estadoActivoTitulo=""
@@ -25,6 +25,10 @@ export default async function SucursalesPage() {
 
   requirePermission(access, "puedeGestionarSucursales");
 
+  if (!access.puedeVerTodo) {
+    redirect("/dashboard/sin-permiso");
+  }
+
   const supabase = createServiceRoleClient();
 
   await supabase.rpc("obtener_o_crear_sucursal_principal", {
@@ -34,7 +38,7 @@ export default async function SucursalesPage() {
   const [
     { data: sucursales, error: sucursalesError },
     { data: accesos, error: accesosError },
-    { data: empleados, error: empleadosError },
+    { data: invitaciones, error: invitacionesError },
   ] = await Promise.all([
     supabase
       .from("sucursales")
@@ -48,60 +52,92 @@ export default async function SucursalesPage() {
       .select(
         `
         id,
+        negocio_id,
         sucursal_id,
+        usuario_id,
+        nombre,
         email,
         rol,
         activo,
         created_at,
         sucursales (
+          id,
           nombre
         )
       `
       )
       .eq("negocio_id", access.negocio.id)
+      .eq("activo", true)
       .order("created_at", { ascending: false }),
 
     supabase
-      .from("empleados")
+      .from("sucursal_invitaciones")
       .select(
         `
         id,
-        nombre,
-        email,
-        telefono,
-        estado,
+        negocio_id,
         sucursal_id,
+        email,
+        rol,
+        estado,
+        expires_at,
+        created_at,
         sucursales (
+          id,
           nombre
         )
       `
       )
       .eq("negocio_id", access.negocio.id)
-      .order("nombre", { ascending: true }),
+      .eq("estado", "pendiente")
+      .order("created_at", { ascending: false }),
   ]);
 
   if (sucursalesError) throw new Error(sucursalesError.message);
   if (accesosError) throw new Error(accesosError.message);
-  if (empleadosError) throw new Error(empleadosError.message);
-
-  const sucursalesBase = (sucursales ?? []).map((sucursal) => ({
-    id: sucursal.id,
-    nombre: sucursal.nombre,
-    estado: sucursal.estado,
-  }));
+  if (invitacionesError) throw new Error(invitacionesError.message);
 
   return (
     <div className="space-y-5">
-      <SucursalesPanel initialSucursales={sucursales ?? []} />
+      <section className="rounded-3xl border bg-background p-5 shadow-sm">
+        <p className="text-sm text-muted-foreground">Plan Empresarial</p>
 
-      <SucursalEmpleadosPanel
-        sucursales={sucursalesBase}
-        initialEmpleados={empleados ?? []}
+        <h1 className="mt-1 text-3xl font-bold tracking-tight">
+          Sucursales y accesos
+        </h1>
+
+        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+          Gestioná las ubicaciones del negocio y creá invitaciones para usuarios
+          con acceso limitado al dashboard de cada sucursal.
+        </p>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div className="rounded-2xl border bg-muted/20 p-4 text-sm">
+            <p className="font-bold">Sucursales</p>
+            <p className="mt-1 text-muted-foreground">
+              Creá y administrá las ubicaciones del negocio.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border bg-muted/20 p-4 text-sm">
+            <p className="font-bold">Usuarios con acceso</p>
+            <p className="mt-1 text-muted-foreground">
+              Reciben un link, crean su contraseña y entran al dashboard de su sucursal.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <SucursalesPanel
+        sucursales={sucursales ?? []}
+        initialSucursales={sucursales ?? []}
       />
 
       <SucursalUsuariosPanel
-        sucursales={sucursalesBase}
-        initialAccesos={accesos ?? []}
+        sucursales={sucursales ?? []}
+        initialSucursales={sucursales ?? []}
+        accesos={accesos ?? []}
+        invitaciones={invitaciones ?? []}
       />
     </div>
   );
