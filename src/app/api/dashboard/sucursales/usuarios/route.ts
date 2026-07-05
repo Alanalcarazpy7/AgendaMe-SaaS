@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { resolveDashboardAccess } from "@/lib/dashboard/access-context";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { nivelPlan } from "@/lib/planes/plan-access";
 
 const ROLES_VALIDOS = [
   "gerente_sucursal",
@@ -53,11 +54,16 @@ async function requireGestionSucursalesApi() {
     };
   }
 
-  if (!access.puedeGestionarSucursales || !access.puedeVerTodo) {
+  const esAdminGlobalEmpresarial =
+    access.scope === "global" &&
+    access.puedeVerTodo === true &&
+    nivelPlan(access.planClave) >= 3;
+
+  if (!esAdminGlobalEmpresarial) {
     return {
       ok: false as const,
       response: NextResponse.json(
-        { error: "Solo el admin empresarial puede gestionar accesos por sucursal." },
+        { error: "Solo el admin global de un negocio empresarial puede gestionar accesos por sucursal." },
         { status: 403 }
       ),
     };

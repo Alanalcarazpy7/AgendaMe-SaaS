@@ -44,6 +44,7 @@ type AccessOk = {
   puedeGestionarEmpleados: boolean;
   puedeGestionarClientes: boolean;
   puedeGestionarCitas: boolean;
+  puedeGestionarReservas: boolean;
   puedeVerReportes: boolean;
   puedeVerReportesGlobales: boolean;
   puedeExportar: boolean;
@@ -204,6 +205,7 @@ function permisosPorRol({
     puedeGestionarEmpleados: global || gerente,
     puedeGestionarClientes: global || gerente || recepcionista,
     puedeGestionarCitas: global || gerente || recepcionista || personal,
+    puedeGestionarReservas: global || gerente || recepcionista,
     puedeVerReportes: global ? planNivel >= 1 : gerente,
     puedeVerReportesGlobales: global && planNivel >= 1,
     puedeExportar: global ? planNivel >= 2 : gerente && planNivel >= 3,

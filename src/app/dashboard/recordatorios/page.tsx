@@ -1,4 +1,5 @@
-﻿import { PremiumFeaturePage } from "@/components/premium/premium-feature-page";
+﻿import { redirect } from "next/navigation";
+import { PremiumFeaturePage } from "@/components/premium/premium-feature-page";
 import { RecordatoriosPanel } from "@/components/recordatorios/recordatorios-panel";
 import { requireDashboardAccess } from "@/lib/dashboard/access-context";
 import { requirePermission, applySucursalScope } from "@/lib/dashboard/scope-helpers";
@@ -65,7 +66,11 @@ function sumarDias(fecha: string, dias: number) {
 export default async function RecordatoriosPage() {
   const access = await requireDashboardAccess();
 
-  if (!access.puedeUsarRecordatorios) {
+  if (access.scope === "sucursal" && access.rol === "empleado_sucursal") {
+    redirect("/dashboard/sin-permiso");
+  }
+
+if (!access.puedeUsarRecordatorios) {
     return (
       <PremiumFeaturePage
         titulo="Recordatorios"

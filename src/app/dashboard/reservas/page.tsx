@@ -12,9 +12,9 @@ function obtenerObjeto<T>(valor: Relacion<T>): T | null {
 
 export default async function ReservasPage() {
   const access = await requireDashboardAccess();
-  requirePermission(access, "puedeGestionarCitas");
+  requirePermission(access, "puedeGestionarReservas");
 
-  const supabase = createServiceRoleClient();
+const supabase = createServiceRoleClient();
 
   let reservasQuery = supabase
     .from("citas")

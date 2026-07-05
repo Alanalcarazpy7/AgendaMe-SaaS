@@ -167,7 +167,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           ) : (
             <>
               ¿No tenés cuenta?{" "}
-              <Link href="/auth/registro" className="font-medium text-primary">
+              <Link href="/registro" className="font-medium text-primary">
                 Crear cuenta
               </Link>
             </>
