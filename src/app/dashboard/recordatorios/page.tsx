@@ -1,8 +1,8 @@
 ﻿import { PremiumFeaturePage } from "@/components/premium/premium-feature-page";
 import { RecordatoriosPanel } from "@/components/recordatorios/recordatorios-panel";
+import { requireDashboardAccess } from "@/lib/dashboard/access-context";
+import { requirePermission, applySucursalScope } from "@/lib/dashboard/scope-helpers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { getDashboardPlanContext } from "@/lib/planes/get-dashboard-plan-context";
-import { nivelPlan } from "@/lib/planes/plan-access";
 
 type Relacion<T> = T | T[] | null;
 
@@ -56,15 +56,18 @@ function sumarDias(fecha: string, dias: number) {
 }
 
 export default async function RecordatoriosPage() {
-  const { negocio, planClave } = await getDashboardPlanContext();
-  const activo = nivelPlan(planClave) >= 2;
+  const access = await requireDashboardAccess();
 
-  if (!activo) {
+  if (!access.puedeUsarRecordatorios) {
     return (
       <PremiumFeaturePage
         titulo="Recordatorios"
         descripcion="Reducí ausencias enviando recordatorios a tus clientes antes de sus citas."
-        desde="Plan Profesional"
+        desde={
+          access.scope === "global"
+            ? "Plan Profesional"
+            : "Plan Empresarial para usuarios de sucursal"
+        }
         activo={false}
         estadoActivoTitulo=""
         estadoActivoDescripcion=""
@@ -72,12 +75,14 @@ export default async function RecordatoriosPage() {
     );
   }
 
+  requirePermission(access, "puedeUsarRecordatorios");
+
   const supabase = createServiceRoleClient();
 
   const desde = hoyAsuncion();
   const hasta = sumarDias(desde, 7);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("citas")
     .select(
       `
@@ -98,12 +103,16 @@ export default async function RecordatoriosPage() {
       )
     `
     )
-    .eq("negocio_id", negocio.id)
+    .eq("negocio_id", access.negocio.id)
     .gte("fecha", desde)
     .lte("fecha", hasta)
     .in("estado", ["pendiente", "confirmada"])
     .order("fecha", { ascending: true })
     .order("hora_inicio", { ascending: true });
+
+  query = applySucursalScope(query, access);
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(error.message);

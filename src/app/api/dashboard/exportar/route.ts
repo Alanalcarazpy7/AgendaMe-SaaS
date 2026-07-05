@@ -1,269 +1,459 @@
 ﻿import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import ExcelJS from "exceljs";
+import { resolveDashboardAccess } from "@/lib/dashboard/access-context";
 import { nivelPlan } from "@/lib/planes/plan-access";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 type Relacion<T> = T | T[] | null;
+
+type ExportData = {
+  titulo: string;
+  columnas: string[];
+  filas: Array<Array<string | number | null>>;
+};
 
 function obtenerObjeto<T>(valor: Relacion<T>): T | null {
   if (!valor) return null;
   return Array.isArray(valor) ? valor[0] ?? null : valor;
 }
 
-function csvCell(value: unknown) {
-  const text = String(value ?? "");
-  return `"${text.replace(/"/g, '""')}"`;
+function limpiar(valor: unknown) {
+  return String(valor ?? "").trim();
 }
 
-function toCsv(headers: string[], rows: unknown[][]) {
-  return [
-    headers.map(csvCell).join(","),
-    ...rows.map((row) => row.map(csvCell).join(",")),
-  ].join("\n");
+function nombreArchivo(base: string) {
+  const fecha = new Date().toISOString().slice(0, 10);
+  return `${base}-agendame-${fecha}.xlsx`;
 }
 
-async function getContext() {
-  const authSupabase = await createClient();
+function precioCita(cita: any) {
+  const servicio = obtenerObjeto(cita.servicios) as any;
+  const precioCitaValor = Number(cita.precio ?? 0);
+  const precioServicioValor = Number(servicio?.precio ?? 0);
 
-  const {
-    data: { user },
-  } = await authSupabase.auth.getUser();
+  return precioCitaValor > 0 ? precioCitaValor : precioServicioValor;
+}
 
-  if (!user) {
-    return { error: "No autenticado.", status: 401 as const };
-  }
+async function validarSucursalFiltro({
+  supabase,
+  negocioId,
+  sucursalId,
+}: {
+  supabase: any;
+  negocioId: string;
+  sucursalId: string;
+}) {
+  if (!sucursalId || sucursalId === "todas") return null;
 
-  const supabase = createServiceRoleClient();
-
-  const { data: membresia, error: membresiaError } = await supabase
-    .from("negocio_usuarios")
-    .select("negocio_id")
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1)
+  const { data, error } = await supabase
+    .from("sucursales")
+    .select("id")
+    .eq("id", sucursalId)
+    .eq("negocio_id", negocioId)
+    .eq("estado", "activo")
     .maybeSingle();
 
-  if (membresiaError) throw new Error(membresiaError.message);
+  if (error) throw new Error(error.message);
 
-  if (!membresia) {
-    return { error: "No tenés un negocio activo.", status: 404 as const };
-  }
-
-  const { data: suscripcion, error: suscripcionError } = await supabase
-    .from("suscripciones")
-    .select("plan_id")
-    .eq("negocio_id", membresia.negocio_id)
-    .eq("estado", "activa")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (suscripcionError) throw new Error(suscripcionError.message);
-
-  let planClave = "gratis";
-
-  if (suscripcion?.plan_id) {
-    const { data: plan, error: planError } = await supabase
-      .from("planes_saas")
-      .select("clave")
-      .eq("id", suscripcion.plan_id)
-      .maybeSingle();
-
-    if (planError) throw new Error(planError.message);
-
-    planClave = plan?.clave ?? "gratis";
-  }
-
-  if (nivelPlan(planClave) < 2) {
-    return { error: "Exportar CSV está disponible desde el Plan Profesional.", status: 403 as const };
-  }
-
-  return {
-    supabase,
-    negocioId: membresia.negocio_id as string,
-  };
+  return data?.id ?? null;
 }
 
-export async function GET(request: Request) {
-  try {
-    const context = await getContext();
+async function obtenerDatosExportacion({
+  access,
+  tipo,
+  desde,
+  hasta,
+  sucursalFiltro,
+}: {
+  access: any;
+  tipo: string;
+  desde: string;
+  hasta: string;
+  sucursalFiltro: string | null;
+}): Promise<ExportData> {
+  const supabase = createServiceRoleClient() as any;
 
-    if ("error" in context) {
-      return NextResponse.json({ error: context.error }, { status: context.status });
-    }
+  if (tipo === "citas") {
+    let query: any = supabase
+      .from("citas")
+      .select(
+        `
+        fecha,
+        hora_inicio,
+        hora_fin,
+        estado,
+        precio,
+        origen,
+        sucursales (
+          nombre
+        ),
+        clientes (
+          nombre_completo,
+          telefono,
+          email
+        ),
+        servicios (
+          nombre,
+          precio
+        ),
+        empleados (
+          nombre
+        )
+      `
+      )
+      .eq("negocio_id", access.negocio.id)
+      .order("fecha", { ascending: true })
+      .order("hora_inicio", { ascending: true });
 
-    const { supabase, negocioId } = context;
-    const { searchParams } = new URL(request.url);
+    if (desde) query = query.gte("fecha", desde);
+    if (hasta) query = query.lte("fecha", hasta);
+    if (sucursalFiltro) query = query.eq("sucursal_id", sucursalFiltro);
 
-    const tipo = searchParams.get("tipo") ?? "citas";
-    const desde = searchParams.get("desde");
-    const hasta = searchParams.get("hasta");
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
 
-    let csv = "";
-    let filename = `${tipo}.csv`;
+    return {
+      titulo: "Citas",
+      columnas: [
+        "Fecha",
+        "Hora inicio",
+        "Hora fin",
+        "Estado",
+        "Precio",
+        "Origen",
+        "Sucursal",
+        "Cliente",
+        "Teléfono",
+        "Email",
+        "Servicio",
+        "Empleado",
+      ],
+      filas: (data ?? []).map((cita: any) => {
+        const cliente = obtenerObjeto(cita.clientes) as any;
+        const servicio = obtenerObjeto(cita.servicios) as any;
+        const empleado = obtenerObjeto(cita.empleados) as any;
+        const sucursal = obtenerObjeto(cita.sucursales) as any;
 
-    if (tipo === "citas") {
-      let query = supabase
-        .from("citas")
+        return [
+          cita.fecha,
+          String(cita.hora_inicio ?? "").slice(0, 5),
+          String(cita.hora_fin ?? "").slice(0, 5),
+          cita.estado,
+          precioCita(cita),
+          cita.origen,
+          sucursal?.nombre ?? "",
+          cliente?.nombre_completo ?? "",
+          cliente?.telefono ?? "",
+          cliente?.email ?? "",
+          servicio?.nombre ?? "",
+          empleado?.nombre ?? "",
+        ];
+      }),
+    };
+  }
+
+  if (tipo === "clientes") {
+    if (sucursalFiltro) {
+      const { data, error } = await supabase
+        .from("cliente_sucursales")
         .select(
           `
-          fecha,
-          hora_inicio,
-          hora_fin,
-          estado,
-          precio,
-          origen,
-          notas,
           clientes (
             nombre_completo,
             telefono,
-            email
+            email,
+            estado,
+            created_at
           ),
-          servicios (
-            nombre
-          ),
-          empleados (
+          sucursales (
             nombre
           )
         `
         )
-        .eq("negocio_id", negocioId)
-        .order("fecha", { ascending: true });
+        .eq("negocio_id", access.negocio.id)
+        .eq("sucursal_id", sucursalFiltro)
+        .order("created_at", { ascending: false });
 
-      if (desde) query = query.gte("fecha", desde);
-      if (hasta) query = query.lte("fecha", hasta);
-
-      const { data, error } = await query;
       if (error) throw new Error(error.message);
 
-      const rows = (data ?? []).map((cita: any) => {
-        const cliente = obtenerObjeto(cita.clientes);
-        const servicio = obtenerObjeto(cita.servicios);
-        const empleado = obtenerObjeto(cita.empleados);
+      return {
+        titulo: "Clientes",
+        columnas: ["Nombre", "Teléfono", "Email", "Estado", "Sucursal", "Creado"],
+        filas: (data ?? []).map((row: any) => {
+          const cliente = obtenerObjeto(row.clientes) as any;
+          const sucursal = obtenerObjeto(row.sucursales) as any;
+
+          return [
+            cliente?.nombre_completo ?? "",
+            cliente?.telefono ?? "",
+            cliente?.email ?? "",
+            cliente?.estado ?? "",
+            sucursal?.nombre ?? "",
+            cliente?.created_at ?? "",
+          ];
+        }),
+      };
+    }
+
+    const { data, error } = await supabase
+      .from("clientes")
+      .select("nombre_completo, telefono, email, estado, created_at")
+      .eq("negocio_id", access.negocio.id)
+      .order("created_at", { ascending: false });
+
+    if (error) throw new Error(error.message);
+
+    return {
+      titulo: "Clientes",
+      columnas: ["Nombre", "Teléfono", "Email", "Estado", "Creado"],
+      filas: (data ?? []).map((cliente: any) => [
+        cliente.nombre_completo,
+        cliente.telefono,
+        cliente.email,
+        cliente.estado,
+        cliente.created_at,
+      ]),
+    };
+  }
+
+  if (tipo === "empleados") {
+    let query: any = supabase
+      .from("empleados")
+      .select(
+        `
+        nombre,
+        email,
+        telefono,
+        estado,
+        created_at,
+        sucursales (
+          nombre
+        )
+      `
+      )
+      .eq("negocio_id", access.negocio.id)
+      .order("created_at", { ascending: false });
+
+    if (sucursalFiltro) query = query.eq("sucursal_id", sucursalFiltro);
+
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+
+    return {
+      titulo: "Empleados",
+      columnas: ["Nombre", "Email", "Teléfono", "Estado", "Sucursal", "Creado"],
+      filas: (data ?? []).map((empleado: any) => {
+        const sucursal = obtenerObjeto(empleado.sucursales) as any;
 
         return [
-          cita.fecha,
-          cita.hora_inicio,
-          cita.hora_fin,
-          cita.estado,
-          cita.precio,
-          cita.origen,
-          cliente?.nombre_completo,
-          cliente?.telefono,
-          cliente?.email,
-          servicio?.nombre,
-          empleado?.nombre,
-          cita.notas,
-        ];
-      });
-
-      csv = toCsv(
-        [
-          "Fecha",
-          "Hora inicio",
-          "Hora fin",
-          "Estado",
-          "Precio",
-          "Origen",
-          "Cliente",
-          "Teléfono",
-          "Email",
-          "Servicio",
-          "Empleado",
-          "Notas",
-        ],
-        rows
-      );
-
-      filename = "citas-agendame.csv";
-    }
-
-    if (tipo === "clientes") {
-      const { data, error } = await supabase
-        .from("clientes")
-        .select("nombre_completo, telefono, email, estado, notas, created_at")
-        .eq("negocio_id", negocioId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw new Error(error.message);
-
-      csv = toCsv(
-        ["Nombre", "Teléfono", "Email", "Estado", "Notas", "Creado"],
-        (data ?? []).map((cliente: any) => [
-          cliente.nombre_completo,
-          cliente.telefono,
-          cliente.email,
-          cliente.estado,
-          cliente.notas,
-          cliente.created_at,
-        ])
-      );
-
-      filename = "clientes-agendame.csv";
-    }
-
-    if (tipo === "servicios") {
-      const { data, error } = await supabase
-        .from("servicios")
-        .select("nombre, descripcion, duracion_minutos, precio, estado, created_at")
-        .eq("negocio_id", negocioId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw new Error(error.message);
-
-      csv = toCsv(
-        ["Nombre", "Descripción", "Duración", "Precio", "Estado", "Creado"],
-        (data ?? []).map((servicio: any) => [
-          servicio.nombre,
-          servicio.descripcion,
-          servicio.duracion_minutos,
-          servicio.precio,
-          servicio.estado,
-          servicio.created_at,
-        ])
-      );
-
-      filename = "servicios-agendame.csv";
-    }
-
-    if (tipo === "empleados") {
-      const { data, error } = await supabase
-        .from("empleados")
-        .select("nombre, email, telefono, estado, created_at")
-        .eq("negocio_id", negocioId)
-        .order("created_at", { ascending: false });
-
-      if (error) throw new Error(error.message);
-
-      csv = toCsv(
-        ["Nombre", "Email", "Teléfono", "Estado", "Creado"],
-        (data ?? []).map((empleado: any) => [
           empleado.nombre,
           empleado.email,
           empleado.telefono,
           empleado.estado,
+          sucursal?.nombre ?? "",
           empleado.created_at,
-        ])
-      );
+        ];
+      }),
+    };
+  }
 
-      filename = "empleados-agendame.csv";
+  if (tipo === "servicios") {
+    if (!access.puedeVerTodo) {
+      throw new Error("Solo el admin global puede exportar servicios.");
     }
 
-    if (!csv) {
-      return NextResponse.json({ error: "Tipo de exportación inválido." }, { status: 400 });
-    }
+    const { data, error } = await supabase
+      .from("servicios")
+      .select("nombre, descripcion, duracion_minutos, precio, estado, created_at")
+      .eq("negocio_id", access.negocio.id)
+      .order("created_at", { ascending: false });
 
-    return new Response(`\ufeff${csv}`, {
-      headers: {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="${filename}"`,
-      },
+    if (error) throw new Error(error.message);
+
+    return {
+      titulo: "Servicios",
+      columnas: [
+        "Nombre",
+        "Descripción",
+        "Duración minutos",
+        "Precio",
+        "Estado",
+        "Creado",
+      ],
+      filas: (data ?? []).map((servicio: any) => [
+        servicio.nombre,
+        servicio.descripcion,
+        servicio.duracion_minutos,
+        servicio.precio,
+        servicio.estado,
+        servicio.created_at,
+      ]),
+    };
+  }
+
+  throw new Error("Tipo de exportación inválido.");
+}
+
+async function crearXlsx(data: ExportData) {
+  const workbook = new ExcelJS.Workbook();
+
+  workbook.creator = "AgendaMe";
+  workbook.created = new Date();
+
+  const sheet = workbook.addWorksheet(data.titulo);
+
+  sheet.columns = data.columnas.map((columna, index) => {
+    const maxContenido = Math.max(
+      columna.length,
+      ...data.filas.map((fila) => String(fila[index] ?? "").length)
+    );
+
+    return {
+      header: columna,
+      key: columna,
+      width: Math.min(Math.max(maxContenido + 4, 14), 42),
+    };
+  });
+
+  sheet.getRow(1).font = {
+    bold: true,
+    color: { argb: "FFFFFFFF" },
+  };
+
+  sheet.getRow(1).fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FF111827" },
+  };
+
+  sheet.getRow(1).alignment = {
+    vertical: "middle",
+    horizontal: "center",
+  };
+
+  sheet.views = [
+    {
+      state: "frozen",
+      ySplit: 1,
+    },
+  ];
+
+  sheet.autoFilter = {
+    from: {
+      row: 1,
+      column: 1,
+    },
+    to: {
+      row: 1,
+      column: data.columnas.length,
+    },
+  };
+
+  for (const fila of data.filas) {
+    sheet.addRow(fila);
+  }
+
+  sheet.eachRow((row) => {
+    row.eachCell((cell) => {
+      cell.border = {
+        top: { style: "thin", color: { argb: "FFE5E7EB" } },
+        left: { style: "thin", color: { argb: "FFE5E7EB" } },
+        bottom: { style: "thin", color: { argb: "FFE5E7EB" } },
+        right: { style: "thin", color: { argb: "FFE5E7EB" } },
+      };
+
+      cell.alignment = {
+        vertical: "middle",
+        wrapText: true,
+      };
     });
-  } catch (error) {
-    console.error("Error exportando CSV:", error);
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+
+  return buffer;
+}
+
+export async function GET(request: Request) {
+  try {
+    const accessResult = await resolveDashboardAccess();
+
+    if (!accessResult.ok) {
+      return NextResponse.json(
+        { error: "No autenticado o sin acceso." },
+        { status: 401 }
+      );
+    }
+
+    const access = accessResult;
+
+    if (!access.puedeExportar) {
+      return NextResponse.json(
+        { error: "No tenés permiso para exportar datos." },
+        { status: 403 }
+      );
+    }
+
+    const supabase = createServiceRoleClient() as any;
+    const { searchParams } = new URL(request.url);
+
+    const tipo = limpiar(searchParams.get("tipo") ?? "citas");
+    const formato = limpiar(searchParams.get("formato") ?? "json");
+    const desde = limpiar(searchParams.get("desde"));
+    const hasta = limpiar(searchParams.get("hasta"));
+    const sucursalParam = limpiar(searchParams.get("sucursalId") ?? "todas");
+
+    const esAdminEmpresarial =
+      access.scope === "global" && nivelPlan(access.planClave) >= 3;
+
+    let sucursalFiltro: string | null = null;
+
+    if (access.scope === "sucursal" && access.sucursalId) {
+      sucursalFiltro = access.sucursalId;
+    } else if (esAdminEmpresarial && sucursalParam !== "todas") {
+      sucursalFiltro = await validarSucursalFiltro({
+        supabase,
+        negocioId: access.negocio.id,
+        sucursalId: sucursalParam,
+      });
+    }
+
+    const data = await obtenerDatosExportacion({
+      access,
+      tipo,
+      desde,
+      hasta,
+      sucursalFiltro,
+    });
+
+    if (formato === "json") {
+      return NextResponse.json({
+        ...data,
+        total: data.filas.length,
+      });
+    }
+
+    if (formato === "xlsx") {
+      const buffer = await crearXlsx(data);
+
+      return new Response(buffer, {
+        headers: {
+          "Content-Type":
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "Content-Disposition": `attachment; filename="${nombreArchivo(tipo)}"`,
+        },
+      });
+    }
 
     return NextResponse.json(
-      { error: "No se pudo exportar el archivo." },
+      { error: "Formato inválido." },
+      { status: 400 }
+    );
+  } catch (error) {
+    console.error("Error exportando datos:", error);
+
+    return NextResponse.json(
+      { error: "No se pudo preparar la exportación." },
       { status: 500 }
     );
   }

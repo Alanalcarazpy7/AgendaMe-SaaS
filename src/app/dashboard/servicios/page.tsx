@@ -1,10 +1,16 @@
-﻿import { ServiciosImagenesPanel } from "@/components/servicios/servicios-imagenes-panel";
+﻿import { requireDashboardAccess } from "@/lib/dashboard/access-context";
 import { redirect } from "next/navigation";
+import { ServiciosImagenesPanel } from "@/components/servicios/servicios-imagenes-panel";
 import { createClient } from "@/lib/supabase/server";
 import { ServiciosPanel } from "@/components/servicios/servicios-panel";
 import type { ServicioItem } from "@/components/servicios/servicio-dialog";
 
 export default async function ServiciosPage() {
+  const access = await requireDashboardAccess();
+  if (!access.puedeVerTodo) {
+    redirect("/dashboard/sin-permiso");
+  }
+
   const supabase = await createClient();
 
   const {

@@ -1,4 +1,5 @@
-﻿import { NextResponse } from "next/server";
+﻿import { requireAdminGlobalApi } from "@/lib/dashboard/api-guards";
+import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
@@ -62,6 +63,10 @@ async function obtenerNegocioDelUsuario() {
 }
 
 export async function GET() {
+  const guard = await requireAdminGlobalApi();
+  if (!guard.ok) return guard.response;
+
+
   try {
     const resultado = await obtenerNegocioDelUsuario();
 
@@ -106,6 +111,10 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
+  const guard = await requireAdminGlobalApi();
+  if (!guard.ok) return guard.response;
+
+
   try {
     const body = await request.json();
     const intervalo = validarIntervalo(body.intervaloReservaMinutos);

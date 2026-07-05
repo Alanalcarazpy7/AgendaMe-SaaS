@@ -1,225 +1,260 @@
-﻿import { NextResponse, type NextRequest } from "next/server";
-import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+﻿import { NextResponse } from "next/server";
+import { requireDashboardAccess } from "@/lib/dashboard/access-context";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
-const citaSchema = z.object({
-  clienteId: z.string().uuid(),
-  servicioId: z.string().uuid(),
-  empleadoId: z.string().uuid().nullable().optional(),
-  fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida."),
-  horaInicio: z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida."),
-});
+type Payload = {
+  clienteId?: string;
+  cliente_id?: string;
+  servicioId?: string;
+  servicio_id?: string;
+  empleadoId?: string;
+  empleado_id?: string;
+  fecha?: string;
+  horaInicio?: string;
+  hora_inicio?: string;
+  estado?: string;
+  notas?: string;
+};
+
+function limpiar(valor: unknown) {
+  return String(valor ?? "").trim();
+}
+
+function toMinutes(hora: string) {
+  const [h, m] = String(hora).slice(0, 5).split(":").map(Number);
+  return h * 60 + m;
+}
+
+function fromMinutes(total: number) {
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
 
 function sumarMinutos(hora: string, minutos: number) {
-  const [hh, mm] = hora.split(":").map(Number);
-  const total = hh * 60 + mm + minutos;
-  const nuevaHora = Math.floor(total / 60);
-  const nuevosMinutos = total % 60;
-
-  return `${String(nuevaHora).padStart(2, "0")}:${String(nuevosMinutos).padStart(2, "0")}`;
+  return fromMinutes(toMinutes(hora) + minutos);
 }
 
-function obtenerMensajeError(errorMessage: string) {
-  const mensaje = errorMessage.toLowerCase();
-
-  if (mensaje.includes("fuera del horario del negocio")) {
-    return "La cita está fuera del horario configurado del negocio.";
-  }
-
-  if (mensaje.includes("fuera del horario del empleado")) {
-    return "La cita está fuera del horario personalizado del empleado.";
-  }
-
-  if (mensaje.includes("bloqueo")) {
-    return "La cita cae dentro de un horario bloqueado.";
-  }
-
-  if (mensaje.includes("solapamiento") || mensaje.includes("exclusion")) {
-    return "Ese empleado ya tiene una cita en ese horario.";
-  }
-
-  if (mensaje.includes("límite") || mensaje.includes("limite") || mensaje.includes("plan")) {
-    return "No podés crear más citas con tu plan actual.";
-  }
-
-  if (mensaje.includes("servicio") && mensaje.includes("asignado")) {
-    return "Ese empleado no tiene asignado ese servicio.";
-  }
-
-  return errorMessage;
+function overlap(aInicio: number, aFin: number, bInicio: number, bFin: number) {
+  return aInicio < bFin && aFin > bInicio;
 }
 
-export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+function fechaHoraPasada(fecha: string, hora: string) {
+  const ahoraParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Asuncion",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    ahoraParts.find((part) => part.type === type)?.value ?? "";
 
-  if (!user) {
-    return NextResponse.json({ error: "No tenés sesión activa." }, { status: 401 });
-  }
+  const ahoraComparable = `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}`;
+  const citaComparable = `${fecha} ${hora.slice(0, 5)}`;
 
-  const body = await request.json();
-  const parsed = citaSchema.safeParse(body);
+  return citaComparable < ahoraComparable;
+}
 
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Datos inválidos." },
-      { status: 400 }
-    );
-  }
+export async function POST(request: Request) {
+  try {
+    const access = await requireDashboardAccess();
 
-  const { data: membresias, error: membresiaError } = await supabase
-    .from("negocio_usuarios")
-    .select("negocio_id")
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1);
-
-  if (membresiaError) {
-    return NextResponse.json({ error: "No se pudo validar tu negocio." }, { status: 500 });
-  }
-
-  const membresia = membresias?.[0];
-
-  if (!membresia) {
-    return NextResponse.json({ error: "No tenés un negocio activo." }, { status: 403 });
-  }
-
-  const datos = parsed.data;
-
-  const [{ data: cliente }, { data: servicio }] = await Promise.all([
-    supabase
-      .from("clientes")
-      .select("id, estado")
-      .eq("id", datos.clienteId)
-      .eq("negocio_id", membresia.negocio_id)
-      .eq("estado", "activo")
-      .maybeSingle(),
-
-    supabase
-      .from("servicios")
-      .select("id, duracion_minutos, estado")
-      .eq("id", datos.servicioId)
-      .eq("negocio_id", membresia.negocio_id)
-      .eq("estado", "activo")
-      .maybeSingle(),
-  ]);
-
-  if (!cliente) {
-    return NextResponse.json({ error: "Cliente no válido o inactivo." }, { status: 400 });
-  }
-
-  if (!servicio) {
-    return NextResponse.json({ error: "Servicio no válido o inactivo." }, { status: 400 });
-  }
-
-  let empleadosCandidatos: string[] = [];
-
-  if (datos.empleadoId) {
-    const [{ data: empleado }, { data: asignacion }] = await Promise.all([
-      supabase
-        .from("empleados")
-        .select("id, estado")
-        .eq("id", datos.empleadoId)
-        .eq("negocio_id", membresia.negocio_id)
-        .eq("estado", "activo")
-        .maybeSingle(),
-
-      supabase
-        .from("empleado_servicios")
-        .select("empleado_id, servicio_id")
-        .eq("empleado_id", datos.empleadoId)
-        .eq("servicio_id", datos.servicioId)
-        .maybeSingle(),
-    ]);
-
-    if (!empleado) {
-      return NextResponse.json({ error: "Empleado no válido o inactivo." }, { status: 400 });
+    if (!access.puedeGestionarCitas) {
+      return NextResponse.json(
+        { error: "No tenés permiso para crear citas." },
+        { status: 403 }
+      );
     }
 
-    if (!asignacion) {
+    const body = (await request.json()) as Payload;
+
+    const clienteId = limpiar(body.clienteId ?? body.cliente_id);
+    const servicioId = limpiar(body.servicioId ?? body.servicio_id);
+    const empleadoId = limpiar(body.empleadoId ?? body.empleado_id);
+    const fecha = limpiar(body.fecha);
+    const horaInicio = limpiar(body.horaInicio ?? body.hora_inicio).slice(0, 5);
+    const estado = limpiar(body.estado) || "confirmada";
+    const notas = limpiar(body.notas);
+
+    if (!clienteId || !servicioId || !empleadoId || !fecha || !horaInicio) {
       return NextResponse.json(
-        { error: "Ese empleado no tiene asignado ese servicio." },
+        { error: "Faltan datos para crear la cita." },
         { status: 400 }
       );
     }
 
-    empleadosCandidatos = [datos.empleadoId];
-  } else {
-    const { data: relaciones, error: relacionesError } = await supabase
+    if (!["pendiente", "confirmada", "completada", "no_asistio", "cancelada"].includes(estado)) {
+      return NextResponse.json(
+        { error: "Estado inválido." },
+        { status: 400 }
+      );
+    }
+
+    if (fechaHoraPasada(fecha, horaInicio)) {
+      return NextResponse.json(
+        { error: "No se puede crear una cita en una fecha u hora pasada." },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createServiceRoleClient();
+
+    const { data: empleado, error: empleadoError } = await supabase
+      .from("empleados")
+      .select("id, sucursal_id, estado")
+      .eq("id", empleadoId)
+      .eq("negocio_id", access.negocio.id)
+      .maybeSingle();
+
+    if (empleadoError) throw new Error(empleadoError.message);
+
+    if (!empleado || empleado.estado !== "activo") {
+      return NextResponse.json(
+        { error: "Empleado no encontrado o inactivo." },
+        { status: 404 }
+      );
+    }
+
+    if (
+      access.scope === "sucursal" &&
+      access.sucursalId &&
+      empleado.sucursal_id !== access.sucursalId
+    ) {
+      return NextResponse.json(
+        { error: "No podés crear citas para otra sucursal." },
+        { status: 403 }
+      );
+    }
+
+    const sucursalId = empleado.sucursal_id;
+
+    const { data: servicio, error: servicioError } = await supabase
+      .from("servicios")
+      .select("id, duracion_minutos, precio, estado")
+      .eq("id", servicioId)
+      .eq("negocio_id", access.negocio.id)
+      .maybeSingle();
+
+    if (servicioError) throw new Error(servicioError.message);
+
+    if (!servicio || servicio.estado !== "activo") {
+      return NextResponse.json(
+        { error: "Servicio no encontrado o inactivo." },
+        { status: 404 }
+      );
+    }
+
+    const { data: relacionServicio, error: relacionError } = await supabase
       .from("empleado_servicios")
       .select("empleado_id")
-      .eq("servicio_id", datos.servicioId);
+      .eq("empleado_id", empleadoId)
+      .eq("servicio_id", servicioId)
+      .maybeSingle();
 
-    if (relacionesError) {
-      return NextResponse.json({ error: relacionesError.message }, { status: 500 });
-    }
+    if (relacionError) throw new Error(relacionError.message);
 
-    const idsAsignados = (relaciones ?? []).map((item) => item.empleado_id);
-
-    if (idsAsignados.length === 0) {
+    if (!relacionServicio) {
       return NextResponse.json(
-        { error: "No hay empleados asignados a este servicio." },
+        { error: "El empleado no realiza este servicio." },
         { status: 400 }
       );
     }
 
-    const { data: empleadosActivos, error: empleadosError } = await supabase
-      .from("empleados")
-      .select("id")
-      .eq("negocio_id", membresia.negocio_id)
-      .eq("estado", "activo")
-      .in("id", idsAsignados);
+    const { data: cliente, error: clienteError } = await supabase
+      .from("clientes")
+      .select("id, estado")
+      .eq("id", clienteId)
+      .eq("negocio_id", access.negocio.id)
+      .maybeSingle();
 
-    if (empleadosError) {
-      return NextResponse.json({ error: empleadosError.message }, { status: 500 });
+    if (clienteError) throw new Error(clienteError.message);
+
+    if (!cliente || cliente.estado !== "activo") {
+      return NextResponse.json(
+        { error: "Cliente no encontrado o inactivo." },
+        { status: 404 }
+      );
     }
 
-    empleadosCandidatos = (empleadosActivos ?? []).map((empleado) => empleado.id);
-  }
+    if (access.scope === "sucursal" && access.sucursalId) {
+      await supabase
+        .from("cliente_sucursales")
+        .insert({
+          negocio_id: access.negocio.id,
+          cliente_id: clienteId,
+          sucursal_id: access.sucursalId,
+        })
+        .select("id")
+        .maybeSingle();
+    }
 
-  if (empleadosCandidatos.length === 0) {
-    return NextResponse.json(
-      { error: "No hay empleados activos disponibles para este servicio." },
-      { status: 400 }
+    const horaFin = sumarMinutos(horaInicio, Number(servicio.duracion_minutos ?? 30));
+
+    const { data: citasOcupadas, error: ocupadasError } = await supabase
+      .from("citas")
+      .select("id, hora_inicio, hora_fin")
+      .eq("negocio_id", access.negocio.id)
+      .eq("empleado_id", empleadoId)
+      .eq("fecha", fecha)
+      .in("estado", ["pendiente", "confirmada", "completada"]);
+
+    if (ocupadasError) throw new Error(ocupadasError.message);
+
+    const inicioNueva = toMinutes(horaInicio);
+    const finNueva = toMinutes(horaFin);
+
+    const solapa = (citasOcupadas ?? []).some((cita) =>
+      overlap(
+        inicioNueva,
+        finNueva,
+        toMinutes(String(cita.hora_inicio).slice(0, 5)),
+        toMinutes(String(cita.hora_fin).slice(0, 5))
+      )
     );
-  }
 
-  const horaFin = sumarMinutos(datos.horaInicio, servicio.duracion_minutos);
+    if (solapa) {
+      return NextResponse.json(
+        { error: "El empleado ya tiene una cita en ese horario." },
+        { status: 409 }
+      );
+    }
 
-  let ultimoError: string | null = null;
-
-  for (const candidatoId of empleadosCandidatos) {
-    const { data: cita, error } = await supabase
+    const { data: cita, error: citaError } = await supabase
       .from("citas")
       .insert({
-        negocio_id: membresia.negocio_id,
-        cliente_id: datos.clienteId,
-        servicio_id: datos.servicioId,
-        empleado_id: candidatoId,
-        fecha: datos.fecha,
-        hora_inicio: datos.horaInicio,
+        negocio_id: access.negocio.id,
+        sucursal_id: sucursalId,
+        cliente_id: clienteId,
+        servicio_id: servicioId,
+        empleado_id: empleadoId,
+        fecha,
+        hora_inicio: horaInicio,
         hora_fin: horaFin,
-        estado: "pendiente",
+        estado,
+        precio: servicio.precio ?? 0,
+        origen: "dashboard",
+        notas: notas || null,
       })
       .select("id")
       .single();
 
-    if (!error) {
-      return NextResponse.json({ cita });
-    }
+    if (citaError) throw new Error(citaError.message);
 
-    ultimoError = error.message;
+    return NextResponse.json({
+      message: "Cita creada correctamente.",
+      citaId: cita.id,
+    });
+  } catch (error) {
+    console.error("Error creando cita:", error);
+
+    return NextResponse.json(
+      { error: "No se pudo crear la cita." },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json(
-    {
-      error: ultimoError
-        ? obtenerMensajeError(ultimoError)
-        : "No se pudo crear la cita.",
-    },
-    { status: 400 }
-  );
 }

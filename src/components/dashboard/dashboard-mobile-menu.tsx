@@ -23,11 +23,22 @@ import {
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { nivelPlan } from "@/lib/planes/plan-access";
 
+type AccessRole =
+  | "admin_global"
+  | "gerente_sucursal"
+  | "recepcionista_sucursal"
+  | "empleado_sucursal";
+
+type AccessScope = "global" | "sucursal";
+
 type DashboardMobileMenuProps = {
   userEmail?: string;
   negocioNombre?: string;
   negocioLogoUrl?: string | null;
   planClave?: string | null;
+  accessRole?: AccessRole;
+  accessScope?: AccessScope;
+  scopeLabel?: string;
 };
 
 type PremiumModalInfo = {
@@ -37,9 +48,24 @@ type PremiumModalInfo = {
 };
 
 const menuItems = [
-  { label: "Inicio", href: "/dashboard", icon: Home },
-  { label: "Reservas", href: "/dashboard/reservas", icon: BellRing },
-  { label: "Citas", href: "/dashboard/citas", icon: CalendarDays },
+  {
+    label: "Inicio",
+    href: "/dashboard",
+    icon: Home,
+    roles: ["admin_global", "gerente_sucursal", "recepcionista_sucursal", "empleado_sucursal"],
+  },
+  {
+    label: "Reservas",
+    href: "/dashboard/reservas",
+    icon: BellRing,
+    roles: ["admin_global", "gerente_sucursal", "recepcionista_sucursal"],
+  },
+  {
+    label: "Citas",
+    href: "/dashboard/citas",
+    icon: CalendarDays,
+    roles: ["admin_global", "gerente_sucursal", "recepcionista_sucursal", "empleado_sucursal"],
+  },
   {
     label: "Reportes",
     href: "/dashboard/reportes",
@@ -47,12 +73,38 @@ const menuItems = [
     requiredLevel: 1,
     desde: "Plan Básico",
     descripcion: "Reportes de ingresos, citas por estado y servicios más reservados.",
+    roles: ["admin_global", "gerente_sucursal"],
   },
-  { label: "Clientes", href: "/dashboard/clientes", icon: Users },
-  { label: "Servicios", href: "/dashboard/servicios", icon: Scissors },
-  { label: "Empleados", href: "/dashboard/empleados", icon: BriefcaseBusiness },
-  { label: "Planes", href: "/dashboard/planes", icon: CreditCard },
-  { label: "Configuración", href: "/dashboard/configuracion", icon: Settings },
+  {
+    label: "Clientes",
+    href: "/dashboard/clientes",
+    icon: Users,
+    roles: ["admin_global", "gerente_sucursal", "recepcionista_sucursal"],
+  },
+  {
+    label: "Servicios",
+    href: "/dashboard/servicios",
+    icon: Scissors,
+    roles: ["admin_global"],
+  },
+  {
+    label: "Empleados",
+    href: "/dashboard/empleados",
+    icon: BriefcaseBusiness,
+    roles: ["admin_global", "gerente_sucursal"],
+  },
+  {
+    label: "Planes",
+    href: "/dashboard/planes",
+    icon: CreditCard,
+    roles: ["admin_global"],
+  },
+  {
+    label: "Configuración",
+    href: "/dashboard/configuracion",
+    icon: Settings,
+    roles: ["admin_global"],
+  },
 ];
 
 const premiumItems = [
@@ -61,16 +113,20 @@ const premiumItems = [
     href: "/dashboard/exportar",
     icon: FileDown,
     requiredLevel: 2,
+    branchRequiredLevel: 3,
     desde: "Plan Profesional",
     descripcion: "Exportá datos de citas, clientes y reportes.",
+    roles: ["admin_global", "gerente_sucursal"],
   },
   {
     label: "Recordatorios",
     href: "/dashboard/recordatorios",
     icon: MessageSquareText,
     requiredLevel: 2,
+    branchRequiredLevel: 3,
     desde: "Plan Profesional",
     descripcion: "Enviá recordatorios a clientes antes de sus citas.",
+    roles: ["admin_global", "gerente_sucursal", "recepcionista_sucursal"],
   },
   {
     label: "Sucursales",
@@ -79,6 +135,7 @@ const premiumItems = [
     requiredLevel: 3,
     desde: "Plan Empresarial",
     descripcion: "Gestioná múltiples ubicaciones o sucursales.",
+    roles: ["admin_global"],
   },
 ];
 
@@ -87,16 +144,31 @@ export function DashboardMobileMenu({
   negocioNombre,
   negocioLogoUrl,
   planClave,
+  accessRole = "admin_global",
+  accessScope = "global",
+  scopeLabel = "Todas las sucursales",
 }: DashboardMobileMenuProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [premiumInfo, setPremiumInfo] = useState<PremiumModalInfo | null>(null);
   const nivelActual = nivelPlan(planClave);
 
+  function puedeVerItem(item: any) {
+    return item.roles.includes(accessRole);
+  }
+
   function renderItem(item: any) {
+    if (!puedeVerItem(item)) return null;
+
     const Icon = item.icon;
+
+    const requiredLevel =
+      accessScope === "sucursal" && item.branchRequiredLevel
+        ? item.branchRequiredLevel
+        : item.requiredLevel;
+
     const bloqueado =
-      typeof item.requiredLevel === "number" && nivelActual < item.requiredLevel;
+      typeof requiredLevel === "number" && nivelActual < requiredLevel;
 
     const activo =
       item.href === "/dashboard"
@@ -152,7 +224,9 @@ export function DashboardMobileMenu({
           <p className="max-w-[210px] truncate text-lg font-bold leading-none">
             {negocioNombre ?? "AgendaMe"}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">Dashboard</p>
+          <p className="mt-1 truncate text-xs text-muted-foreground">
+            {scopeLabel}
+          </p>
         </Link>
 
         <button
@@ -193,8 +267,8 @@ export function DashboardMobileMenu({
                   <p className="truncate text-2xl font-bold leading-none">
                     {negocioNombre ?? "AgendaMe"}
                   </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Panel del negocio
+                  <p className="mt-1 truncate text-sm text-muted-foreground">
+                    {scopeLabel}
                   </p>
                 </div>
               </div>

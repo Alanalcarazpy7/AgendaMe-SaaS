@@ -1,185 +1,148 @@
-﻿import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import {
-  ReservasPendientesPanel,
-  type ClienteReservaOption,
-  type EmpleadoReservaOption,
-  type EmpleadoServicioReservaOption,
-  type ReservaPendienteItem,
-  type ServicioReservaOption,
-} from "@/components/reservas/reservas-pendientes-panel";
+﻿import { ReservasPendientesPanel } from "@/components/reservas/reservas-pendientes-panel";
+import { requireDashboardAccess } from "@/lib/dashboard/access-context";
+import { applySucursalScope, requirePermission } from "@/lib/dashboard/scope-helpers";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 type Relacion<T> = T | T[] | null;
-
-type CitaPendienteRaw = {
-  id: string;
-  cliente_id: string;
-  servicio_id: string;
-  empleado_id: string;
-  fecha: string;
-  hora_inicio: string;
-  hora_fin: string;
-  estado: "pendiente" | "confirmada" | "cancelada" | "completada" | "no_asistio";
-  created_at: string;
-  seguimiento_token: string | null;
-  clientes: Relacion<{
-    nombre_completo: string;
-    telefono: string | null;
-    email: string | null;
-  }>;
-  servicios: Relacion<{
-    nombre: string;
-  }>;
-  empleados: Relacion<{
-    nombre: string;
-  }>;
-};
 
 function obtenerObjeto<T>(valor: Relacion<T>): T | null {
   if (!valor) return null;
   return Array.isArray(valor) ? valor[0] ?? null : valor;
 }
 
-export default async function ReservasPendientesPage() {
-  const supabase = await createClient();
+export default async function ReservasPage() {
+  const access = await requireDashboardAccess();
+  requirePermission(access, "puedeGestionarCitas");
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const supabase = createServiceRoleClient();
 
-  if (!user) {
-    redirect("/auth/login");
-  }
+  let reservasQuery = supabase
+    .from("citas")
+    .select(
+      `
+      id,
+      negocio_id,
+      sucursal_id,
+      cliente_id,
+      servicio_id,
+      empleado_id,
+      fecha,
+      hora_inicio,
+      hora_fin,
+      estado,
+      precio,
+      notas,
+      origen,
+      seguimiento_token,
+      created_at,
+      clientes (
+        id,
+        nombre_completo,
+        telefono,
+        email
+      ),
+      servicios (
+        id,
+        nombre,
+        duracion_minutos,
+        precio
+      ),
+      empleados (
+        id,
+        nombre,
+        sucursal_id
+      ),
+      sucursales (
+        id,
+        nombre
+      )
+    `
+    )
+    .eq("negocio_id", access.negocio.id)
+    .eq("estado", "pendiente")
+    .order("fecha", { ascending: true })
+    .order("hora_inicio", { ascending: true });
 
-  const { data: membresia, error: membresiaError } = await supabase
-    .from("negocio_usuarios")
-    .select("negocio_id")
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1)
-    .single();
+  reservasQuery = applySucursalScope(reservasQuery, access);
 
-  if (membresiaError || !membresia) {
-    redirect("/onboarding/negocio");
-  }
+  let empleadosQuery = supabase
+    .from("empleados")
+    .select("id, nombre, email, telefono, color_calendario, estado, sucursal_id")
+    .eq("negocio_id", access.negocio.id)
+    .eq("estado", "activo")
+    .order("nombre", { ascending: true });
 
-  const [
-    { data: citasData, error: citasError },
-    { data: clientesData, error: clientesError },
-    { data: serviciosData, error: serviciosError },
-    { data: empleadosData, error: empleadosError },
-  ] = await Promise.all([
-    supabase
-      .from("citas")
+  empleadosQuery = applySucursalScope(empleadosQuery, access);
+
+  let clientes: any[] = [];
+
+  if (access.scope === "sucursal" && access.sucursalId) {
+    const { data: clientesSucursal, error: clientesSucursalError } = await supabase
+      .from("cliente_sucursales")
       .select(
         `
-        id,
-        cliente_id,
-        servicio_id,
-        empleado_id,
-        fecha,
-        hora_inicio,
-        hora_fin,
-        estado,
-        seguimiento_token,
-        created_at,
         clientes (
+          id,
           nombre_completo,
           telefono,
-          email
-        ),
-        servicios (
-          nombre
-        ),
-        empleados (
-          nombre
+          email,
+          estado
         )
       `
       )
-      .eq("negocio_id", membresia.negocio_id)
-      .eq("estado", "pendiente")
-      .order("fecha", { ascending: true })
-      .order("hora_inicio", { ascending: true }),
+      .eq("negocio_id", access.negocio.id)
+      .eq("sucursal_id", access.sucursalId);
 
-    supabase
+    if (clientesSucursalError) {
+      throw new Error(clientesSucursalError.message);
+    }
+
+    clientes = (clientesSucursal ?? [])
+      .map((row: any) => obtenerObjeto(row.clientes))
+      .filter(Boolean)
+      .filter((cliente: any) => cliente.estado === "activo");
+  } else {
+    const { data: clientesData, error: clientesError } = await supabase
       .from("clientes")
-      .select("id, nombre_completo, telefono, email")
-      .eq("negocio_id", membresia.negocio_id)
+      .select("id, nombre_completo, telefono, email, estado")
+      .eq("negocio_id", access.negocio.id)
       .eq("estado", "activo")
-      .order("nombre_completo", { ascending: true }),
+      .order("nombre_completo", { ascending: true });
+
+    if (clientesError) {
+      throw new Error(clientesError.message);
+    }
+
+    clientes = clientesData ?? [];
+  }
+
+  const [
+    { data: reservas, error: reservasError },
+    { data: empleados, error: empleadosError },
+    { data: servicios, error: serviciosError },
+  ] = await Promise.all([
+    reservasQuery,
+
+    empleadosQuery,
 
     supabase
       .from("servicios")
-      .select("id, nombre, duracion_minutos, precio")
-      .eq("negocio_id", membresia.negocio_id)
-      .eq("estado", "activo")
-      .order("nombre", { ascending: true }),
-
-    supabase
-      .from("empleados")
-      .select("id, nombre")
-      .eq("negocio_id", membresia.negocio_id)
+      .select("id, nombre, duracion_minutos, precio, color, estado")
+      .eq("negocio_id", access.negocio.id)
       .eq("estado", "activo")
       .order("nombre", { ascending: true }),
   ]);
 
-  if (citasError) throw new Error(citasError.message);
-  if (clientesError) throw new Error(clientesError.message);
-  if (serviciosError) throw new Error(serviciosError.message);
+  if (reservasError) throw new Error(reservasError.message);
   if (empleadosError) throw new Error(empleadosError.message);
-
-  const empleadosIds = ((empleadosData ?? []) as EmpleadoReservaOption[]).map(
-    (empleado) => empleado.id
-  );
-
-  let empleadoServicios: EmpleadoServicioReservaOption[] = [];
-
-  if (empleadosIds.length > 0) {
-    const { data: relacionesData, error: relacionesError } = await supabase
-      .from("empleado_servicios")
-      .select("empleado_id, servicio_id")
-      .in("empleado_id", empleadosIds);
-
-    if (relacionesError) {
-      throw new Error(relacionesError.message);
-    }
-
-    empleadoServicios = (relacionesData ?? []) as EmpleadoServicioReservaOption[];
-  }
-
-  const reservas: ReservaPendienteItem[] = (
-    (citasData ?? []) as CitaPendienteRaw[]
-  ).map((cita) => {
-    const cliente = obtenerObjeto(cita.clientes);
-    const servicio = obtenerObjeto(cita.servicios);
-    const empleado = obtenerObjeto(cita.empleados);
-
-    return {
-      id: cita.id,
-      cliente_id: cita.cliente_id,
-      servicio_id: cita.servicio_id,
-      empleado_id: cita.empleado_id,
-      fecha: cita.fecha,
-      hora_inicio: cita.hora_inicio,
-      hora_fin: cita.hora_fin,
-      estado: cita.estado,
-      created_at: cita.created_at,
-      seguimiento_token: cita.seguimiento_token,
-      cliente_nombre: cliente?.nombre_completo ?? "Cliente",
-      cliente_telefono: cliente?.telefono ?? null,
-      cliente_email: cliente?.email ?? null,
-      servicio_nombre: servicio?.nombre ?? "Servicio",
-      empleado_nombre: empleado?.nombre ?? "Empleado",
-    };
-  });
+  if (serviciosError) throw new Error(serviciosError.message);
 
   return (
     <ReservasPendientesPanel
-      reservas={reservas}
-      clientes={(clientesData ?? []) as ClienteReservaOption[]}
-      servicios={(serviciosData ?? []) as ServicioReservaOption[]}
-      empleados={(empleadosData ?? []) as EmpleadoReservaOption[]}
-      empleadoServicios={empleadoServicios}
+      reservas={reservas ?? []}
+      clientes={clientes}
+      servicios={servicios ?? []}
+      empleados={empleados ?? []}
     />
   );
 }

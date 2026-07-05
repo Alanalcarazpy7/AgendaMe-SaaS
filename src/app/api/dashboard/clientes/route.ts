@@ -1,127 +1,162 @@
-﻿import { NextResponse, type NextRequest } from "next/server";
-import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+﻿import { NextResponse } from "next/server";
+import { requireDashboardAccess } from "@/lib/dashboard/access-context";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
-const clienteSchema = z.object({
-  nombreCompleto: z.string().min(2, "Ingresá el nombre del cliente."),
-  telefono: z.string().optional(),
-  email: z.string().email("Correo inválido.").optional().or(z.literal("")),
-  documento: z.string().optional(),
-  notasInternas: z.string().optional(),
-});
+type Payload = {
+  id?: string;
+  nombre_completo?: string;
+  telefono?: string;
+  email?: string;
+  estado?: string;
+};
 
-function limpiarTexto(valor?: string) {
-  const limpio = valor?.trim();
-
-  return limpio ? limpio : null;
+function limpiar(valor: unknown) {
+  return String(valor ?? "").trim();
 }
 
-function limpiarEmail(valor?: string) {
-  const limpio = valor?.trim().toLowerCase();
+export async function POST(request: Request) {
+  try {
+    const access = await requireDashboardAccess();
 
-  return limpio ? limpio : null;
-}
-
-function obtenerMensajeDuplicado(errorMessage: string) {
-  const mensaje = errorMessage.toLowerCase();
-
-  if (
-    mensaje.includes("telefono") ||
-    mensaje.includes("idx_clientes_negocio_telefono_unico")
-  ) {
-    return "Ya existe un cliente con ese teléfono en este negocio.";
-  }
-
-  if (
-    mensaje.includes("email") ||
-    mensaje.includes("correo") ||
-    mensaje.includes("idx_clientes_negocio_email_unico")
-  ) {
-    return "Ya existe un cliente con ese correo en este negocio.";
-  }
-
-  if (
-    mensaje.includes("documento") ||
-    mensaje.includes("idx_clientes_negocio_documento_unico")
-  ) {
-    return "Ya existe un cliente con ese documento en este negocio.";
-  }
-
-  return "Ya existe un cliente con esos datos en este negocio.";
-}
-
-export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json(
-      { error: "No tenés sesión activa." },
-      { status: 401 }
-    );
-  }
-
-  const body = await request.json();
-  const parsed = clienteSchema.safeParse(body);
-
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Datos inválidos." },
-      { status: 400 }
-    );
-  }
-
-  const { data: membresias, error: membresiaError } = await supabase
-    .from("negocio_usuarios")
-    .select("negocio_id")
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1);
-
-  if (membresiaError) {
-    return NextResponse.json(
-      { error: "No se pudo validar tu negocio." },
-      { status: 500 }
-    );
-  }
-
-  const membresia = membresias?.[0];
-
-  if (!membresia) {
-    return NextResponse.json(
-      { error: "No tenés un negocio activo." },
-      { status: 403 }
-    );
-  }
-
-  const datos = parsed.data;
-
-  const { data: cliente, error } = await supabase
-    .from("clientes")
-    .insert({
-      negocio_id: membresia.negocio_id,
-      nombre_completo: datos.nombreCompleto.trim(),
-      telefono: limpiarTexto(datos.telefono),
-      email: limpiarEmail(datos.email),
-      documento: limpiarTexto(datos.documento),
-      notas_internas: limpiarTexto(datos.notasInternas),
-    })
-    .select("id, nombre_completo")
-    .single();
-
-  if (error) {
-    if (error.code === "23505") {
+    if (!access.puedeGestionarClientes) {
       return NextResponse.json(
-        { error: obtenerMensajeDuplicado(error.message) },
-        { status: 409 }
+        { error: "No tenés permiso para crear clientes." },
+        { status: 403 }
       );
     }
 
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+    const body = (await request.json()) as Payload;
 
-  return NextResponse.json({ cliente });
+    const nombre = limpiar(body.nombre_completo);
+    const telefono = limpiar(body.telefono);
+    const email = limpiar(body.email);
+
+    if (!nombre) {
+      return NextResponse.json(
+        { error: "El nombre del cliente es obligatorio." },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createServiceRoleClient();
+
+    const { data: cliente, error } = await supabase
+      .from("clientes")
+      .insert({
+        negocio_id: access.negocio.id,
+        nombre_completo: nombre,
+        telefono: telefono || null,
+        email: email || null,
+        estado: "activo",
+      })
+      .select("id")
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    if (access.scope === "sucursal" && access.sucursalId) {
+      await supabase
+        .from("cliente_sucursales")
+        .insert({
+          negocio_id: access.negocio.id,
+          cliente_id: cliente.id,
+          sucursal_id: access.sucursalId,
+        });
+    }
+
+    return NextResponse.json({ message: "Cliente creado correctamente." });
+  } catch (error) {
+    console.error("Error creando cliente:", error);
+
+    return NextResponse.json(
+      { error: "No se pudo crear el cliente." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const access = await requireDashboardAccess();
+
+    if (!access.puedeGestionarClientes) {
+      return NextResponse.json(
+        { error: "No tenés permiso para editar clientes." },
+        { status: 403 }
+      );
+    }
+
+    const body = (await request.json()) as Payload;
+
+    const id = limpiar(body.id);
+    const nombre = limpiar(body.nombre_completo);
+    const telefono = limpiar(body.telefono);
+    const email = limpiar(body.email);
+    const estado = limpiar(body.estado) || "activo";
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "Falta el ID del cliente." },
+        { status: 400 }
+      );
+    }
+
+    if (!nombre) {
+      return NextResponse.json(
+        { error: "El nombre del cliente es obligatorio." },
+        { status: 400 }
+      );
+    }
+
+    if (!["activo", "inactivo"].includes(estado)) {
+      return NextResponse.json(
+        { error: "Estado inválido." },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createServiceRoleClient();
+
+    if (access.scope === "sucursal" && access.sucursalId) {
+      const { data: permitido, error: permisoError } = await supabase
+        .from("cliente_sucursales")
+        .select("id")
+        .eq("negocio_id", access.negocio.id)
+        .eq("cliente_id", id)
+        .eq("sucursal_id", access.sucursalId)
+        .maybeSingle();
+
+      if (permisoError) throw new Error(permisoError.message);
+
+      if (!permitido) {
+        return NextResponse.json(
+          { error: "No podés editar clientes de otra sucursal." },
+          { status: 403 }
+        );
+      }
+    }
+
+    const { error } = await supabase
+      .from("clientes")
+      .update({
+        nombre_completo: nombre,
+        telefono: telefono || null,
+        email: email || null,
+        estado,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("negocio_id", access.negocio.id);
+
+    if (error) throw new Error(error.message);
+
+    return NextResponse.json({ message: "Cliente actualizado correctamente." });
+  } catch (error) {
+    console.error("Error editando cliente:", error);
+
+    return NextResponse.json(
+      { error: "No se pudo editar el cliente." },
+      { status: 500 }
+    );
+  }
 }

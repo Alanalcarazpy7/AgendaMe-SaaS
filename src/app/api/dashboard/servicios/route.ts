@@ -1,4 +1,5 @@
-﻿import { NextResponse, type NextRequest } from "next/server";
+﻿import { requireAdminGlobalApi } from "@/lib/dashboard/api-guards";
+import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
@@ -46,6 +47,10 @@ function obtenerMensajeError(errorMessage: string) {
 }
 
 export async function POST(request: NextRequest) {
+  const guard = await requireAdminGlobalApi();
+  if (!guard.ok) return guard.response;
+
+
   const supabase = await createClient();
 
   const {

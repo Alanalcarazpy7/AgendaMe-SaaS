@@ -1,4 +1,5 @@
-﻿import { redirect } from "next/navigation";
+﻿import { requireDashboardAccess } from "@/lib/dashboard/access-context";
+import { redirect } from "next/navigation";
 import {
   BarChart3,
   CheckCircle2,
@@ -112,6 +113,11 @@ function parteFechaAsuncion(tipo: Intl.DateTimeFormatPartTypes) {
 }
 
 export default async function DashboardPlanesPage() {
+  const access = await requireDashboardAccess();
+  if (!access.puedeGestionarPlanes) {
+    redirect("/dashboard/sin-permiso");
+  }
+
   const authSupabase = await createClient();
 
   const {

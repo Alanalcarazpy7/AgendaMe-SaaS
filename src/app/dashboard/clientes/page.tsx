@@ -1,49 +1,74 @@
-﻿import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { ClientesPanel } from "@/components/clientes/clientes-panel";
-import type { ClienteItem } from "@/components/clientes/cliente-dialog";
+﻿import { ClientesPanel } from "@/components/clientes/clientes-panel";
+import { requireDashboardAccess } from "@/lib/dashboard/access-context";
+import { requirePermission } from "@/lib/dashboard/scope-helpers";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
+
+type Relacion<T> = T | T[] | null;
+
+type ClienteRaw = {
+  id: string;
+  nombre_completo: string;
+  telefono: string | null;
+  email: string | null;
+  estado: string;
+  created_at: string;
+  updated_at?: string | null;
+};
+
+function obtenerObjeto<T>(valor: Relacion<T>): T | null {
+  if (!valor) return null;
+  return Array.isArray(valor) ? valor[0] ?? null : valor;
+}
 
 export default async function ClientesPage() {
-  const supabase = await createClient();
+  const access = await requireDashboardAccess();
+  requirePermission(access, "puedeGestionarClientes");
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const supabase = createServiceRoleClient();
 
-  if (!user) {
-    redirect("/auth/login");
+  let clientes: ClienteRaw[] = [];
+
+  if (access.scope === "sucursal" && access.sucursalId) {
+    const { data, error } = await supabase
+      .from("cliente_sucursales")
+      .select(
+        `
+        clientes (
+          id,
+          nombre_completo,
+          telefono,
+          email,
+          estado,
+          created_at,
+          updated_at
+        )
+      `
+      )
+      .eq("negocio_id", access.negocio.id)
+      .eq("sucursal_id", access.sucursalId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw new Error(error.message);
+
+    clientes = (data ?? [])
+      .map((row: any) => obtenerObjeto(row.clientes))
+      .filter(Boolean) as ClienteRaw[];
+  } else {
+    const { data, error } = await supabase
+      .from("clientes")
+      .select("id, nombre_completo, telefono, email, estado, created_at, updated_at")
+      .eq("negocio_id", access.negocio.id)
+      .order("created_at", { ascending: false });
+
+    if (error) throw new Error(error.message);
+
+    clientes = (data ?? []) as ClienteRaw[];
   }
 
-  const { data: membresias, error: membresiaError } = await supabase
-    .from("negocio_usuarios")
-    .select("negocio_id")
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1);
+  const clientesCompatibles = clientes.map((cliente) => ({
+    ...cliente,
+    notas: null,
+  }));
 
-  if (membresiaError) {
-    throw new Error(membresiaError.message);
-  }
-
-  const membresia = membresias?.[0];
-
-  if (!membresia) {
-    redirect("/onboarding/negocio");
-  }
-
-  const { data: clientesData, error: clientesError } = await supabase
-    .from("clientes")
-    .select(
-      "id, nombre_completo, telefono, email, documento, notas_internas, estado, created_at"
-    )
-    .eq("negocio_id", membresia.negocio_id)
-    .order("created_at", { ascending: false });
-
-  if (clientesError) {
-    throw new Error(clientesError.message);
-  }
-
-  const clientes = (clientesData ?? []) as ClienteItem[];
-
-  return <ClientesPanel clientes={clientes} />;
+  return <ClientesPanel clientes={clientesCompatibles} />;
 }

@@ -1,56 +1,49 @@
 ﻿import { NextResponse } from "next/server";
-import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { calcularDisponibilidadReserva } from "@/lib/reservas/disponibilidad";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
-type DisponibilidadRouteProps = {
+type RouteContext = {
   params: Promise<{
     slug: string;
   }>;
 };
 
-export async function GET(request: Request, { params }: DisponibilidadRouteProps) {
+export async function GET(request: Request, context: RouteContext) {
   try {
-    const { slug } = await params;
+    const { slug } = await context.params;
     const { searchParams } = new URL(request.url);
 
     const servicioId = searchParams.get("servicioId") ?? "";
     const fecha = searchParams.get("fecha") ?? "";
+    const sucursalId = searchParams.get("sucursalId");
+
+    if (!servicioId || !fecha) {
+      return NextResponse.json(
+        { error: "Faltan datos para consultar disponibilidad." },
+        { status: 400 }
+      );
+    }
 
     const supabase = createServiceRoleClient();
 
-    const resultado = await calcularDisponibilidadReserva({
+    const disponibilidad = await calcularDisponibilidadReserva({
       supabase,
       slug,
       servicioId,
       fecha,
+      sucursalId,
     });
-
-    if (resultado.error) {
-      return NextResponse.json(
-        {
-          error: resultado.error,
-          slots: [],
-        },
-        {
-          status: resultado.status ?? 400,
-        }
-      );
-    }
 
     return NextResponse.json({
-      slots: resultado.slots.map((slot) => slot.hora),
+      slots: disponibilidad.slots,
+      sucursalId: disponibilidad.sucursalId,
     });
   } catch (error) {
-    console.error("Error calculando disponibilidad pública:", error);
+    console.error("Error consultando disponibilidad:", error);
 
     return NextResponse.json(
-      {
-        error: "No se pudo calcular la disponibilidad.",
-        slots: [],
-      },
-      {
-        status: 500,
-      }
+      { error: "No se pudo consultar la disponibilidad." },
+      { status: 500 }
     );
   }
 }

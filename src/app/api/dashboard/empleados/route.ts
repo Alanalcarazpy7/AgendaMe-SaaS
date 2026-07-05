@@ -1,190 +1,146 @@
-﻿import { NextResponse, type NextRequest } from "next/server";
-import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+﻿import { NextResponse } from "next/server";
+import { requireDashboardAccess } from "@/lib/dashboard/access-context";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
-const horarioSchema = z.object({
-  dia_semana: z.number().int().min(0).max(6),
-  activo: z.boolean(),
-  hora_inicio: z.string().nullable(),
-  hora_fin: z.string().nullable(),
-});
+type Payload = {
+  nombre?: string;
+  email?: string;
+  telefono?: string;
+  color_calendario?: string;
+  estado?: string;
+  servicio_ids?: string[];
+  horarios?: {
+    dia_semana: number;
+    activo: boolean;
+    hora_inicio: string;
+    hora_fin: string;
+    descanso_inicio?: string | null;
+    descanso_fin?: string | null;
+  }[];
+};
 
-const empleadoSchema = z.object({
-  nombre: z.string().min(2, "Ingresá el nombre del empleado."),
-  email: z.string().email("Correo inválido.").optional().or(z.literal("")),
-  telefono: z.string().optional(),
-  color: z.string().optional(),
-  serviciosIds: z.array(z.string().uuid()).optional(),
-  horarios: z.array(horarioSchema).length(7).optional(),
-});
-
-function limpiarTexto(valor?: string) {
-  const limpio = valor?.trim();
-  return limpio ? limpio : null;
+function limpiar(valor: unknown) {
+  return String(valor ?? "").trim();
 }
 
-function limpiarEmail(valor?: string) {
-  const limpio = valor?.trim().toLowerCase();
-  return limpio ? limpio : null;
+function limpiarColor(valor: unknown) {
+  const color = limpiar(valor);
+  return color || "#2563eb";
 }
 
-function normalizarHora(valor: string | null) {
-  if (!valor) return null;
-  return valor.slice(0, 5);
+function validarEstado(estado: string) {
+  return ["activo", "inactivo"].includes(estado);
 }
 
-function obtenerMensajeError(errorMessage: string) {
-  const mensaje = errorMessage.toLowerCase();
+export async function POST(request: Request) {
+  try {
+    const access = await requireDashboardAccess();
 
-  if (mensaje.includes("limite") || mensaje.includes("límite")) {
-    return "No podés crear más empleados con tu plan actual.";
-  }
-
-  if (mensaje.includes("duplicate") || mensaje.includes("unique")) {
-    return "Ya existe un empleado con esos datos.";
-  }
-
-  return errorMessage;
-}
-
-function validarHorarios(
-  horarios: z.infer<typeof horarioSchema>[]
-): string | null {
-  for (const horario of horarios) {
-    const inicio = horario.activo ? normalizarHora(horario.hora_inicio) : null;
-    const fin = horario.activo ? normalizarHora(horario.hora_fin) : null;
-
-    if (horario.activo && (!inicio || !fin)) {
-      return "Los días activos deben tener hora de inicio y fin.";
+    if (!access.puedeGestionarEmpleados) {
+      return NextResponse.json(
+        { error: "No tenés permiso para crear empleados." },
+        { status: 403 }
+      );
     }
 
-    if (horario.activo && inicio! >= fin!) {
-      return "La hora de salida debe ser posterior a la hora de entrada.";
+    const body = (await request.json()) as Payload;
+
+    const nombre = limpiar(body.nombre);
+    const email = limpiar(body.email);
+    const telefono = limpiar(body.telefono);
+    const color = limpiarColor(body.color_calendario);
+    const estado = limpiar(body.estado) || "activo";
+    const servicioIds = Array.isArray(body.servicio_ids) ? body.servicio_ids : [];
+    const horarios = Array.isArray(body.horarios) ? body.horarios : [];
+
+    if (!nombre) {
+      return NextResponse.json(
+        { error: "El nombre del empleado es obligatorio." },
+        { status: 400 }
+      );
     }
-  }
 
-  return null;
-}
+    if (!validarEstado(estado)) {
+      return NextResponse.json(
+        { error: "Estado inválido." },
+        { status: 400 }
+      );
+    }
 
-export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+    const supabase = createServiceRoleClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    let sucursalId: string | null = access.sucursalId;
 
-  if (!user) {
+    if (!sucursalId) {
+      const { data: principal, error: principalError } = await supabase
+        .from("sucursales")
+        .select("id")
+        .eq("negocio_id", access.negocio.id)
+        .eq("es_principal", true)
+        .maybeSingle();
+
+      if (principalError) throw new Error(principalError.message);
+
+      sucursalId = principal?.id ?? null;
+    }
+
+    const { data: empleado, error: empleadoError } = await supabase
+      .from("empleados")
+      .insert({
+        negocio_id: access.negocio.id,
+        sucursal_id: sucursalId,
+        nombre,
+        email: email || null,
+        telefono: telefono || null,
+        color_calendario: color,
+        estado,
+      })
+      .select("id")
+      .single();
+
+    if (empleadoError) throw new Error(empleadoError.message);
+
+    if (servicioIds.length > 0) {
+      const relaciones = servicioIds.map((servicioId) => ({
+        empleado_id: empleado.id,
+        servicio_id: servicioId,
+      }));
+
+      const { error: relacionesError } = await supabase
+        .from("empleado_servicios")
+        .insert(relaciones);
+
+      if (relacionesError) throw new Error(relacionesError.message);
+    }
+
+    if (horarios.length > 0) {
+      const horariosPayload = horarios.map((horario) => ({
+        empleado_id: empleado.id,
+        dia_semana: horario.dia_semana,
+        activo: horario.activo,
+        hora_inicio: horario.hora_inicio,
+        hora_fin: horario.hora_fin,
+        descanso_inicio: horario.descanso_inicio || null,
+        descanso_fin: horario.descanso_fin || null,
+      }));
+
+      const { error: horariosError } = await supabase
+        .from("horarios_empleado")
+        .insert(horariosPayload);
+
+      if (horariosError) throw new Error(horariosError.message);
+    }
+
+    return NextResponse.json({
+      message: "Empleado creado correctamente.",
+      empleadoId: empleado.id,
+    });
+  } catch (error) {
+    console.error("Error creando empleado:", error);
+
     return NextResponse.json(
-      { error: "No tenés sesión activa." },
-      { status: 401 }
-    );
-  }
-
-  const body = await request.json();
-  const parsed = empleadoSchema.safeParse(body);
-
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Datos inválidos." },
-      { status: 400 }
-    );
-  }
-
-  const { data: membresias, error: membresiaError } = await supabase
-    .from("negocio_usuarios")
-    .select("negocio_id")
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1);
-
-  if (membresiaError) {
-    return NextResponse.json(
-      { error: "No se pudo validar tu negocio." },
+      { error: "No se pudo crear el empleado." },
       { status: 500 }
     );
   }
-
-  const membresia = membresias?.[0];
-
-  if (!membresia) {
-    return NextResponse.json(
-      { error: "No tenés un negocio activo." },
-      { status: 403 }
-    );
-  }
-
-  const datos = parsed.data;
-  const horarios = datos.horarios ?? [];
-
-  if (horarios.length > 0) {
-    const errorHorarios = validarHorarios(horarios);
-
-    if (errorHorarios) {
-      return NextResponse.json({ error: errorHorarios }, { status: 400 });
-    }
-  }
-
-  const { data: empleado, error: empleadoError } = await supabase
-    .from("empleados")
-    .insert({
-      negocio_id: membresia.negocio_id,
-      nombre: datos.nombre.trim(),
-      email: limpiarEmail(datos.email),
-      telefono: limpiarTexto(datos.telefono),
-      color_calendario: limpiarTexto(datos.color) ?? "#2563eb",
-    })
-    .select("id, nombre")
-    .single();
-
-  if (empleadoError) {
-    return NextResponse.json(
-      { error: obtenerMensajeError(empleadoError.message) },
-      { status: 500 }
-    );
-  }
-
-  const serviciosIds = datos.serviciosIds ?? [];
-
-  if (serviciosIds.length > 0) {
-    const registros = serviciosIds.map((servicioId) => ({
-      empleado_id: empleado.id,
-      servicio_id: servicioId,
-    }));
-
-    const { error: serviciosError } = await supabase
-      .from("empleado_servicios")
-      .insert(registros);
-
-    if (serviciosError) {
-      return NextResponse.json(
-        { error: serviciosError.message },
-        { status: 500 }
-      );
-    }
-  }
-
-  if (horarios.length > 0) {
-    const registrosHorarios = horarios.map((horario) => ({
-      empleado_id: empleado.id,
-      dia_semana: horario.dia_semana,
-      activo: horario.activo,
-      hora_inicio: horario.activo ? normalizarHora(horario.hora_inicio) : null,
-      hora_fin: horario.activo ? normalizarHora(horario.hora_fin) : null,
-      descanso_inicio: null,
-      descanso_fin: null,
-    }));
-
-    const { error: horariosError } = await supabase
-      .from("horarios_empleado")
-      .insert(registrosHorarios);
-
-    if (horariosError) {
-      return NextResponse.json(
-        { error: horariosError.message },
-        { status: 500 }
-      );
-    }
-  }
-
-  return NextResponse.json({ empleado });
 }

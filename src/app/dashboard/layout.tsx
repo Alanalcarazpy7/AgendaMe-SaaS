@@ -1,8 +1,6 @@
-﻿import { redirect } from "next/navigation";
-import { DashboardMobileMenu } from "@/components/dashboard/dashboard-mobile-menu";
+﻿import { DashboardMobileMenu } from "@/components/dashboard/dashboard-mobile-menu";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { createClient } from "@/lib/supabase/server";
-import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { requireDashboardAccess } from "@/lib/dashboard/access-context";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -12,85 +10,38 @@ type DashboardLayoutProps = {
 };
 
 export default async function DashboardLayout({ children }: DashboardLayoutProps) {
-  const authSupabase = await createClient();
-
-  const {
-    data: { user },
-  } = await authSupabase.auth.getUser();
-
-  if (!user) {
-    redirect("/auth/login");
-  }
-
-  const supabase = createServiceRoleClient();
-
-  const { data: membresia, error: membresiaError } = await supabase
-    .from("negocio_usuarios")
-    .select("negocio_id")
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1)
-    .maybeSingle();
-
-  if (membresiaError || !membresia) {
-    redirect("/onboarding/negocio");
-  }
-
-  const { data: negocio, error: negocioError } = await supabase
-    .from("negocios")
-    .select("nombre, logo_url")
-    .eq("id", membresia.negocio_id)
-    .maybeSingle();
-
-  if (negocioError) {
-    throw new Error(negocioError.message);
-  }
-
-  const { data: suscripcionActual, error: suscripcionError } = await supabase
-    .from("suscripciones")
-    .select("plan_id")
-    .eq("negocio_id", membresia.negocio_id)
-    .eq("estado", "activa")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (suscripcionError) {
-    throw new Error(suscripcionError.message);
-  }
-
-  let planClave = "gratis";
-
-  if (suscripcionActual?.plan_id) {
-    const { data: plan, error: planError } = await supabase
-      .from("planes_saas")
-      .select("clave")
-      .eq("id", suscripcionActual.plan_id)
-      .maybeSingle();
-
-    if (planError) {
-      throw new Error(planError.message);
-    }
-
-    planClave = plan?.clave ?? "gratis";
-  }
+  const access = await requireDashboardAccess();
 
   return (
     <div className="min-h-screen bg-muted/30">
       <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:block lg:w-72">
         <DashboardSidebar
-          userEmail={user.email ?? undefined}
-          negocioNombre={negocio?.nombre ?? "AgendaMe"}
-          negocioLogoUrl={negocio?.logo_url ?? null}
-          planClave={planClave}
+          userEmail={access.user.email ?? undefined}
+          negocioNombre={access.negocio.nombre}
+          negocioLogoUrl={access.negocio.logo_url ?? null}
+          planClave={access.planClave}
+          accessRole={access.rol}
+          accessScope={access.scope}
+          scopeLabel={
+            access.scope === "global"
+              ? "Todas las sucursales"
+              : access.sucursalNombre ?? "Sucursal"
+          }
         />
       </div>
 
       <DashboardMobileMenu
-        userEmail={user.email ?? undefined}
-        negocioNombre={negocio?.nombre ?? "AgendaMe"}
-        negocioLogoUrl={negocio?.logo_url ?? null}
-        planClave={planClave}
+        userEmail={access.user.email ?? undefined}
+        negocioNombre={access.negocio.nombre}
+        negocioLogoUrl={access.negocio.logo_url ?? null}
+        planClave={access.planClave}
+        accessRole={access.rol}
+        accessScope={access.scope}
+        scopeLabel={
+          access.scope === "global"
+            ? "Todas las sucursales"
+            : access.sucursalNombre ?? "Sucursal"
+        }
       />
 
       <main className="lg:pl-72">

@@ -1,6 +1,7 @@
-﻿import { BrandingNegocioCard } from "@/components/configuracion/branding-negocio-card";
-import { IntervaloReservaCard } from "@/components/configuracion/intervalo-reserva-card";
+﻿import { requireDashboardAccess } from "@/lib/dashboard/access-context";
 import { redirect } from "next/navigation";
+import { BrandingNegocioCard } from "@/components/configuracion/branding-negocio-card";
+import { IntervaloReservaCard } from "@/components/configuracion/intervalo-reserva-card";
 import { createClient } from "@/lib/supabase/server";
 import {
   HorariosNegocioForm,
@@ -14,6 +15,11 @@ import {
 } from "@/components/ui/card";
 
 export default async function ConfiguracionPage() {
+  const access = await requireDashboardAccess();
+  if (!access.puedeGestionarConfiguracion) {
+    redirect("/dashboard/sin-permiso");
+  }
+
   const supabase = await createClient();
 
   const {

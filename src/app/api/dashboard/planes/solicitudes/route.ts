@@ -1,4 +1,5 @@
-﻿import { NextResponse } from "next/server";
+﻿import { requireAdminGlobalApi } from "@/lib/dashboard/api-guards";
+import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
@@ -12,6 +13,10 @@ function limpiar(valor: unknown) {
 }
 
 export async function POST(request: Request) {
+  const guard = await requireAdminGlobalApi();
+  if (!guard.ok) return guard.response;
+
+
   try {
     const authSupabase = await createClient();
 

@@ -1,11 +1,11 @@
 ﻿import { NextResponse } from "next/server";
-import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import {
   calcularDisponibilidadReserva,
   sumarMinutosHora,
 } from "@/lib/reservas/disponibilidad";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
-type ReservaPublicaRouteProps = {
+type RouteContext = {
   params: Promise<{
     slug: string;
   }>;
@@ -13,61 +13,37 @@ type ReservaPublicaRouteProps = {
 
 type ReservaPayload = {
   servicioId?: string;
+  sucursalId?: string | null;
   fecha?: string;
   horaInicio?: string;
-  nombreCompleto?: string;
-  telefono?: string;
-  email?: string;
+  clienteNombre?: string;
+  clienteTelefono?: string;
+  clienteEmail?: string;
+  notas?: string;
 };
 
-function normalizarTexto(valor: unknown) {
+function limpiar(valor: unknown) {
   return String(valor ?? "").trim();
 }
 
-function normalizarTelefono(valor: unknown) {
-  const raw = String(valor ?? "").trim();
-  const digits = raw.replace(/\D/g, "");
-
-  if (!digits) return "";
-
-  if (digits.startsWith("595")) return digits;
-
-  if (digits.startsWith("0")) {
-    return `595${digits.slice(1)}`;
-  }
-
-  return digits;
-}
-
-function normalizarHora(valor: unknown) {
-  return String(valor ?? "").slice(0, 5);
-}
-
-function obtenerMensajeError(error: unknown) {
-  if (error instanceof Error) return error.message;
-  return "No se pudo crear la reserva.";
-}
-
-export async function POST(request: Request, { params }: ReservaPublicaRouteProps) {
+export async function POST(request: Request, context: RouteContext) {
   try {
-    const { slug } = await params;
+    const { slug } = await context.params;
     const body = (await request.json()) as ReservaPayload;
 
-    const servicioId = normalizarTexto(body.servicioId);
-    const fecha = normalizarTexto(body.fecha);
-    const horaInicio = normalizarHora(body.horaInicio);
-    const nombreCompleto = normalizarTexto(body.nombreCompleto);
-    const telefono = normalizarTelefono(body.telefono);
-    const email = normalizarTexto(body.email).toLowerCase();
+    const servicioId = limpiar(body.servicioId);
+    const sucursalId = limpiar(body.sucursalId) || null;
+    const fecha = limpiar(body.fecha);
+    const horaInicio = limpiar(body.horaInicio);
+    const clienteNombre = limpiar(body.clienteNombre);
+    const clienteTelefono = limpiar(body.clienteTelefono);
+    const clienteEmail = limpiar(body.clienteEmail);
+    const notas = limpiar(body.notas);
 
-    if (!servicioId || !fecha || !horaInicio || !nombreCompleto || !telefono) {
+    if (!servicioId || !fecha || !horaInicio || !clienteNombre || !clienteTelefono) {
       return NextResponse.json(
-        {
-          error: "Completá servicio, fecha, horario, nombre y teléfono.",
-        },
-        {
-          status: 400,
-        }
+        { error: "Completá todos los datos obligatorios." },
+        { status: 400 }
       );
     }
 
@@ -78,140 +54,120 @@ export async function POST(request: Request, { params }: ReservaPublicaRouteProp
       slug,
       servicioId,
       fecha,
+      sucursalId,
     });
-
-    if (disponibilidad.error) {
-      return NextResponse.json(
-        {
-          error: disponibilidad.error,
-        },
-        {
-          status: disponibilidad.status ?? 400,
-        }
-      );
-    }
 
     if (!disponibilidad.negocio || !disponibilidad.servicio) {
       return NextResponse.json(
-        {
-          error: "No se pudo validar el negocio o servicio.",
-        },
-        {
-          status: 400,
-        }
+        { error: "No se encontró el negocio o servicio." },
+        { status: 404 }
       );
     }
 
-    const slotSeleccionado = disponibilidad.slots.find(
-      (slot) => slot.hora === horaInicio
-    );
-
-    if (!slotSeleccionado || slotSeleccionado.empleadosDisponibles.length === 0) {
+    if (!disponibilidad.slots.includes(horaInicio)) {
       return NextResponse.json(
-        {
-          error:
-            "Ese horario ya no está disponible. Elegí otro horario de la lista.",
-        },
-        {
-          status: 409,
-        }
+        { error: "Ese horario ya no está disponible." },
+        { status: 409 }
       );
     }
 
-    const empleadoAsignado = slotSeleccionado.empleadosDisponibles[0];
+    const empleadoId = disponibilidad.slotEmployees[horaInicio]?.[0];
+
+    if (!empleadoId) {
+      return NextResponse.json(
+        { error: "No hay empleado disponible para ese horario." },
+        { status: 409 }
+      );
+    }
+
+    const negocioId = disponibilidad.negocio.id;
+    const sucursalFinalId = disponibilidad.sucursalId;
+    const servicio = disponibilidad.servicio;
     const horaFin = sumarMinutosHora(
       horaInicio,
-      disponibilidad.servicio.duracion_minutos
+      Number(servicio.duracion_minutos ?? 30)
     );
+
+    let clienteId: string | null = null;
 
     const { data: clienteExistente, error: clienteBuscarError } = await supabase
       .from("clientes")
       .select("id")
-      .eq("negocio_id", disponibilidad.negocio.id)
-      .eq("telefono", telefono)
+      .eq("negocio_id", negocioId)
+      .eq("telefono", clienteTelefono)
       .maybeSingle();
 
     if (clienteBuscarError) {
       throw new Error(clienteBuscarError.message);
     }
 
-    let clienteId = clienteExistente?.id as string | undefined;
+    if (clienteExistente?.id) {
+      clienteId = clienteExistente.id;
 
-    if (!clienteId) {
-      const { data: clienteNuevo, error: clienteCrearError } = await supabase
+      await supabase
+        .from("clientes")
+        .update({
+          nombre_completo: clienteNombre,
+          email: clienteEmail || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", clienteId)
+        .eq("negocio_id", negocioId);
+    } else {
+      const { data: clienteNuevo, error: clienteError } = await supabase
         .from("clientes")
         .insert({
-          negocio_id: disponibilidad.negocio.id,
-          nombre_completo: nombreCompleto,
-          telefono,
-          email: email || null,
+          negocio_id: negocioId,
+          nombre_completo: clienteNombre,
+          telefono: clienteTelefono,
+          email: clienteEmail || null,
           estado: "activo",
         })
         .select("id")
         .single();
 
-      if (clienteCrearError) {
-        throw new Error(clienteCrearError.message);
+      if (clienteError) {
+        throw new Error(clienteError.message);
       }
 
-      clienteId = clienteNuevo.id as string;
+      clienteId = clienteNuevo.id;
     }
 
     const { data: cita, error: citaError } = await supabase
       .from("citas")
       .insert({
-        negocio_id: disponibilidad.negocio.id,
+        negocio_id: negocioId,
+        sucursal_id: sucursalFinalId,
         cliente_id: clienteId,
-        servicio_id: disponibilidad.servicio.id,
-        empleado_id: empleadoAsignado.id,
+        servicio_id: servicio.id,
+        empleado_id: empleadoId,
         fecha,
         hora_inicio: horaInicio,
         hora_fin: horaFin,
         estado: "pendiente",
-        precio: disponibilidad.servicio.precio ?? 0,
-        notas: null,
+        precio: servicio.precio ?? 0,
         origen: "publico",
+        notas: notas || null,
       })
-      .select("id, fecha, hora_inicio, hora_fin, estado, seguimiento_token")
+      .select("id, seguimiento_token")
       .single();
 
     if (citaError) {
-      console.error("Error creando cita pública:", citaError);
-
-      return NextResponse.json(
-        {
-          error:
-            citaError.message ||
-            "Ese horario ya no está disponible. Elegí otro horario.",
-        },
-        {
-          status: 409,
-        }
-      );
+      throw new Error(citaError.message);
     }
 
     return NextResponse.json({
       message: "Reserva creada correctamente.",
-      reserva: cita,
-      negocio: {
-        nombre: disponibilidad.negocio.nombre,
-        slug: disponibilidad.negocio.slug,
-      },
-      servicio: {
-        nombre: disponibilidad.servicio.nombre,
-      },
+      citaId: cita.id,
+      seguimientoToken: cita.seguimiento_token,
       seguimientoUrl: `/reserva/estado/${cita.seguimiento_token}`,
     });
   } catch (error) {
-    console.error("Error en reserva pública:", error);
+    console.error("Error creando reserva pública:", error);
 
     return NextResponse.json(
-      {
-        error: obtenerMensajeError(error),
-      },
-      {
-        status: 500,
-      }
+      { error: "No se pudo crear la reserva." },
+      { status: 500 }
     );
   }
 }

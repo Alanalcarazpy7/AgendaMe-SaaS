@@ -1,4 +1,5 @@
-﻿import { NextResponse, type NextRequest } from "next/server";
+﻿import { requireAdminGlobalApi } from "@/lib/dashboard/api-guards";
+import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
