@@ -67,6 +67,9 @@ export default async function ClientesPage() {
 
   const clientesCompatibles = clientes.map((cliente) => ({
     ...cliente,
+    estado: cliente.estado === "inactivo" ? "inactivo" as const : "activo" as const,
+    documento: null,
+    notas_internas: null,
     notas: null,
   }));
 

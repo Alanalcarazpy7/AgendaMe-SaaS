@@ -1,5 +1,5 @@
 ﻿import { NextResponse } from "next/server";
-import { requireDashboardAccess } from "@/lib/dashboard/access-context";
+import { requireApiDashboardAccess } from "@/lib/dashboard/api-access";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 function limpiar(valor: unknown) {
@@ -8,7 +8,9 @@ function limpiar(valor: unknown) {
 
 export async function PATCH(request: Request) {
   try {
-    const access = await requireDashboardAccess();
+    const accessGuard = await requireApiDashboardAccess();
+    if (!accessGuard.ok) return accessGuard.response;
+    const access = accessGuard.access;
     const body = await request.json();
 
     const password = limpiar(body.password);

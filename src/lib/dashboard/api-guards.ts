@@ -1,24 +1,18 @@
 ﻿import { NextResponse } from "next/server";
-import { resolveDashboardAccess } from "@/lib/dashboard/access-context";
+import { requireApiDashboardAccess } from "@/lib/dashboard/api-access";
 
 export async function requireAdminGlobalApi() {
-  const access = await resolveDashboardAccess();
+  const guard = await requireApiDashboardAccess();
 
-  if (!access.ok) {
-    return {
-      ok: false as const,
-      response: NextResponse.json(
-        { error: "No autenticado o sin acceso al negocio." },
-        { status: 401 }
-      ),
-    };
+  if (!guard.ok) {
+    return guard;
   }
 
-  if (!access.puedeVerTodo) {
+  if (!guard.access.puedeVerTodo) {
     return {
       ok: false as const,
       response: NextResponse.json(
-        { error: "Esta acción solo está permitida para el admin global del negocio." },
+        { error: "No tenés permiso para realizar esta acción." },
         { status: 403 }
       ),
     };
@@ -26,6 +20,6 @@ export async function requireAdminGlobalApi() {
 
   return {
     ok: true as const,
-    access,
+    access: guard.access,
   };
 }

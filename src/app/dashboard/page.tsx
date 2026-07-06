@@ -115,7 +115,7 @@ export default async function DashboardPage() {
 
   proximasQuery = applySucursalScope(proximasQuery, access);
 
-  let clientesQuery = supabase
+  let clientesQuery: any = supabase
     .from("clientes")
     .select("id", { count: "exact", head: true })
     .eq("negocio_id", access.negocio.id)

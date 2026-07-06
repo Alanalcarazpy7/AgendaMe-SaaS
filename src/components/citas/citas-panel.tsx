@@ -332,7 +332,7 @@ export function CitasPanel({
     if (!detalleServicioId) return empleados;
 
     const empleadosIds = new Set(
-      empleadoServicios
+      (empleadoServicios ?? [])
         .filter((relacion) => relacion.servicio_id === detalleServicioId)
         .map((relacion) => relacion.empleado_id)
     );
@@ -346,7 +346,7 @@ export function CitasPanel({
 
   function obtenerEmpleadosPorServicio(servicioId: string) {
     const empleadosIds = new Set(
-      empleadoServicios
+      (empleadoServicios ?? [])
         .filter((relacion) => relacion.servicio_id === servicioId)
         .map((relacion) => relacion.empleado_id)
     );
@@ -772,7 +772,7 @@ export function CitasPanel({
         clientes={clientes}
         servicios={servicios}
         empleados={empleados}
-        empleadoServicios={empleadoServicios}
+        empleadoServicios={empleadoServicios ?? []}
         onSaved={() => window.location.reload()}
       />
 

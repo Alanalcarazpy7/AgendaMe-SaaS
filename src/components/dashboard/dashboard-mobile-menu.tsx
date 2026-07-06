@@ -29,6 +29,8 @@ import { SignOutButton } from "@/components/dashboard/sign-out-button";
 type Props = {
   userEmail?: string;
   userName?: string;
+  userAvatarUrl?: string | null;
+  userColor?: string | null;
   negocioNombre: string;
   negocioLogoUrl?: string | null;
   planClave: string;

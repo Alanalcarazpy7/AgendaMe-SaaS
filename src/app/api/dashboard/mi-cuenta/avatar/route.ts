@@ -1,5 +1,5 @@
 ﻿import { NextResponse } from "next/server";
-import { requireDashboardAccess } from "@/lib/dashboard/access-context";
+import { requireApiDashboardAccess } from "@/lib/dashboard/api-access";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 function extensionPorMime(mime: string) {
@@ -11,7 +11,9 @@ function extensionPorMime(mime: string) {
 
 export async function POST(request: Request) {
   try {
-    const access = await requireDashboardAccess();
+    const accessGuard = await requireApiDashboardAccess();
+    if (!accessGuard.ok) return accessGuard.response;
+    const access = accessGuard.access;
     const formData = await request.formData();
 
     const file = formData.get("avatar");
