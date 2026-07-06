@@ -1,11 +1,57 @@
-﻿import { expect, type Browser, type Page } from "@playwright/test";
+﻿import { expect, type Browser, type BrowserContext, type Page, type TestInfo } from "@playwright/test";
 
 export const AGENDA = {
   slug: "barberia",
   sucursal: "Secundaria",
   servicio: "Barberia1",
   adminStorage: "tests/.auth/admin.json",
+  gerenteStorage: "tests/.auth/gerente.json",
+  recepcionStorage: "tests/.auth/recepcion.json",
+  empleadoStorage: "tests/.auth/empleado.json",
 };
+
+export const RUTAS_ADMIN = [
+  "/dashboard",
+  "/dashboard/citas",
+  "/dashboard/reservas",
+  "/dashboard/clientes",
+  "/dashboard/empleados",
+  "/dashboard/servicios",
+  "/dashboard/reportes",
+  "/dashboard/exportar",
+  "/dashboard/recordatorios",
+  "/dashboard/sucursales",
+  "/dashboard/planes",
+  "/dashboard/configuracion",
+  "/dashboard/mi-cuenta",
+];
+
+export const RUTAS_GERENTE = [
+  "/dashboard",
+  "/dashboard/citas",
+  "/dashboard/reservas",
+  "/dashboard/clientes",
+  "/dashboard/empleados",
+  "/dashboard/reportes",
+  "/dashboard/exportar",
+  "/dashboard/recordatorios",
+  "/dashboard/mi-cuenta",
+];
+
+export const RUTAS_RECEPCION = [
+  "/dashboard",
+  "/dashboard/citas",
+  "/dashboard/reservas",
+  "/dashboard/clientes",
+  "/dashboard/recordatorios",
+  "/dashboard/mi-cuenta",
+];
+
+export const RUTAS_EMPLEADO = [
+  "/dashboard",
+  "/dashboard/citas",
+  "/dashboard/mi-cuenta",
+];
 
 export function siguienteLunesIso() {
   const date = new Date();
@@ -32,7 +78,10 @@ function toIsoDate(date: Date) {
 }
 
 export function uniqueId() {
-  return String(Date.now()).slice(-8);
+  const timestamp = String(Date.now()).slice(-7);
+  const random = Math.floor(Math.random() * 999).toString().padStart(3, "0");
+
+  return `${timestamp}${random}`;
 }
 
 export type ReservaCreada = {
@@ -51,6 +100,7 @@ export async function crearReservaPublica(
     fechaReserva?: string;
     sucursal?: string;
     servicio?: string;
+    indiceHorario?: number;
   }
 ): Promise<ReservaCreada> {
   const id = uniqueId();
@@ -64,6 +114,8 @@ export async function crearReservaPublica(
 
   await page.goto(`/reservar/${AGENDA.slug}`, { waitUntil: "domcontentloaded" });
 
+  await esperarPaginaSinErrores(page);
+
   await expect(page.locator("body")).toContainText(/Reserva online/i);
   await expect(page.locator("body")).toContainText(/Barberia|Barbería/i);
 
@@ -72,17 +124,22 @@ export async function crearReservaPublica(
 
   await page.locator('input[type="date"]').fill(fechaReserva);
 
-  const primerHorario = page.getByRole("button", {
+  const horarios = page.getByRole("button", {
     name: /^\d{2}:\d{2}$/,
-  }).first();
+  });
 
   await expect(
-    primerHorario,
+    horarios.first(),
     `No apareció ningún horario disponible para ${sucursal} / ${servicio} en ${fechaReserva}.`
   ).toBeVisible({ timeout: 20_000 });
 
-  const horarioElegido = (await primerHorario.textContent())?.trim() ?? "";
-  await primerHorario.click();
+  const cantidadHorarios = await horarios.count();
+  const indice = Math.min(opciones?.indiceHorario ?? 0, Math.max(cantidadHorarios - 1, 0));
+
+  const horario = horarios.nth(indice);
+  const horarioElegido = (await horario.textContent())?.trim() ?? "";
+
+  await horario.click();
 
   await page.locator('input[placeholder="Tu nombre"]').fill(clienteNombre);
   await page.locator('input[placeholder="0981..."]').fill(clienteTelefono);
@@ -110,8 +167,16 @@ export async function crearReservaPublica(
 }
 
 export async function abrirDashboardComoAdmin(browser: Browser, path: string) {
+  return abrirDashboardConStorage(browser, AGENDA.adminStorage, path);
+}
+
+export async function abrirDashboardConStorage(
+  browser: Browser,
+  storageState: string,
+  path: string
+): Promise<{ context: BrowserContext; page: Page }> {
   const context = await browser.newContext({
-    storageState: AGENDA.adminStorage,
+    storageState,
     baseURL: "http://localhost:3000",
   });
 
@@ -129,4 +194,25 @@ export async function esperarPaginaSinErrores(page: Page) {
   await expect(body).not.toContainText(/Application error/i);
   await expect(body).not.toContainText(/Unhandled Runtime Error/i);
   await expect(body).not.toContainText(/Error parsing package\.json/i);
+  await expect(body).not.toContainText(/Internal Server Error/i);
+}
+
+export async function esperarDashboardValido(page: Page) {
+  await esperarPaginaSinErrores(page);
+
+  await expect(page).not.toHaveURL(/\/login/i);
+  await expect(page).not.toHaveURL(/\/dashboard\/sin-permiso/i);
+
+  await expect(page.locator("body")).toBeVisible();
+}
+
+export async function adjuntarScreenshot(page: Page, testInfo: TestInfo, nombre: string) {
+  const buffer = await page.screenshot({
+    fullPage: true,
+  });
+
+  await testInfo.attach(nombre, {
+    body: buffer,
+    contentType: "image/png",
+  });
 }
