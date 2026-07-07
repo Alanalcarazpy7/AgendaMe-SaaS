@@ -1,0 +1,420 @@
+Aprobado Etapa E funcionalmente. Dashboard planes quedó bien y api-security pasó.
+
+NO tocar tests todavía.
+NO modificar test:limits todavía.
+Primero quiero corregir y mejorar fuerte la landing pública y la página /planes.
+
+Problemas actuales detectados:
+1. Hay textos en inglés como “Schedules”, “Appointments”, “Reminders”, etc. Toda la UI pública debe estar 100% en español.
+2. El logo del header se ve muy chico. Debe verse más presente y profesional.
+3. El hero actual no me gusta. El mockup no representa suficientemente el sistema real.
+4. El hero debe mostrar mockup de escritorio y también mockup móvil.
+5. El botón “Ver demo de reserva pública” NO debe llevar a /reservar/barberia, porque esa ruta corresponde a un negocio real/de prueba y no tiene sentido como demo comercial.
+6. Hay confusión con planes: existe /planes y también #planes en la landing. El navbar “Planes” debe llevar a /planes. La landing puede tener un resumen, pero el destino principal de planes debe ser /planes.
+7. Las cards de nichos están muy básicas, sin sensación premium.
+8. La landing tiene pocas secciones. Falta explicar mejor cómo funciona la app.
+9. Falta sección de contacto/formulario que arme mensaje a WhatsApp.
+10. Falta FAQ/preguntas frecuentes.
+11. Falta sección de beneficios y características más completa.
+12. Falta sección tipo testimonios/casos de uso, sin inventar números falsos.
+13. Falta animación suave al hacer scroll.
+14. Quiero scrollbar personalizada con colores de la marca.
+15. La página /planes debe tener cards y también una comparativa tipo tabla profesional como referencia estilo AgendaPro, pero usando mis datos reales de Supabase.
+16. No copiar marcas externas. Solo usar las capturas como inspiración de estructura/calidad visual.
+
+Reglas estrictas:
+- Toda la UI visible debe estar en español.
+- No tocar APIs.
+- No tocar reservas.
+- No tocar auth.
+- No tocar permisos.
+- No tocar Supabase.
+- No tocar tests.
+- No instalar librerías nuevas.
+- No usar imágenes externas pesadas.
+- No usar textos en inglés.
+- No usar precios hardcodeados.
+- No usar límites hardcodeados.
+- No usar USD.
+- No prometer funcionalidades ilimitadas.
+- No decir “funcionalidades ilimitadas”.
+- Usar “Funcionalidades a medida bajo evaluación”.
+- Planes/precios/límites/features deben venir de Supabase mediante getPlanesPublicos().
+- WhatsApp debe usar buildWhatsappUrl() y, para planes, generarMensajeWhatsAppPlan().
+- Número oficial ya centralizado: 595994295092.
+- Mantener revalidate = 60 en / y /planes.
+- Después ejecutar npm run build.
+
+Archivos permitidos:
+- src/app/page.tsx
+- src/app/planes/page.tsx
+- src/app/globals.css
+- src/components/landing/*
+- src/components/planes/*
+- src/components/brand/agendame-logo.tsx SOLO si hace falta ajustar tamaño/clases, no cambiar SVG
+- src/lib/contact/whatsapp.ts SOLO si necesitás función reusable para contacto general, no tocar lógica existente de planes
+- src/lib/planes/planes-shared.ts SOLO si necesitás una función pura extra para visualización, no cambiar lo que ya funciona
+
+================================================
+ETAPA F1 — CORRECCIONES RÁPIDAS DE UX
+================================================
+
+1. Navbar:
+   - Logo más grande.
+   - Links:
+     - Cómo funciona -> #como-funciona
+     - Funciones -> #funciones
+     - Nichos -> #nichos
+     - Planes -> /planes
+     - Contacto -> #contacto
+   - Botones:
+     - Iniciar sesión -> /auth/login
+     - Crear cuenta gratis -> /auth/registro
+   - Icono de WhatsApp discreto -> #contacto o link WhatsApp general.
+
+2. Eliminar o cambiar el link “Ver demo de reserva pública”.
+   NO debe llevar a /reservar/barberia.
+   Reemplazar por:
+   - “Ver cómo funciona” -> #como-funciona
+   o
+   - “Ver demo visual” -> #demo-visual
+
+3. No usar #planes como destino principal del navbar.
+   Si la landing tiene resumen de precios, usar id:
+   - #planes-resumen
+   Pero el navbar “Planes” debe ir a:
+   - /planes
+
+================================================
+ETAPA F2 — LANDING PREMIUM COMPLETA
+================================================
+
+Rediseñar la landing inicial para que tenga estas secciones:
+
+1. Header premium
+   - Logo AgendaMe más grande
+   - Nav claro
+   - Botón principal visible
+   - Sticky o semi-sticky elegante si queda bien
+   - Responsive mobile con menú claro
+
+2. Hero premium
+   Título sugerido:
+   “Reservas, citas y clientes organizados en un solo lugar”
+
+   Subtítulo:
+   “AgendaMe te ayuda a recibir reservas online, gestionar turnos, clientes, empleados, servicios y recordatorios desde un panel simple y profesional.”
+
+   Badges:
+   - Gratis hasta 20 citas al mes
+   - Sin tarjeta requerida
+   - Para negocios con turnos y citas
+
+   CTAs:
+   - Crear cuenta gratis -> /auth/registro
+   - Ver planes -> /planes
+   - Hablar por WhatsApp -> #contacto o WhatsApp directo
+
+   Visual obligatorio:
+   - Mockup desktop del dashboard
+   - Mockup móvil de reserva/agenda
+   - Ambos hechos con divs/Tailwind, no imágenes externas
+   - El mockup desktop debe parecer un panel real:
+     - citas de hoy
+     - próximos turnos
+     - recordatorios
+     - clientes
+     - progreso semanal
+   - El mockup móvil debe parecer una reserva pública:
+     - elegir servicio
+     - elegir horario
+     - confirmar reserva
+   - Animación muy sutil: flotación, glow o aparición suave, no exagerar.
+
+3. Sección “Cómo funciona” con 3 pasos
+   id="como-funciona"
+
+   Pasos:
+   1. Creá tu cuenta y configurá tu negocio
+   2. Compartí tu enlace de reservas
+   3. Recibí citas y gestioná todo desde el panel
+
+   Estilo:
+   - Línea visual o cards conectadas
+   - Números grandes
+   - Animación suave al aparecer
+
+4. Sección de beneficios
+   id="beneficios"
+
+   Dividir en dos columnas:
+   Para el negocio:
+   - Más organización
+   - Menos mensajes manuales
+   - Mejor control de clientes
+   - Seguimiento del movimiento mensual
+
+   Para los clientes:
+   - Reservan más rápido
+   - Ven servicios disponibles
+   - Reciben confirmación
+   - Menos olvidos con recordatorios
+
+   Cards premium, no básicas.
+
+5. Sección de funciones
+   id="funciones"
+
+   Cards premium para:
+   - Agenda online
+   - Citas y reservas
+   - Clientes
+   - Servicios
+   - Empleados
+   - Recordatorios
+   - Reportes
+   - Planes y límites
+
+   Cada card debe tener:
+   - icono simple
+   - título
+   - descripción corta
+   - hover premium
+   - borde sutil
+   - fondo con gradiente suave
+   - buena jerarquía
+
+6. Sección de nichos
+   id="nichos"
+
+   Rediseñar las cards actuales. No deben verse simples.
+   Nichos:
+   - Barberías
+   - Veterinarias
+   - Clínicas
+   - Consultorios
+   - Estética
+   - Spa
+   - Peluquerías
+   - Profesionales
+
+   Cada card debe tener:
+   - icono
+   - título
+   - breve texto orientado al rubro
+   - hover con elevación/gradiente
+   - animación sutil
+   - mejor composición visual
+
+7. Sección de demo visual
+   id="demo-visual"
+
+   Mostrar dos paneles:
+   - Vista del negocio: dashboard operativo
+   - Vista del cliente: reserva pública desde celular
+
+   Objetivo:
+   Que el visitante entienda claramente qué vende AgendaMe.
+
+8. Resumen de planes en landing
+   id="planes-resumen"
+
+   Usar PlanPricingCards existente si conviene, pero con variante resumida si hace falta.
+   Debe leer planes desde Supabase.
+   Debe tener:
+   - toggle mensual/anual
+   - profesional destacado
+   - CTA “Ver planes completos” -> /planes
+   - CTA por plan según corresponda
+   - no duplicar demasiado contenido si /planes ya es la página completa
+
+9. Sección de confianza / seguridad
+   No usar números falsos.
+   Mostrar:
+   - Datos organizados
+   - Acceso por roles
+   - Límites por plan
+   - Panel administrativo
+   - Diseño responsive
+   - Pensado para negocios reales
+
+10. Testimonios o casos de uso
+   No inventar “miles de clientes”.
+   Usar título:
+   “Casos donde AgendaMe puede ayudarte”
+
+   Cards tipo:
+   - Barbería con agenda llena
+   - Veterinaria con revisiones y controles
+   - Estética con servicios por horario
+
+   Redactar como casos de uso, no como testimonios reales si no tenemos clientes reales.
+   Evitar nombres falsos de personas reales.
+   No colocar fotos de personas.
+
+11. FAQ
+   id="faq"
+
+   Preguntas frecuentes:
+   - ¿Puedo empezar gratis?
+   - ¿Necesito tarjeta para registrarme?
+   - ¿Puedo cambiar de plan después?
+   - ¿Puedo usar AgendaMe para barbería/veterinaria/estética?
+   - ¿Los clientes pueden reservar desde el celular?
+   - ¿Qué pasa si llego al límite de citas?
+   - ¿Puedo pedir adaptaciones a medida?
+   - ¿Los precios se actualizan automáticamente?
+
+   Respuestas claras y comerciales.
+
+12. Contacto
+   id="contacto"
+
+   Crear una sección premium de contacto con:
+   - Lado izquierdo:
+     - WhatsApp oficial
+     - Atención comercial
+     - Texto de ayuda
+   - Lado derecho:
+     Formulario visual SIN backend que arme mensaje a WhatsApp.
+
+   Campos:
+   - Nombre
+   - Nombre del negocio
+   - Rubro
+   - Teléfono
+   - Plan de interés
+   - Mensaje
+
+   Al enviar:
+   - No mandar a API
+   - Armar texto con esos datos
+   - Abrir WhatsApp usando buildWhatsappUrl()
+   - Usar window.open(url, "_blank", "noopener,noreferrer")
+
+   Debe ser client component separado:
+   src/components/landing/contact-whatsapp-form.tsx
+
+   Todo en español.
+   Placeholder paraguayo:
+   - Ej: 0994 295092
+   No usar +56 ni datos de Chile.
+
+13. CTA final
+   - Crear cuenta gratis -> /auth/registro
+   - Hablar por WhatsApp -> #contacto
+   - Ver planes -> /planes
+
+14. Footer
+   - Logo AgendaMe
+   - Links:
+     - Cómo funciona
+     - Funciones
+     - Nichos
+     - Planes
+     - FAQ
+     - Contacto
+     - Login
+     - Registro
+   - Texto breve y profesional.
+
+================================================
+ETAPA F3 — ANIMACIONES Y SCROLLBAR
+================================================
+
+Sin instalar librerías nuevas.
+
+Agregar animaciones suaves:
+- reveal on scroll
+- fade-up
+- scale suave en cards
+- hover lift
+- glow sutil
+- mockup flotante muy leve
+
+Crear si hace falta:
+src/components/landing/reveal.tsx
+
+Debe usar IntersectionObserver.
+Debe respetar prefers-reduced-motion.
+No debe romper SSR.
+No hacer animaciones exageradas.
+
+En globals.css:
+- agregar scrollbar personalizada:
+  - track claro en light mode
+  - thumb cyan/teal/blue
+  - hover más fuerte
+  - compatible con dark mode
+- agregar keyframes suaves si hace falta
+- respetar prefers-reduced-motion
+
+================================================
+ETAPA F4 — /PLANES MÁS COMPLETA
+================================================
+
+Mejorar /planes para que sea una página completa, no solo cards.
+
+Debe tener:
+
+1. Header propio con logo y nav
+2. Hero:
+   “Elegí el plan ideal para tu negocio”
+   Subtítulo comercial
+3. Toggle mensual/anual
+4. Cards desde Supabase
+5. Comparativa tipo tabla profesional, inspirada en la referencia AgendaPro:
+   - columnas: Gratis, Básico, Profesional, Empresarial
+   - filas con límites:
+     - Citas mensuales
+     - Empleados
+     - Servicios
+     - Clientes
+     - Sucursales
+   - filas con funciones/flags:
+     - Página pública de reservas
+     - Gestión de clientes
+     - Gestión de empleados
+     - Gestión de servicios
+     - Estadísticas básicas
+     - Reportes avanzados
+     - Exportación XLSX / CSV
+     - Recordatorios WhatsApp
+     - Múltiples sucursales
+     - Soporte prioritario
+     - Funcionalidades a medida bajo evaluación
+
+La comparación debe usar datos de Supabase:
+- límites desde columnas
+- funciones desde features/flags
+- precios desde columnas
+- destacado desde destacado/texto_destacado
+
+No usar precios hardcodeados.
+No usar límites hardcodeados.
+No usar “ilimitado”.
+
+6. FAQ de planes
+7. CTA final a WhatsApp y registro
+
+================================================
+REVISIÓN FINAL
+================================================
+
+Después de editar, ejecutar búsqueda:
+
+Get-ChildItem -Recurse -Path src -Include *.ts,*.tsx |
+  Select-String -Pattern "Schedules|Appointments|Reminders|Reviews|Notes|/reservar/barberia|/auth/register|Desde Gs\.|49\.000|79\.000|149\.000|399\.000|USD|US\$|\+56|Wirevet|Agendi|ReservaSimple|AgendaPro"
+
+Si aparece alguno:
+- Si es texto visible de UI, corregir.
+- Si aparece en comentario o referencia no usada, avisar.
+
+Después ejecutar:
+npm run build
+
+No tocar dashboard.
+No tocar tests.
+No tocar APIs.
+No tocar Supabase.
+No borrar nada ni hacer rm rf que ya borraste una vez el proyecto
