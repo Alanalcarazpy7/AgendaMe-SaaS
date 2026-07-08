@@ -1,74 +1,61 @@
-﻿import Link from "next/link";
-import { ArrowLeft, HelpCircle } from "lucide-react";
-import { AgendaMeLogo } from "@/components/brand/agendame-logo";
+import Link from "next/link";
+import { ArrowRight, MessageSquareText } from "lucide-react";
+import { SiteNavbar } from "@/components/landing/site-navbar";
+import { SiteFooter } from "@/components/landing/site-footer";
+import { Reveal } from "@/components/landing/reveal";
+import { FaqAccordion } from "@/components/landing/faq-accordion";
+import { WhatsAppIcon } from "@/components/landing/social-icons";
 import { PlanesPublicosSection } from "@/components/planes/planes-publicos-section";
 import { PlanComparisonTable } from "@/components/planes/plan-comparison-table";
 import { getPlanesPublicos } from "@/lib/planes/planes-publicos";
+import { getWhatsappNumber } from "@/lib/contact/whatsapp";
 
 export const revalidate = 60;
 
 const faq = [
   ["Puedo empezar gratis?", "Si. Podes crear una cuenta y probar AgendaMe con el plan gratis disponible."],
-  ["Puedo cambiar de plan despues?", "Si. Desde el dashboard podes revisar el uso y solicitar un cambio de plan."],
-  ["Los precios vienen de Supabase?", "Si. Esta pagina lee los planes publicos desde la vista oficial configurada en Supabase."],
-  ["Puedo pedir funcionalidades a medida?", "Si. Las funcionalidades a medida se evaluan segun la necesidad del negocio."],
-];
+  ["Puedo cambiar de plan despues?", "Si. Desde el dashboard podes revisar tu uso y solicitar un cambio de plan."],
+  ["Los precios vienen de Supabase?", "Si. Esta pagina lee los planes publicos desde la vista oficial configurada en Supabase, siempre actualizada."],
+  ["Que significa el plan anual?", "Pagas 10 meses y usas el servicio los 12 meses del año, segun el ahorro de cada plan."],
+  ["Que pasa si necesito mas capacidad que el plan Empresarial?", "Las funcionalidades a medida se evaluan segun la necesidad puntual del negocio."],
+  ["Puedo solicitar un plan por WhatsApp?", "Si. Cada card tiene un boton que arma el mensaje con el plan y periodo elegidos."],
+] as const;
 
 export default async function PlanesPage() {
   const planes = await getPlanesPublicos();
+  const whatsappNumero = getWhatsappNumber();
 
   return (
-    <main className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b bg-background/88 shadow-sm shadow-slate-950/5 backdrop-blur-xl dark:bg-background/82">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="inline-flex rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background" aria-label="AgendaMe">
-            <AgendaMeLogo size="lg" />
-          </Link>
-
-          <nav className="hidden items-center gap-6 lg:flex">
-            <Link href="/#como-funciona" className="text-sm font-medium text-muted-foreground transition hover:text-foreground">Como funciona</Link>
-            <Link href="/#funciones" className="text-sm font-medium text-muted-foreground transition hover:text-foreground">Funciones</Link>
-            <Link href="/#nichos" className="text-sm font-medium text-muted-foreground transition hover:text-foreground">Nichos</Link>
-            <Link href="/planes" className="text-sm font-semibold text-primary">Planes</Link>
-            <Link href="/#contacto" className="text-sm font-medium text-muted-foreground transition hover:text-foreground">Contacto</Link>
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <Link href="/auth/login" className="hidden h-10 items-center justify-center rounded-xl border bg-card px-4 text-sm font-semibold shadow-sm transition hover:bg-accent hover:text-accent-foreground sm:inline-flex">
-              Iniciar sesion
-            </Link>
-            <Link href="/auth/registro" className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/20 transition hover:bg-primary/90">
-              Crear cuenta gratis
-            </Link>
-          </div>
-        </div>
-      </header>
+    <main className="min-h-screen overflow-x-clip bg-background">
+      <SiteNavbar />
 
       <section className="relative overflow-hidden px-4 py-16 sm:px-6 lg:py-20">
-        <div className="absolute inset-x-0 top-0 -z-10 h-96 bg-[radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--primary)_18%,transparent),transparent_30rem),radial-gradient(circle_at_top_right,color-mix(in_srgb,var(--ring)_18%,transparent),transparent_28rem)]" />
-        <div className="mx-auto max-w-7xl">
-          <Link href="/" className="inline-flex items-center rounded-full border bg-card px-4 py-2 text-sm font-semibold text-muted-foreground shadow-sm transition hover:bg-accent hover:text-accent-foreground">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Volver al inicio
-          </Link>
+        <div className="ag-bg-blobs absolute inset-x-0 top-0 -z-20 h-[34rem]" />
+        <div className="ag-bg-dots absolute inset-x-0 top-0 -z-10 h-[34rem] opacity-50" />
 
-          <div className="mt-10 max-w-4xl">
-            <p className="text-sm font-semibold text-primary">Planes de AgendaMe</p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-6xl">
+        <div className="mx-auto max-w-7xl">
+          <Reveal>
+            <div className="mx-auto inline-flex items-center rounded-full border bg-card px-4 py-2 text-sm font-semibold text-primary shadow-sm">
+              Planes de AgendaMe
+            </div>
+          </Reveal>
+
+          <Reveal delay={80} className="mt-8 max-w-4xl">
+            <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
               Empeza gratis y elegi el plan cuando tu agenda crezca
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
               Compara limites, funciones y precios actualizados desde Supabase. El plan Profesional se destaca automaticamente cuando esta marcado como recomendado.
             </p>
-          </div>
+          </Reveal>
         </div>
       </section>
 
       <PlanesPublicosSection planes={planes} />
 
-      <section className="px-4 pb-20 sm:px-6">
-        <div className="mx-auto max-w-7xl">
-          <div className="rounded-[2rem] border bg-card p-5 shadow-sm ring-1 ring-foreground/5 dark:shadow-black/20">
+      <section className="relative px-4 pb-20 sm:px-6">
+        <Reveal className="mx-auto max-w-7xl">
+          <div className="rounded-[2rem] border bg-card p-5 shadow-sm ring-1 ring-foreground/5 dark:shadow-black/20 sm:p-7">
             <h2 className="text-2xl font-bold">Comparativa completa</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Revisa en detalle que incluye cada plan antes de elegir.
@@ -78,46 +65,65 @@ export default async function PlanesPage() {
               <PlanComparisonTable planes={planes} />
             </div>
           </div>
-        </div>
+        </Reveal>
       </section>
 
-      <section className="bg-muted/40 px-4 py-20 sm:px-6">
+      <section className="relative overflow-hidden bg-muted/40 px-4 py-20 sm:px-6">
+        <div className="ag-bg-dots-soft absolute inset-0 -z-10 opacity-40" />
         <div className="mx-auto max-w-4xl">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-semibold text-primary">FAQ</p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-5xl">Preguntas sobre planes</h2>
-          </div>
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-primary">
+              FAQ
+            </span>
+            <h2 className="mt-5 text-4xl font-extrabold tracking-tight text-balance sm:text-6xl">Preguntas sobre planes</h2>
+          </Reveal>
 
-          <div className="mt-10 divide-y rounded-[2rem] border bg-card px-6 shadow-sm ring-1 ring-foreground/5">
-            {faq.map(([question, answer]) => (
-              <div key={question} className="py-5">
-                <div className="flex items-start gap-3">
-                  <HelpCircle className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                  <div>
-                    <h3 className="font-bold">{question}</h3>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{answer}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <Reveal delay={100} className="mt-10">
+            <FaqAccordion items={faq} />
+          </Reveal>
+
+          <Reveal delay={200} className="mt-8 flex justify-center">
+            <div className="flex flex-col items-center gap-3 rounded-2xl border bg-card px-6 py-5 text-center shadow-sm ring-1 ring-foreground/5 sm:flex-row sm:gap-5">
+              <p className="text-sm text-muted-foreground">No encontras lo que buscas?</p>
+              <a
+                href={`https://wa.me/${whatsappNumero}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-whatsapp px-4 text-sm font-bold text-white shadow-sm shadow-whatsapp/25 transition hover:-translate-y-0.5 hover:bg-[color-mix(in_srgb,var(--whatsapp)_88%,black)]"
+              >
+                <MessageSquareText className="h-4 w-4" />
+                Contactanos directamente
+              </a>
+            </div>
+          </Reveal>
         </div>
       </section>
 
       <section className="px-4 py-20 sm:px-6">
-        <div className="mx-auto rounded-[2rem] border bg-[linear-gradient(135deg,var(--primary),var(--ring))] p-8 text-primary-foreground shadow-2xl shadow-primary/20 lg:max-w-7xl lg:p-12">
-          <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
+        <Reveal className="relative mx-auto overflow-hidden rounded-[2rem] border bg-[linear-gradient(135deg,var(--primary),var(--ring))] p-8 text-primary-foreground shadow-2xl shadow-primary/20 lg:max-w-7xl lg:p-12">
+          <div className="ag-bg-dots pointer-events-none absolute inset-0 opacity-10" />
+          <div className="relative grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
               <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">Proba AgendaMe con el plan gratis</h2>
-              <p className="mt-4 max-w-2xl text-primary-foreground/82">Crea tu cuenta, configura tu negocio y solicita un plan pago cuando necesites mas capacidad.</p>
+              <p className="mt-4 max-w-2xl text-primary-foreground/85">
+                Crea tu cuenta, configura tu negocio y solicita un plan pago cuando necesites mas capacidad.
+              </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-              <Link href="/auth/registro" className="inline-flex h-11 items-center justify-center rounded-xl bg-white px-5 text-sm font-bold text-slate-950">Crear cuenta gratis</Link>
-              <Link href="/#contacto" className="inline-flex h-11 items-center justify-center rounded-xl border border-white/40 px-5 text-sm font-bold text-white">Hablar por WhatsApp</Link>
+              <Link href="/auth/registro" className="inline-flex h-11 items-center justify-center rounded-xl bg-white px-5 text-sm font-bold text-slate-950 transition hover:-translate-y-0.5 hover:shadow-lg">
+                Crear cuenta gratis
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+              <a href="/#contacto" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-whatsapp px-5 text-sm font-bold text-white shadow-md shadow-black/10 transition hover:-translate-y-0.5 hover:bg-[color-mix(in_srgb,var(--whatsapp)_88%,black)]">
+                <WhatsAppIcon className="h-4 w-4" />
+                Hablar por WhatsApp
+              </a>
             </div>
           </div>
-        </div>
+        </Reveal>
       </section>
+
+      <SiteFooter />
     </main>
   );
 }

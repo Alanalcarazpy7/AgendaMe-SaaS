@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 import type { PlanPublico } from "@/lib/planes/planes-shared";
 import { Reveal } from "@/components/landing/reveal";
+import { HeroShape } from "@/components/landing/hero-shape";
+import { SectionWave } from "@/components/landing/section-wave";
+import { WhatsAppIcon } from "@/components/landing/social-icons";
 
 function gratisBadge(planes: PlanPublico[]) {
   const gratis = planes.find((plan) => plan.clave === "gratis");
@@ -182,9 +185,10 @@ function MobileBookingMockup() {
 
 export function HeroSection({ planes }: { planes: PlanPublico[] }) {
   return (
-    <section className="relative overflow-hidden px-4 pb-28 pt-16 sm:px-6 lg:pb-36 lg:pt-24">
+    <section className="relative overflow-hidden px-4 pb-24 pt-16 sm:px-6 lg:pt-24">
       <div className="ag-bg-blobs absolute inset-x-0 top-0 -z-20 h-[42rem]" />
       <div className="ag-bg-dots absolute inset-x-0 top-0 -z-10 h-[42rem] opacity-60" />
+      <HeroShape />
 
       <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[0.95fr_1.05fr]">
         <div>
@@ -231,9 +235,9 @@ export function HeroSection({ planes }: { planes: PlanPublico[] }) {
               </Link>
               <a
                 href="#contacto"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[var(--whatsapp)] px-5 text-sm font-semibold text-white shadow-lg shadow-[var(--whatsapp)]/25 transition-[background-color,box-shadow,transform] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:bg-[color-mix(in_srgb,var(--whatsapp)_88%,black)]"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-whatsapp px-5 text-sm font-semibold text-white shadow-lg shadow-whatsapp/25 transition-[background-color,box-shadow,transform] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:bg-[color-mix(in_srgb,var(--whatsapp)_88%,black)]"
               >
-                <MessageSquareText className="h-4 w-4" />
+                <WhatsAppIcon className="h-4 w-4" />
                 WhatsApp
               </a>
             </div>
@@ -250,7 +254,21 @@ export function HeroSection({ planes }: { planes: PlanPublico[] }) {
         <Reveal delay={200} className="relative pb-16">
           <DashboardMockup />
           <MobileBookingMockup />
+
+          <div className="ag-animate-float absolute -left-4 top-6 hidden -rotate-6 items-center gap-2 rounded-2xl border bg-card px-4 py-2.5 shadow-xl shadow-slate-950/10 sm:flex" style={{ animationDelay: "0.6s" }}>
+            <span className="flex h-2 w-2 rounded-full bg-chart-4" />
+            <span className="text-xs font-bold">Panel siempre al dia</span>
+          </div>
         </Reveal>
+      </div>
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-0">
+        <div className="text-primary/15">
+          <SectionWave variant="gradient" className="h-24! sm:h-36!" />
+        </div>
+        <div className="-mt-14 text-background sm:-mt-20">
+          <SectionWave />
+        </div>
       </div>
     </section>
   );

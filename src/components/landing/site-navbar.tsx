@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, MessageCircle, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { AgendaMeLogo } from "@/components/brand/agendame-logo";
+import { WhatsAppIcon } from "@/components/landing/social-icons";
 
 const links = [
   { label: "Como funciona", href: "#como-funciona" },
@@ -96,16 +97,20 @@ export function SiteNavbar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`relative rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 ease-[var(--ease-out)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
-                isActive(link.href)
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
+              className={`group relative rounded-lg px-3.5 py-2 text-sm font-semibold transition-transform duration-200 ease-[var(--ease-out)] hover:scale-[1.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                isActive(link.href) ? "text-primary" : "text-muted-foreground hover:text-foreground"
               }`}
             >
+              <span
+                className="absolute inset-0 -z-10 scale-90 rounded-lg bg-primary/10 opacity-0 transition-all duration-200 ease-[var(--ease-out)] group-hover:scale-100 group-hover:opacity-100"
+                aria-hidden="true"
+              />
               {link.label}
-              {isActive(link.href) && (
-                <span className="absolute inset-x-3 -bottom-[1px] h-0.5 rounded-full bg-primary transition-all duration-300" />
-              )}
+              <span
+                className={`absolute inset-x-3 -bottom-[1px] h-0.5 origin-center rounded-full bg-primary transition-transform duration-300 ease-[var(--ease-out)] ${
+                  isActive(link.href) ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
+                }`}
+              />
             </Link>
           ))}
         </nav>
@@ -115,7 +120,7 @@ export function SiteNavbar() {
             href="#contacto"
             className="hidden h-10 items-center justify-center gap-2 rounded-xl bg-[var(--whatsapp)] px-4 text-sm font-semibold text-white shadow-sm shadow-[var(--whatsapp)]/30 transition-[background-color,box-shadow,transform] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:bg-[color-mix(in_srgb,var(--whatsapp)_88%,black)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:inline-flex"
           >
-            <MessageCircle className="h-4 w-4" />
+            <WhatsAppIcon className="h-4 w-4" />
             WhatsApp
           </a>
 
@@ -190,7 +195,7 @@ export function SiteNavbar() {
                 onClick={() => setOpen(false)}
                 className="flex h-12 items-center justify-center gap-2 rounded-xl bg-[var(--whatsapp)] text-sm font-semibold text-white shadow-sm shadow-[var(--whatsapp)]/30 transition hover:bg-[color-mix(in_srgb,var(--whatsapp)_88%,black)]"
               >
-                <MessageCircle className="h-4 w-4" />
+                <WhatsAppIcon className="h-4 w-4" />
                 Hablar por WhatsApp
               </a>
               <Link
