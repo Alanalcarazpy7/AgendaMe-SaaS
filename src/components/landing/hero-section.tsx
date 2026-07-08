@@ -15,7 +15,6 @@ import {
 import type { PlanPublico } from "@/lib/planes/planes-shared";
 import { Reveal } from "@/components/landing/reveal";
 import { HeroShape } from "@/components/landing/hero-shape";
-import { SectionWave } from "@/components/landing/section-wave";
 import { WhatsAppIcon } from "@/components/landing/social-icons";
 
 function gratisBadge(planes: PlanPublico[]) {
@@ -185,12 +184,12 @@ function MobileBookingMockup() {
 
 export function HeroSection({ planes }: { planes: PlanPublico[] }) {
   return (
-    <section className="relative overflow-hidden px-4 pb-24 pt-16 sm:px-6 lg:pt-24">
-      <div className="ag-bg-blobs absolute inset-x-0 top-0 -z-20 h-[42rem]" />
-      <div className="ag-bg-dots absolute inset-x-0 top-0 -z-10 h-[42rem] opacity-60" />
+    <section className="relative isolate overflow-hidden px-4 pb-20 pt-16 sm:px-6 lg:min-h-[calc(100dvh-4.5rem)] lg:pb-20 lg:pt-20">
+      <div className="absolute inset-x-0 top-0 z-0 h-[42rem] bg-[radial-gradient(circle_at_12%_18%,color-mix(in_srgb,var(--primary)_10%,transparent),transparent_32rem)]" />
+      <div className="ag-bg-dots absolute inset-x-0 top-0 z-0 h-[42rem] opacity-60" />
       <HeroShape />
 
-      <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[0.95fr_1.05fr]">
+      <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[0.92fr_1.08fr]">
         <div>
           <Reveal>
             <div className="flex flex-wrap gap-2">
@@ -262,14 +261,8 @@ export function HeroSection({ planes }: { planes: PlanPublico[] }) {
         </Reveal>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0">
-        <div className="text-primary/15">
-          <SectionWave variant="gradient" className="h-24! sm:h-36!" />
-        </div>
-        <div className="-mt-14 text-background sm:-mt-20">
-          <SectionWave />
-        </div>
-      </div>
+
     </section>
   );
 }
+
