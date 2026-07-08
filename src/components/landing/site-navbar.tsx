@@ -8,17 +8,17 @@ import { AgendaMeLogo } from "@/components/brand/agendame-logo";
 import { WhatsAppIcon } from "@/components/landing/social-icons";
 
 const links = [
-  { label: "Como funciona", href: "#como-funciona" },
-  { label: "Funciones", href: "#funciones" },
-  { label: "Nichos", href: "#nichos" },
+  { label: "Como funciona", href: "/#como-funciona" },
+  { label: "Funciones", href: "/#funciones" },
+  { label: "Nichos", href: "/#nichos" },
   { label: "Planes", href: "/planes" },
-  { label: "FAQ", href: "#faq" },
-  { label: "Contacto", href: "#contacto" },
+  { label: "FAQ", href: "/#faq" },
+  { label: "Contacto", href: "/#contacto" },
 ];
 
 const sectionIds = links
-  .filter((link) => link.href.startsWith("#"))
-  .map((link) => link.href.slice(1));
+  .filter((link) => link.href.includes("#"))
+  .map((link) => link.href.split("#")[1]);
 
 export function SiteNavbar() {
   const pathname = usePathname();
@@ -72,12 +72,13 @@ export function SiteNavbar() {
 
   function isActive(href: string) {
     if (href === "/planes") return pathname === "/planes";
-    return pathname === "/" && activeHash === href.slice(1);
+    return pathname === "/" && activeHash === href.split("#")[1];
   }
 
   return (
+    <>
     <header
-      className={`sticky top-0 z-50 border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ${
+      className={`sticky top-0 z-40 border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ${
         scrolled
           ? "border-border/70 bg-background/85 shadow-md shadow-slate-950/5 backdrop-blur-xl"
           : "border-transparent bg-background/40 backdrop-blur-md"
@@ -117,7 +118,7 @@ export function SiteNavbar() {
 
         <div className="flex items-center gap-2">
           <a
-            href="#contacto"
+            href="/#contacto"
             className="hidden h-10 items-center justify-center gap-2 rounded-xl bg-[var(--whatsapp)] px-4 text-sm font-semibold text-white shadow-sm shadow-[var(--whatsapp)]/30 transition-[background-color,box-shadow,transform] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:bg-[color-mix(in_srgb,var(--whatsapp)_88%,black)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:inline-flex"
           >
             <WhatsAppIcon className="h-4 w-4" />
@@ -148,6 +149,7 @@ export function SiteNavbar() {
           </button>
         </div>
       </div>
+    </header>
 
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
@@ -159,7 +161,7 @@ export function SiteNavbar() {
             aria-label="Cerrar menu"
           />
 
-          <div className="absolute right-0 top-0 flex h-full w-[88%] max-w-sm flex-col bg-background shadow-2xl">
+          <div className="absolute inset-y-0 right-0 flex w-[88%] max-w-sm flex-col bg-background shadow-2xl">
             <div className="flex items-center justify-between border-b p-4">
               <AgendaMeLogo size="md" />
               <button
@@ -191,7 +193,7 @@ export function SiteNavbar() {
 
             <div className="space-y-3 border-t p-4">
               <a
-                href="#contacto"
+                href="/#contacto"
                 onClick={() => setOpen(false)}
                 className="flex h-12 items-center justify-center gap-2 rounded-xl bg-[var(--whatsapp)] text-sm font-semibold text-white shadow-sm shadow-[var(--whatsapp)]/30 transition hover:bg-[color-mix(in_srgb,var(--whatsapp)_88%,black)]"
               >
@@ -216,6 +218,6 @@ export function SiteNavbar() {
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }

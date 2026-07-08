@@ -121,7 +121,7 @@ const faq = [
   ["Los clientes pueden reservar desde el celular?", "Si. El enlace publico de reservas funciona desde celular, tablet o computadora."],
   ["Que pasa si llego al limite de citas?", "El panel te muestra tu uso actual y te ayuda a evaluar el siguiente plan disponible."],
   ["Puedo pedir adaptaciones a medida?", "Si. Las funcionalidades a medida se evaluan segun la necesidad del negocio."],
-  ["Los precios se actualizan automaticamente?", "Si. Las secciones de planes leen la informacion publica actualizada desde Supabase."],
+  ["Los precios se actualizan automaticamente?", "Si. Las secciones de planes muestran siempre la informacion actualizada."],
   ["AgendaMe funciona desde el celular?", "Si. El panel administrativo es responsive y se puede usar desde el celular."],
   ["Puedo usarlo con varios empleados?", "Si. Cada plan define cuantos empleados activos podes tener en tu equipo."],
 ] as const;

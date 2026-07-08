@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Layers3, MessageCircle, Star, Zap } from "lucide-react";
+import { CheckCircle2, Layers3, MessageCircle, Sparkles, Star, Zap } from "lucide-react";
 import type { PlanPeriodo, PlanPublico } from "@/lib/planes/planes-shared";
 import {
   formatPlanPrice,
@@ -43,14 +43,14 @@ export function PlanPricingCards({ planes }: PlanPricingCardsProps) {
 
   return (
     <div>
-      <div className="mx-auto flex max-w-md flex-col items-center gap-3">
-        <div className="inline-flex items-center gap-1 rounded-full border bg-card p-1 shadow-sm">
+      <div className="mx-auto flex max-w-md flex-col items-center gap-4">
+        <div className="inline-flex items-center gap-1 rounded-full border bg-card p-1.5 shadow-sm">
           <button
             type="button"
             onClick={() => setPeriodo("mensual")}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+            className={`rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300 ease-[var(--ease-out)] ${
               periodo === "mensual"
-                ? "bg-primary text-primary-foreground shadow-sm"
+                ? "bg-[linear-gradient(135deg,var(--primary),var(--ring))] text-white shadow-md shadow-primary/25"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -60,19 +60,29 @@ export function PlanPricingCards({ planes }: PlanPricingCardsProps) {
           <button
             type="button"
             onClick={() => setPeriodo("anual")}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+            className={`flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300 ease-[var(--ease-out)] ${
               periodo === "anual"
-                ? "bg-primary text-primary-foreground shadow-sm"
+                ? "bg-[linear-gradient(135deg,var(--primary),var(--ring))] text-white shadow-md shadow-primary/25"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Anual
+            {mesesBonificados > 0 && (
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-extrabold transition-colors duration-300 ${
+                  periodo === "anual" ? "bg-white/20 text-white" : "bg-chart-4/15 text-chart-4"
+                }`}
+              >
+                -{mesesBonificados} {mesesBonificados === 1 ? "mes" : "meses"}
+              </span>
+            )}
           </button>
         </div>
 
         {mesesBonificados > 0 && (
-          <p className="text-center text-sm text-muted-foreground">
-            Paga anual y usa 12 meses pagando solo {mesesPagados}
+          <p className="flex items-center gap-1.5 text-center text-sm font-medium text-muted-foreground">
+            <Sparkles className="h-3.5 w-3.5 shrink-0 text-chart-4" />
+            Con el plan anual pagas {mesesPagados} meses y usas los 12
           </p>
         )}
       </div>
@@ -88,7 +98,7 @@ export function PlanPricingCards({ planes }: PlanPricingCardsProps) {
           return (
             <article
               key={plan.id}
-              className={`group relative flex h-full flex-col rounded-[1.75rem] border p-6 transition-[transform,box-shadow,border-color] duration-300 ease-[var(--ease-out)] hover:-translate-y-1.5 ${
+              className={`group relative flex h-full flex-col rounded-[1.75rem] border p-6 transition-all duration-300 ease-[var(--ease-out)] hover:-translate-y-1.5 hover:scale-[1.02] ${
                 plan.destacado
                   ? "border-transparent bg-[linear-gradient(160deg,color-mix(in_srgb,var(--primary)_10%,var(--card)),var(--card)_55%)] shadow-2xl shadow-primary/15 ring-2 ring-primary/40"
                   : "bg-card shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 hover:shadow-xl hover:shadow-primary/10"
@@ -128,11 +138,12 @@ export function PlanPricingCards({ planes }: PlanPricingCardsProps) {
                 {esGratis ? "Gratis para siempre" : periodo === "anual" ? "/ ano" : "/ mes"}
               </p>
 
-              <div className="mt-1 h-4">
+              <div className="mt-1.5 h-6">
                 {ahorroLabel && (
-                  <p className="text-xs font-semibold text-chart-4">
+                  <span className="ag-animate-badge inline-flex items-center gap-1 rounded-full bg-chart-4/15 px-2.5 py-1 text-xs font-bold text-chart-4">
+                    <Sparkles className="h-3 w-3" />
                     {ahorroLabel} · {ahorroMontoLabel}
-                  </p>
+                  </span>
                 )}
               </div>
 
