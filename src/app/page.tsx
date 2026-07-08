@@ -29,7 +29,6 @@ import { SiteNavbar } from "@/components/landing/site-navbar";
 import { HeroSection } from "@/components/landing/hero-section";
 import { RubrosMarquee } from "@/components/landing/rubros-marquee";
 import { AntesDespues } from "@/components/landing/antes-despues";
-import { SectionWave } from "@/components/landing/section-wave";
 import { ContactWhatsappForm } from "@/components/landing/contact-whatsapp-form";
 import { Reveal } from "@/components/landing/reveal";
 import { FaqAccordion } from "@/components/landing/faq-accordion";
@@ -173,13 +172,23 @@ function AccentWord({ children }: { children: React.ReactNode }) {
   );
 }
 
+function IconGlowBox({ icon: Icon }: { icon: typeof CalendarCheck2 }) {
+  return (
+    <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-transparent bg-primary/10 text-primary transition-all duration-300 ease-[var(--ease-out)] group-hover:-translate-y-0.5 group-hover:rotate-12 group-hover:scale-110 group-hover:border-primary/40 group-hover:text-primary-foreground group-hover:shadow-[0_0_0_1px_color-mix(in_srgb,var(--primary)_30%,transparent),0_10px_26px_-6px_color-mix(in_srgb,var(--primary)_70%,transparent)]">
+      <div
+        className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 ease-[var(--ease-out)] group-hover:opacity-100"
+        style={{ background: "linear-gradient(135deg, var(--primary), var(--ring))" }}
+      />
+      <Icon className="relative h-5 w-5 transition-transform duration-300 ease-[var(--ease-out)] group-hover:scale-110" />
+    </div>
+  );
+}
+
 function FeatureCard({ icon: Icon, title, text }: { icon: typeof CalendarCheck2; title: string; text: string }) {
   return (
     <article className="group relative h-full overflow-hidden rounded-3xl border bg-card p-5 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 transition-all duration-300 ease-[var(--ease-out)] hover:-translate-y-1.5 hover:scale-[1.03] hover:border-primary/30 hover:shadow-xl hover:shadow-primary/15 hover:z-10 dark:shadow-black/20">
       <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-primary/5 blur-2xl transition-opacity duration-300 group-hover:opacity-100 opacity-0" />
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-none transition-all duration-300 ease-[var(--ease-out)] group-hover:rotate-12 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-lg group-hover:shadow-primary/30">
-        <Icon className="h-5 w-5 transition-transform duration-300 ease-[var(--ease-out)] group-hover:scale-110" />
-      </div>
+      <IconGlowBox icon={Icon} />
       <h3 className="mt-5 text-lg font-bold">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">{text}</p>
     </article>
@@ -189,9 +198,7 @@ function FeatureCard({ icon: Icon, title, text }: { icon: typeof CalendarCheck2;
 function NichoCard({ icon: Icon, title, problema, beneficio }: { icon: typeof Scissors; title: string; problema: string; beneficio: string }) {
   return (
     <article className="group relative h-full overflow-hidden rounded-3xl border bg-[linear-gradient(160deg,var(--card),color-mix(in_srgb,var(--primary)_4%,var(--card)))] p-5 shadow-sm ring-1 ring-foreground/5 transition-all duration-300 ease-[var(--ease-out)] hover:-translate-y-1.5 hover:scale-[1.03] hover:shadow-xl hover:shadow-primary/15 hover:z-10">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-all duration-300 ease-[var(--ease-out)] group-hover:rotate-12 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-lg group-hover:shadow-primary/30">
-        <Icon className="h-5 w-5 transition-transform duration-300 ease-[var(--ease-out)] group-hover:scale-110" />
-      </div>
+      <IconGlowBox icon={Icon} />
       <h3 className="mt-5 text-lg font-bold">{title}</h3>
       <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">El problema</p>
       <p className="mt-1 text-sm leading-6 text-muted-foreground">{problema}</p>
@@ -233,24 +240,21 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <div className="text-[#0B1120]">
-        <SectionWave />
-      </div>
-
-      <section id="beneficios" className="relative overflow-hidden bg-[#0B1120] px-4 pt-4 pb-20 text-slate-300 sm:px-6">
+      <section id="beneficios" className="relative overflow-hidden bg-[#0B1120] px-4 py-20 text-slate-300 sm:px-6">
         <div className="ag-bg-dots pointer-events-none absolute inset-0 -z-10 opacity-[0.06]" />
         <div className="pointer-events-none absolute -left-24 top-10 -z-10 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
         <div className="pointer-events-none absolute -right-24 bottom-10 -z-10 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl" />
 
-        <div className="relative mx-auto grid max-w-7xl gap-10 pt-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
-          <SectionHeader align="left" tone="dark" eyebrow="Beneficios" title="Pensado para el negocio y para el cliente">
-            Menos trabajo administrativo para vos, una mejor experiencia de reserva para tus clientes.
+        <div className="relative mx-auto max-w-7xl">
+          <SectionHeader align="left" tone="dark" eyebrow="Beneficios" title="Pensado para el negocio, el cliente y tu equipo">
+            Menos trabajo administrativo para vos, una mejor experiencia de reserva para tus clientes y mas orden para todo tu equipo.
           </SectionHeader>
 
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="mt-12 grid gap-5 lg:grid-cols-3">
             {[
               ["Para el negocio", ["Mas organizacion", "Menos mensajes manuales", "Mejor control de clientes", "Seguimiento del movimiento mensual"], ShieldCheck],
               ["Para los clientes", ["Reservan mas rapido", "Ven servicios disponibles", "Reciben confirmacion", "Menos olvidos con recordatorios"], CheckCircle2],
+              ["Para tu equipo", ["Cada uno ve su propia agenda", "Sabe su disponibilidad real", "Menos coordinacion manual", "Acceso segun su rol"], Users],
             ].map(([title, items, HeaderIcon], index) => (
               <Reveal key={String(title)} delay={index * 120}>
                 <article className="h-full rounded-[2rem] border border-white/10 bg-white/4 p-7 shadow-lg shadow-black/20 backdrop-blur transition-all duration-300 ease-[var(--ease-out)] hover:-translate-y-1 hover:border-cyan-400/30 hover:bg-white/10">
@@ -261,7 +265,7 @@ export default async function HomePage() {
                         return <Icon className="h-5 w-5" />;
                       })()}
                     </div>
-                    <h3 className="text-2xl font-bold text-white">{String(title)}</h3>
+                    <h3 className="text-xl font-bold text-white">{String(title)}</h3>
                   </div>
                   <div className="mt-6 grid gap-3">
                     {(items as string[]).map((item) => (
@@ -275,10 +279,25 @@ export default async function HomePage() {
               </Reveal>
             ))}
           </div>
-        </div>
 
-        <div className="relative mt-16 text-background">
-          <SectionWave />
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {(
+              [
+                { Icon: MonitorSmartphone, label: "Sin instalaciones" },
+                { Icon: Globe, label: "Acceso desde cualquier dispositivo" },
+                { Icon: Database, label: "Datos siempre organizados" },
+                { Icon: WhatsAppIcon, label: "Soporte directo por WhatsApp" },
+              ] as { Icon: (props: { className?: string }) => React.ReactNode; label: string }[]
+            ).map(({ Icon, label }) => (
+              <div
+                key={label}
+                className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/3 px-4 py-3 text-xs font-semibold text-slate-300"
+              >
+                <Icon className="h-4 w-4 shrink-0 text-cyan-300" />
+                {label}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -299,7 +318,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section id="nichos" className="relative overflow-hidden border-t border-border/60 bg-muted/40 px-4 py-20 sm:px-6">
+      <section id="nichos" className="relative overflow-hidden bg-muted/40 px-4 py-20 sm:px-6">
         <div className="ag-bg-dots absolute inset-0 -z-10 opacity-40" />
         <div className="mx-auto max-w-7xl">
           <SectionHeader eyebrow="Nichos" title={<>Pensado para negocios que trabajan con <AccentWord>turnos</AccentWord></>} />
@@ -316,16 +335,12 @@ export default async function HomePage() {
       <AntesDespues />
       <PlanesPublicosSection planes={planes} />
 
-      <div className="text-[#0B1120]">
-        <SectionWave />
-      </div>
-
-      <section className="relative overflow-hidden bg-[#0B1120] px-4 pt-4 pb-20 text-slate-300 sm:px-6">
+      <section className="relative overflow-hidden bg-[#0B1120] px-4 py-20 text-slate-300 sm:px-6">
         <div className="ag-bg-dots pointer-events-none absolute inset-0 -z-10 opacity-[0.06]" />
         <div className="pointer-events-none absolute -right-24 top-10 -z-10 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl" />
         <div className="pointer-events-none absolute -left-24 bottom-24 -z-10 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
 
-        <div className="relative mx-auto max-w-7xl pt-8">
+        <div className="relative mx-auto max-w-7xl">
           <SectionHeader tone="dark" eyebrow="Confianza y seguridad" title="Un panel preparado para operar de verdad" />
 
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -341,13 +356,9 @@ export default async function HomePage() {
             ))}
           </div>
         </div>
-
-        <div className="relative mt-16 text-background">
-          <SectionWave />
-        </div>
       </section>
 
-      <section className="relative bg-[linear-gradient(180deg,var(--background),color-mix(in_srgb,var(--primary)_5%,var(--background))_45%,var(--background))] px-4 py-20 sm:px-6">
+      <section className="relative bg-muted/40 px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-7xl">
           <SectionHeader eyebrow="Casos de uso" title={<>Casos donde AgendaMe puede <AccentWord>ayudarte</AccentWord></>} />
           <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -370,15 +381,11 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <div className="text-[#0B1120]">
-        <SectionWave />
-      </div>
-
-      <section id="testimonios" className="relative overflow-hidden bg-[#0B1120] px-4 pt-4 pb-20 text-slate-300 sm:px-6">
+      <section id="testimonios" className="relative overflow-hidden bg-[#0B1120] px-4 py-20 text-slate-300 sm:px-6">
         <div className="ag-bg-dots pointer-events-none absolute inset-0 -z-10 opacity-[0.06]" />
         <div className="pointer-events-none absolute -right-24 top-1/3 -z-10 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl" />
 
-        <div className="relative mx-auto max-w-7xl pt-8">
+        <div className="relative mx-auto max-w-7xl">
           <SectionHeader tone="dark" eyebrow="Testimonios" title="Asi usan AgendaMe distintos negocios">
             Ejemplos de como negocios como el tuyo ordenaron su agenda con AgendaMe.
           </SectionHeader>
@@ -405,10 +412,6 @@ export default async function HomePage() {
               </Reveal>
             ))}
           </div>
-        </div>
-
-        <div className="relative mt-16 text-background">
-          <SectionWave />
         </div>
       </section>
 
@@ -437,7 +440,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section id="contacto" className="relative overflow-hidden border-t border-border/60 px-4 py-20 sm:px-6">
+      <section id="contacto" className="relative overflow-hidden bg-muted/40 px-4 py-20 sm:px-6">
         <div className="ag-bg-blobs-soft absolute inset-0 -z-10" />
         <div className="mx-auto max-w-7xl">
           <SectionHeader eyebrow="Contacto" title="Hablemos de tu negocio">

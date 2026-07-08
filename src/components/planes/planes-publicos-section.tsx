@@ -10,10 +10,7 @@ export type PlanesPublicosSectionProps = {
 
 export function PlanesPublicosSection({ planes }: PlanesPublicosSectionProps) {
   return (
-    <section
-      id="planes-resumen"
-      className="relative overflow-hidden border-t border-border/60 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--primary)_5%,var(--background)),var(--background)_60%)] px-4 py-20 sm:px-6"
-    >
+    <section id="planes-resumen" className="relative overflow-hidden bg-muted/40 px-4 py-20 sm:px-6">
       <div className="ag-bg-blobs-soft absolute inset-0 -z-10" />
 
       <div className="mx-auto max-w-7xl">
