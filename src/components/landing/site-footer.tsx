@@ -15,8 +15,10 @@ export function SiteFooter() {
         <SectionWave />
       </div>
 
-      <footer className="relative overflow-hidden bg-[#0B1120] px-4 py-14 text-slate-300 sm:px-6">
+      <footer className="relative overflow-hidden bg-[#0B1120] px-4 pt-16 pb-10 text-slate-300 sm:px-6">
         <div className="ag-bg-blobs-soft absolute inset-0 -z-10 opacity-40" />
+        <div className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-72 w-[36rem] -translate-x-1/2 rounded-full bg-cyan-400/10 blur-3xl" />
+        <div className="ag-bg-dots pointer-events-none absolute inset-0 -z-10 opacity-[0.05]" />
 
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-10 md:grid-cols-[1.2fr_0.8fr_0.8fr_1fr]">
@@ -27,28 +29,28 @@ export function SiteFooter() {
               </p>
             </div>
 
-            <div>
-              <p className="text-sm font-semibold text-white">Producto</p>
+            <div className="md:border-l md:border-white/10 md:pl-8">
+              <p className="text-xs font-bold uppercase tracking-wider text-cyan-300">Producto</p>
               <div className="mt-4 flex flex-col gap-3 text-sm text-slate-400">
-                <Link href="/#como-funciona" className="transition hover:text-white">Como funciona</Link>
-                <Link href="/#funciones" className="transition hover:text-white">Funciones</Link>
-                <Link href="/#nichos" className="transition hover:text-white">Nichos</Link>
-                <Link href="/planes" className="transition hover:text-white">Planes</Link>
-                <Link href="/#faq" className="transition hover:text-white">FAQ</Link>
+                <Link href="/#como-funciona" className="w-fit transition hover:translate-x-0.5 hover:text-white">Como funciona</Link>
+                <Link href="/#funciones" className="w-fit transition hover:translate-x-0.5 hover:text-white">Funciones</Link>
+                <Link href="/#nichos" className="w-fit transition hover:translate-x-0.5 hover:text-white">Nichos</Link>
+                <Link href="/planes" className="w-fit transition hover:translate-x-0.5 hover:text-white">Planes</Link>
+                <Link href="/#faq" className="w-fit transition hover:translate-x-0.5 hover:text-white">FAQ</Link>
               </div>
             </div>
 
-            <div>
-              <p className="text-sm font-semibold text-white">Cuenta</p>
+            <div className="md:border-l md:border-white/10 md:pl-8">
+              <p className="text-xs font-bold uppercase tracking-wider text-cyan-300">Cuenta</p>
               <div className="mt-4 flex flex-col gap-3 text-sm text-slate-400">
-                <Link href="/#contacto" className="transition hover:text-white">Contacto</Link>
-                <Link href="/auth/login" className="transition hover:text-white">Iniciar sesion</Link>
-                <Link href="/auth/registro" className="transition hover:text-white">Crear cuenta</Link>
+                <Link href="/#contacto" className="w-fit transition hover:translate-x-0.5 hover:text-white">Contacto</Link>
+                <Link href="/auth/login" className="w-fit transition hover:translate-x-0.5 hover:text-white">Iniciar sesion</Link>
+                <Link href="/auth/registro" className="w-fit transition hover:translate-x-0.5 hover:text-white">Crear cuenta</Link>
               </div>
             </div>
 
-            <div>
-              <p className="text-sm font-semibold text-white">Redes y contacto</p>
+            <div className="md:border-l md:border-white/10 md:pl-8">
+              <p className="text-xs font-bold uppercase tracking-wider text-cyan-300">Redes y contacto</p>
               <a
                 href={`https://wa.me/${whatsappNumero}`}
                 target="_blank"
@@ -65,7 +67,7 @@ export function SiteFooter() {
                   target="_blank"
                   rel="noreferrer"
                   aria-label="Instagram"
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:-translate-y-0.5 hover:bg-white/10 hover:text-white"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition-all duration-300 ease-[var(--ease-out)] hover:-translate-y-1 hover:scale-110 hover:border-cyan-400/30 hover:bg-white/10 hover:text-white hover:shadow-lg hover:shadow-cyan-500/10"
                 >
                   <InstagramIcon className="h-4 w-4" />
                 </a>
@@ -74,7 +76,7 @@ export function SiteFooter() {
                   target="_blank"
                   rel="noreferrer"
                   aria-label="Facebook"
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:-translate-y-0.5 hover:bg-white/10 hover:text-white"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition-all duration-300 ease-[var(--ease-out)] hover:-translate-y-1 hover:scale-110 hover:border-cyan-400/30 hover:bg-white/10 hover:text-white hover:shadow-lg hover:shadow-cyan-500/10"
                 >
                   <FacebookIcon className="h-4 w-4" />
                 </a>
@@ -82,7 +84,11 @@ export function SiteFooter() {
             </div>
           </div>
 
-          <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 text-sm text-slate-400 sm:flex-row">
+          <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-7 text-sm text-slate-400 sm:flex-row">
+            <p className="flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+              AgendaMe · Paraguay
+            </p>
             <p>
               © 2026 AgendaMe. Desarrollado por{" "}
               <a
