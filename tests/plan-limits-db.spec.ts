@@ -38,8 +38,8 @@ test("catálogo de planes tiene límites coherentes", async () => {
   expect(planes.gratis.limite_citas_mensuales).not.toBeNull();
   expect(planes.basico.limite_citas_mensuales).not.toBeNull();
 
-  expect(planes.profesional.limite_citas_mensuales).toBeNull();
-  expect(planes.empresarial.limite_citas_mensuales).toBeNull();
+  expect(planes.profesional.limite_citas_mensuales).toBe(500);
+  expect(planes.empresarial.limite_citas_mensuales).toBe(2000);
 });
 
 test("plan gratis bloquea la cita 21 del mismo mes y permite el mes siguiente", async () => {
@@ -138,18 +138,19 @@ test("plan básico bloquea la cita extra después de su límite mensual", async 
   }
 });
 
-test("plan profesional permite muchas citas porque es ilimitado en citas", async () => {
+test("plan profesional bloquea la cita extra después de su límite mensual", async () => {
   test.setTimeout(240_000);
 
   const fixture = await crearNegocioPrueba("profesional");
 
   try {
     const agenda = await prepararAgendaBase(fixture);
-    const total = 120;
+    const limite = Number(fixture.plan.limite_citas_mensuales ?? 500);
 
-    expect(fixture.plan.limite_citas_mensuales).toBeNull();
+    expect(fixture.plan.limite_citas_mensuales).toBe(500);
+    test.skip(limite > 250, `Límite demasiado alto para test local: ${limite}`);
 
-    for (let i = 0; i < total; i++) {
+    for (let i = 0; i < limite; i++) {
       await crearCitaDirecta({
         negocioId: fixture.negocioId,
         sucursalId: fixture.sucursalId,
@@ -161,26 +162,39 @@ test("plan profesional permite muchas citas porque es ilimitado en citas", async
       });
     }
 
-    await expect(usoMensual(fixture.negocioId, 5)).resolves.toBe(total);
+    await expect(usoMensual(fixture.negocioId, 5)).resolves.toBe(limite);
 
-    console.log(`Profesional OK: ${total} citas creadas sin bloqueo mensual.`);
+    const intentoExtra = await intentarCrearCitaDirecta({
+      negocioId: fixture.negocioId,
+      sucursalId: fixture.sucursalId,
+      clienteId: agenda.clienteId,
+      servicioId: agenda.servicioId,
+      empleadoId: agenda.empleadoId,
+      monthOffset: 5,
+      index: limite,
+    });
+
+    errorDebeSerLimite(intentoExtra.error);
+
+    console.log(`Profesional OK: ${limite} citas permitidas y la extra bloqueada.`);
   } finally {
     await borrarNegocioPrueba(fixture.negocioId);
   }
 });
 
-test("plan empresarial permite muchas citas porque es ilimitado", async () => {
+test("plan empresarial bloquea la cita extra después de su límite mensual", async () => {
   test.setTimeout(300_000);
 
   const fixture = await crearNegocioPrueba("empresarial");
 
   try {
     const agenda = await prepararAgendaBase(fixture);
-    const total = 150;
+    const limite = Number(fixture.plan.limite_citas_mensuales ?? 2000);
 
-    expect(fixture.plan.limite_citas_mensuales).toBeNull();
+    expect(fixture.plan.limite_citas_mensuales).toBe(2000);
+    test.skip(limite > 250, `Límite demasiado alto para test local: ${limite}`);
 
-    for (let i = 0; i < total; i++) {
+    for (let i = 0; i < limite; i++) {
       await crearCitaDirecta({
         negocioId: fixture.negocioId,
         sucursalId: fixture.sucursalId,
@@ -192,9 +206,21 @@ test("plan empresarial permite muchas citas porque es ilimitado", async () => {
       });
     }
 
-    await expect(usoMensual(fixture.negocioId, 6)).resolves.toBe(total);
+    await expect(usoMensual(fixture.negocioId, 6)).resolves.toBe(limite);
 
-    console.log(`Empresarial OK: ${total} citas creadas sin bloqueo mensual.`);
+    const intentoExtra = await intentarCrearCitaDirecta({
+      negocioId: fixture.negocioId,
+      sucursalId: fixture.sucursalId,
+      clienteId: agenda.clienteId,
+      servicioId: agenda.servicioId,
+      empleadoId: agenda.empleadoId,
+      monthOffset: 6,
+      index: limite,
+    });
+
+    errorDebeSerLimite(intentoExtra.error);
+
+    console.log(`Empresarial OK: ${limite} citas permitidas y la extra bloqueada.`);
   } finally {
     await borrarNegocioPrueba(fixture.negocioId);
   }

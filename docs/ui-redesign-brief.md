@@ -1,223 +1,201 @@
-﻿# AgendaMe - Brief UI/UX Premium
+﻿# UI Redesign Brief — AgendaMe
+
+## Objetivo
+
+Rediseñar AgendaMe para que se sienta como un SaaS premium, confiable, moderno y comercial.
+
+La interfaz debe vender claramente el producto y también funcionar como dashboard operativo profesional.
 
 ## Producto
 
-AgendaMe es un SaaS multi-tenant para negocios que necesitan gestionar reservas, citas, clientes, empleados, servicios, sucursales, reportes y planes.
+AgendaMe es un SaaS multi-tenant para reservas, citas, turnos, clientes, servicios, empleados, recordatorios, reportes y planes.
 
-No es solo para barberías. Debe servir para varios nichos:
+## Público objetivo
+
+Negocios de Paraguay que trabajan con turnos:
 
 - Barberías
 - Veterinarias
 - Clínicas
 - Consultorios
-- Estética y belleza
+- Estética
 - Spa
 - Peluquerías
-- Gimnasios
 - Profesionales independientes
-- Talleres o servicios por turno
-- Negocios que trabajan con agenda y citas
+- Negocios con varias sucursales
 
-## Estado actual
+## Principios visuales
 
-La funcionalidad ya está validada.
+- Profesional
+- Limpio
+- Premium
+- Claro
+- Confiable
+- Seguro
+- Tecnológico
+- Responsive
+- No infantil
+- Sin sobrecarga visual
+- Sin emojis en UI
 
-- Build producción OK.
-- TypeScript OK.
-- Seguridad APIs OK.
-- Límites por plan OK.
-- Dashboard por roles OK.
-- Reserva pública OK.
+## Paleta visual oficial
 
-Ahora el trabajo es SOLO diseño UI/UX.
+Usar la paleta definida en docs/brand-agendame.md.
 
-## Objetivo visual
+Dirección oficial:
 
-Rediseñar AgendaMe para que se vea como un SaaS premium, moderno, confiable y comercial.
+- Navy
+- Azul
+- Cyan
+- Teal
+- Green
+- Blanco
+- Slate/grises profesionales
 
-Debe verse profesional para vender a negocios reales.
+No usar amber, orange, yellow ni dorado como identidad principal.
 
-No quiero un diseño genérico.
-No quiero diseño infantil.
-No quiero demasiados emojis.
-No quiero sobrecargar.
+No usar amarillo/dorado para destacar planes premium.
 
-## Estilo general
+Para destacar el plan Profesional usar azul, cyan o teal.
 
-Inspiración:
+## Landing deseada
 
-- CRM premium
-- Dashboard operativo moderno
-- SaaS tipo Linear / Vercel / Stripe / Resend, pero más comercial
-- Panel oscuro con métricas fuertes
-- Cards con bordes sutiles
-- Layout limpio
-- Jerarquía visual clara
-- Microinteracciones sutiles
-- Responsive mobile cuidado
+La landing debe tener:
 
-## Modo oscuro
+1. Header premium
+2. Hero fuerte
+3. Mockup desktop del dashboard
+4. Mockup móvil de reserva pública
+5. Cómo funciona
+6. Beneficios
+7. Funciones
+8. Nichos
+9. Demo visual
+10. Resumen de planes
+11. Confianza/seguridad
+12. Casos de uso
+13. FAQ
+14. Contacto WhatsApp
+15. CTA final
+16. Footer
 
-Debe sentirse premium y tecnológico.
+## Hero recomendado
 
-Colores sugeridos:
+Título:
 
-- Fondo principal: navy/black muy oscuro
-- Cards: negro azulado / slate oscuro
-- Bordes: slate sutil
-- Acentos principales: amber, orange, yellow premium
-- Acentos secundarios: cyan, teal, blue
-- Verde solo para éxito
-- Rojo solo para error/peligro
-- Glow sutil, no exagerado
+Reservas, citas y clientes organizados en un solo lugar.
 
-## Modo claro
+Subtítulo:
 
-Debe verse profesional, limpio y confiable.
+AgendaMe te ayuda a recibir reservas online, gestionar turnos, clientes, empleados, servicios y recordatorios desde un panel simple y profesional.
 
-Colores sugeridos:
+CTAs:
 
-- Fondo blanco / gris muy suave
-- Cards blancas
-- Bordes suaves
-- Texto fuerte
-- Acentos teal, blue y amber
-- Ideal para negocios tradicionales
+- Crear cuenta gratis -> /auth/registro
+- Ver planes -> /planes
+- Hablar por WhatsApp
 
-## Landing page
+No usar /reservar/barberia como demo comercial principal.
 
-La landing debe vender el SaaS.
+## Planes
 
-Debe incluir:
+Los planes deben venir desde Supabase.
 
-1. Hero claro:
-   - Agenda online para negocios que trabajan con turnos y citas.
-   - CTA principal: Crear cuenta / Probar AgendaMe.
-   - CTA secundario: Ver planes / Ver demo.
+Fuente:
 
-2. Dolores:
-   - Clientes escriben a cualquier hora.
-   - Turnos desordenados.
-   - Doble reserva.
-   - No hay seguimiento de clientes.
-   - Falta de control de empleados y servicios.
+public.vista_planes_publicos
 
-3. Solución:
-   - Agenda online.
-   - Reserva pública.
-   - Panel administrativo.
-   - Clientes, empleados y servicios.
-   - Reportes.
-   - Planes por uso.
+No hardcodear precios ni límites.
 
-4. Nichos:
-   - Barberías.
-   - Veterinarias.
-   - Estética.
-   - Clínicas.
-   - Consultorios.
-   - Profesionales.
+Mostrar:
 
-5. Módulos:
-   - Agenda / Citas.
-   - Clientes CRM.
-   - Servicios.
-   - Empleados.
-   - Sucursales.
-   - Reportes.
-   - Planes.
+- Mensual
+- Anual
+- Ahorrás 2 meses
+- Ahorrás Gs. X al año
+- Pagá anual y usá 12 meses pagando solo 10
 
-6. Sección visual:
-   - Mockup de dashboard.
-   - Tarjetas de métricas.
-   - Vista de reservas.
-   - Estilo SaaS premium.
+Plan destacado:
 
-7. Planes:
-   - Gratis.
-   - Básico.
-   - Profesional.
-   - Empresarial.
+- Profesional
+- Usar destacado = true
+- Destacar visualmente con azul/cyan/teal, no amber/yellow.
 
-8. CTA final:
-   - Empezar ahora.
-   - Organizar mi agenda.
+## Página /planes
+
+Debe tener:
+
+- Hero propio
+- Cards de planes
+- Toggle mensual/anual
+- Comparativa tipo tabla profesional
+- FAQ de planes
+- CTA final
+
+Comparativa:
+
+- Citas mensuales
+- Empleados
+- Servicios
+- Clientes
+- Sucursales
+- Página pública de reservas
+- Gestión de clientes
+- Gestión de empleados
+- Gestión de servicios
+- Estadísticas básicas
+- Reportes avanzados
+- Exportación XLSX / CSV
+- Recordatorios WhatsApp
+- Múltiples sucursales
+- Soporte prioritario
+- Funcionalidades a medida bajo evaluación
 
 ## Dashboard
 
-El dashboard debe sentirse como panel operativo premium.
+El dashboard debe sentirse como un CRM/operación premium.
 
-Mejorar:
+Debe tener:
 
-- Sidebar.
-- Header/topbar.
-- Cards de métricas.
-- Tablas.
-- Formularios.
-- Dialogs.
-- Botones.
-- Badges.
-- Estados vacíos.
-- Estados hover/focus.
-- Mobile menu.
+- Sidebar clara
+- Estados activos
+- Cards limpias
+- Métricas legibles
+- Dark mode premium
+- Light mode profesional
+- Tablas claras
+- Formularios limpios
+- Focus visible
+- Responsive real
 
-## Microinteracciones
+No tocar permisos ni lógica crítica.
 
-Usar animaciones sutiles:
+## Animaciones
 
-- Hover en cards.
-- Transiciones en botones.
-- Active state en sidebar.
-- Focus visible en inputs.
-- Aparición suave de dialogs.
-- Glow sutil en elementos destacados.
-- Nada exagerado.
-- No instalar librerías nuevas sin pedir permiso.
+Usar animaciones suaves, sin instalar librerías nuevas.
 
-## Archivos permitidos
+Permitido:
 
-Se puede tocar:
+- Reveal on scroll
+- Fade-up
+- Hover lift
+- Scale sutil
+- Glow controlado
+- Mockup flotante leve
 
-- src/app/globals.css
-- src/app/page.tsx
-- src/app/planes/page.tsx
-- src/app/auth/login/page.tsx
-- src/app/auth/registro/page.tsx
-- src/app/dashboard/layout.tsx
-- src/components/ui/*
-- src/components/dashboard/*
-- src/components/citas/*
-- src/components/clientes/*
-- src/components/empleados/*
-- src/components/servicios/*
+Debe respetar prefers-reduced-motion.
 
-## Archivos prohibidos
+## Reglas estrictas
 
-NO tocar:
-
-- src/app/api/**
-- src/lib/supabase/**
-- src/lib/dashboard/**
-- src/lib/planes/**
-- tests/**
-- supabase/**
-- SQL
-- triggers
-- autenticación
-- permisos
-- queries de Supabase
-- lógica de negocio
-- inserts
-- updates
-- deletes
-
-## Reglas
-
-- No cambiar rutas.
-- No cambiar lógica.
-- No cambiar permisos.
+- UI visible 100% español.
+- No textos en inglés.
+- No precios hardcodeados.
+- No límites hardcodeados.
+- No USD.
+- No prometer ilimitado.
+- No copiar marcas externas.
+- No tocar APIs.
 - No tocar Supabase.
-- No romper TypeScript.
-- No instalar librerías nuevas sin permiso.
-- Trabajar por etapas pequeñas.
-- Después de cada etapa ejecutar npm run build.
+- No tocar permisos.
+- No tocar tests sin aprobación.
+- No usar amber/orange/yellow como identidad principal.

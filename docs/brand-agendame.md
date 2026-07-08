@@ -1,20 +1,19 @@
-﻿# AgendaMe - Guía de Marca
+﻿# Brand Guide — AgendaMe
 
 ## Nombre oficial
 
-AgendaMe
+AgendaMe.
 
-No usar:
-- AgendaMe!
-- Agenda Pro
-- Agendi
-- AgendaPro
+No usar: AgendaMe!, Agenda Pro, AgendaPro, Agendi, ReservaSimple, Wirevet, Citalo.
 
-## Concepto de marca
+## Qué es AgendaMe
 
-AgendaMe es un SaaS de reservas y citas para negocios que trabajan con turnos.
+AgendaMe es un SaaS multi-tenant de reservas, citas y gestión de turnos para negocios de Paraguay.
 
-Sirve para:
+Permite que un negocio configure servicios, empleados, sucursales y horarios, y comparta un enlace público para que sus clientes puedan reservar. Desde el dashboard, el negocio gestiona citas, clientes, empleados, servicios, reportes, recordatorios y su plan.
+
+## Nichos objetivo
+
 - Barberías
 - Veterinarias
 - Clínicas
@@ -23,131 +22,98 @@ Sirve para:
 - Spa
 - Peluquerías
 - Profesionales independientes
-- Negocios de servicios por turno
+- Negocios con varias sucursales
 
 ## Promesa principal
 
-Reservas, clientes y citas en un solo lugar.
+Reservas, citas y clientes organizados en un solo lugar.
 
-## Oferta comercial principal
+## Paleta oficial vigente
 
-Gratis hasta 20 citas al mes.
+Esta es la paleta oficial del proyecto. Reemplaza cualquier mención anterior a amber, orange, yellow o dorado como identidad principal.
 
-## Personalidad visual
+### Colores principales
 
-- SaaS premium
-- Moderno
-- Profesional
-- Confiable
-- Comercial
-- Limpio
-- Tecnológico
-- No infantil
-- No genérico
-- Sin emojis en la interfaz
+- Navy principal: #0F172A
+- Navy profundo: #0B1120
+- Azul principal: #2563EB
+- Cyan: #06B6D4
+- Teal: #14B8A6
+- Green: #10B981
 
-## Logo recomendado
+### Neutros
 
-Usar una identidad basada en:
-
-- Calendario
-- Check de confirmación
-- Reloj / turno
-- Letra A de AgendaMe
-
-Opción principal:
-Calendario + check + texto AgendaMe.
-
-El logo debe funcionar como:
-1. Logo completo: icono + AgendaMe
-2. Solo icono: para favicon, sidebar colapsado o avatar de app
-
-## Colores modo claro
-
-- Fondo principal: #F8FAFC
-- Fondo secundario: #F1F5F9
-- Card: #FFFFFF
-- Borde: #E2E8F0
-- Texto principal: #0F172A
+- Fondo claro: #F8FAFC
+- Card claro: #FFFFFF
+- Borde claro: #E2E8F0
+- Texto oscuro: #0F172A
 - Texto secundario: #475569
 - Texto suave: #64748B
-- Primary teal: #0F766E
-- Accent blue: #2563EB
-- Amber: #D97706
-- Success: #16A34A
-- Danger: #DC2626
 
-## Colores modo oscuro
+### Dark mode
 
 - Fondo principal: #070A12
 - Fondo secundario: #0B1020
-- Card: #111827
+- Card oscuro: #111827
 - Card elevada: #151F32
-- Borde: #263244
-- Texto principal: #F8FAFC
+- Borde oscuro: #263244
+- Texto claro: #F8FAFC
 - Texto secundario: #CBD5E1
 - Texto suave: #94A3B8
-- Primary amber: #F59E0B
-- Primary hover: #FBBF24
-- Accent cyan: #22D3EE
-- Accent teal: #14B8A6
-- Success: #22C55E
-- Danger: #EF4444
 
-## Landing page
+## Reglas de color
 
-La landing debe comunicar:
+- Navy: base premium, confianza y estructura.
+- Azul: CTA, enlaces y acciones principales.
+- Cyan/Teal: tecnología, foco visual, bordes y detalles premium.
+- Green: éxito, confirmación y estados positivos.
+- Rojo: solo errores, alertas críticas o acciones destructivas.
+- No usar amber, orange, yellow ni dorado como identidad principal.
+- No usar amarillo/dorado para destacar planes premium.
+- Para destacar el plan Profesional usar azul, cyan o teal.
 
-Título sugerido:
-Organizá las reservas de tu negocio sin complicaciones
+## Logo
 
-Subtítulo sugerido:
-AgendaMe te ayuda a recibir reservas online, gestionar clientes, empleados y servicios desde un panel simple y profesional.
+Los logos ya existen y no deben recrearse ni rediseñarse sin autorización.
 
-Badge:
-Gratis hasta 20 citas al mes
+Assets existentes:
 
-CTA principal:
-Crear cuenta gratis
+- public/brand/logo-agendame.svg
+- public/brand/logo-agendame-dark.svg
+- public/brand/logo-agendame-light.svg
+- public/brand/icon-agendame.svg
+- public/brand/icon-agendame-dark.svg
+- public/brand/icon-agendame-light.svg
 
-CTA secundario:
-Ver planes
+Componente esperado:
 
-## Nichos destacados
+- src/components/brand/agendame-logo.tsx
 
-Mostrar cards para:
+El componente debe usar los SVG existentes.
 
-- Barberías
-- Veterinarias
-- Clínicas
-- Estética
-- Spa
-- Consultorios
-- Peluquerías
-- Profesionales
+## Tono
 
-## Estilo UI
+Usar español claro, comercial y profesional.
 
-Modo oscuro:
-- Fondo navy/black premium
-- Cards oscuras
-- Bordes sutiles
-- Acentos amber/orange/yellow
-- Acentos secundarios cyan/teal/blue
-- Glow suave
+Evitar:
 
-Modo claro:
-- Fondo blanco/gris suave
-- Cards blancas
-- Bordes sutiles
-- Acentos teal/blue/amber
+- Textos visibles en inglés
+- Promesas exageradas
+- Ilimitado
+- Funcionalidades ilimitadas
+- Testimonios falsos
+- Datos inventados
 
-## Reglas
+Usar:
 
-- No copiar marcas externas.
-- No copiar AgendaPro ni Agendi.
-- Usar solo como inspiración.
-- Mantener identidad AgendaMe.
-- No usar diseño genérico.
-- No sobrecargar.
-- Mantener responsive.
+- Probá gratis
+- Organizá tus reservas
+- Gestioná tus clientes
+- Ahorrá tiempo administrativo
+- Funcionalidades a medida bajo evaluación
+
+## WhatsApp
+
+Número visible: +595 994 295092
+
+Para wa.me usar: 595994295092

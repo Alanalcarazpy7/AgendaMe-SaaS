@@ -20,7 +20,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
       : access.sucursalNombre ?? "Sucursal";
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-muted/30 bg-[radial-gradient(circle_at_top_right,color-mix(in_srgb,var(--primary)_10%,transparent),transparent_32rem)]">
       <DashboardPreferencesApplier
         tema={access.user.tema}
         colorAcento={access.user.color_acento}

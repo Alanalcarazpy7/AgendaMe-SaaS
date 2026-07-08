@@ -94,7 +94,7 @@ export default async function EmpleadosPage() {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-3xl border bg-background p-5 shadow-sm">
+      <section className="rounded-3xl border bg-card p-5 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
         <p className="text-sm text-muted-foreground">Empleados de agenda</p>
 
         <h1 className="mt-1 text-3xl font-bold tracking-tight">
@@ -108,12 +108,12 @@ export default async function EmpleadosPage() {
         </p>
 
         {mostrarAsignacionSucursal ? (
-          <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+          <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/10 p-4 text-sm text-primary">
             <strong>Plan Empresarial:</strong> además de crear empleados, podés
             asignarlos a una sucursal desde esta misma vista.
           </div>
         ) : (
-          <div className="mt-4 rounded-2xl border bg-muted/30 p-4 text-sm text-muted-foreground">
+          <div className="mt-4 rounded-2xl border bg-muted/50 p-4 text-sm text-muted-foreground">
             En planes no empresariales, los empleados se asignan automáticamente
             a la sucursal principal interna del negocio.
           </div>

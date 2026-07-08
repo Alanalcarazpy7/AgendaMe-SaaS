@@ -1,6 +1,108 @@
+Ya corregí los archivos de documentación y la skill para eliminar el conflicto de paleta.
+
+Decisión final de marca:
+- NO usar amber/orange/yellow como identidad principal.
+- NO usar dorado/yellow/amber para destacar planes premium.
+- Usar navy + azul #2563EB + cyan #06B6D4 + teal #14B8A6 + green #10B981.
+- Rojo solo para errores o acciones destructivas.
+
+También aclaro lo del brand:
+Los logos YA existen en public/brand.
+No crear logos nuevos.
+No rediseñar los SVG.
+Lo que faltaba era el componente wrapper:
+src/components/brand/agendame-logo.tsx
+
+Ya dejé creado ese componente usando los SVG existentes:
+- AgendaMeLogo
+- AgendaMeIcon
+
+Ahora podés continuar usando:
+- .agents/skills/frontend-design
+- .agents/skills/design-taste-frontend
+- .agents/skills/animation-vocabulary
+- .claude/skills/agendame-ui-safe-redesign/SKILL.md
+
+Continuá con el diagnóstico actualizado y después proponé nuevamente el plan por etapas.
+
+No edites todavía si no te apruebo la etapa.
+
+Recordá:
+- No comandos destructivos.
+- No tocar APIs.
+- No tocar Supabase.
+- No tocar permisos.
+- No tocar tests salvo aprobación.
+- Después de cada etapa: npm run build.
+
+Si estás de acuerdo, proponeme nuevamente el plan empezando por:
+Etapa A — tokens en globals.css con la paleta oficial.
+
+
 Supabase ya está actualizado y la vista public.vista_planes_publicos ya existe.
 
 Resultado verificado en Supabase:
+Soluciona el txt de lo que aparece en la landing page de los planes y descripciones de cada plan
+
+[
+  {
+    "clave": "gratis",
+    "nombre": "Gratis",
+    "precio_mensual_gs": 0,
+    "precio_anual_gs": 0,
+    "ahorro_anual_meses": 0,
+    "limite_citas_mensuales": 20,
+    "limite_empleados": 1,
+    "limite_servicios": 3,
+    "limite_clientes": 50,
+    "limite_sucursales": 1,
+    "destacado": false,
+    "visible_publico": true
+  },
+  {
+    "clave": "basico",
+    "nombre": "Básico",
+    "precio_mensual_gs": 99000,
+    "precio_anual_gs": 990000,
+    "ahorro_anual_meses": 2,
+    "limite_citas_mensuales": 100,
+    "limite_empleados": 3,
+    "limite_servicios": 10,
+    "limite_clientes": 300,
+    "limite_sucursales": 1,
+    "destacado": false,
+    "visible_publico": true
+  },
+  {
+    "clave": "profesional",
+    "nombre": "Profesional",
+    "precio_mensual_gs": 199000,
+    "precio_anual_gs": 1990000,
+    "ahorro_anual_meses": 2,
+    "limite_citas_mensuales": 500,
+    "limite_empleados": 10,
+    "limite_servicios": 30,
+    "limite_clientes": 1000,
+    "limite_sucursales": 1,
+    "destacado": true,
+    "visible_publico": true
+  },
+  {
+    "clave": "empresarial",
+    "nombre": "Empresarial",
+    "precio_mensual_gs": 499000,
+    "precio_anual_gs": 4990000,
+    "ahorro_anual_meses": 2,
+    "limite_citas_mensuales": 2000,
+    "limite_empleados": 25,
+    "limite_servicios": 80,
+    "limite_clientes": 5000,
+    "limite_sucursales": 3,
+    "destacado": false,
+    "visible_publico": true
+  }
+]
+
 
 Gratis:
 - precio_mensual_gs: 0

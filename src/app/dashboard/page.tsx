@@ -48,14 +48,14 @@ function MetricCard({
   icon: typeof CalendarDays;
 }) {
   return (
-    <div className="rounded-3xl border bg-background p-5 shadow-sm">
+    <div className="rounded-3xl border bg-card p-5 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm text-muted-foreground">{titulo}</p>
           <p className="mt-2 text-3xl font-bold">{valor}</p>
         </div>
 
-        <div className="rounded-2xl bg-muted p-3 text-muted-foreground">
+        <div className="rounded-2xl bg-primary/10 p-3 text-primary">
           <Icon className="h-5 w-5" />
         </div>
       </div>
@@ -151,7 +151,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-3xl border bg-background p-5 shadow-sm">
+      <section className="rounded-3xl border bg-card p-5 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
         <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
             <p className="text-sm text-muted-foreground">
@@ -175,7 +175,7 @@ export default async function DashboardPage() {
           {access.puedeGestionarPlanes ? (
             <Link
               href="/dashboard/planes"
-              className="inline-flex h-10 items-center justify-center rounded-xl bg-foreground px-4 text-sm font-semibold text-background transition hover:opacity-90"
+              className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/20 transition-[background-color,box-shadow,color] duration-200 ease-[var(--ease-out)] hover:bg-primary/90 hover:shadow-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Gestionar plan
             </Link>
@@ -222,12 +222,12 @@ export default async function DashboardPage() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded-3xl border bg-background p-5 shadow-sm lg:col-span-2">
+        <div className="rounded-3xl border bg-card p-5 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10 lg:col-span-2">
           <h2 className="text-xl font-bold">Próximas citas</h2>
 
           <div className="mt-4 space-y-3">
             {(proximas ?? []).length === 0 ? (
-              <p className="rounded-2xl border bg-muted/30 p-4 text-sm text-muted-foreground">
+              <p className="rounded-2xl border bg-muted/50 p-4 text-sm text-muted-foreground">
                 No hay próximas citas para esta vista.
               </p>
             ) : (
@@ -243,7 +243,7 @@ export default async function DashboardPage() {
                 return (
                   <div
                     key={cita.id}
-                    className="rounded-2xl border bg-muted/20 p-4"
+                    className="rounded-2xl border bg-muted/40 p-4 shadow-sm"
                   >
                     <p className="font-semibold">
                       {cita.fecha} · {String(cita.hora_inicio).slice(0, 5)}
@@ -259,14 +259,14 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-3xl border bg-background p-5 shadow-sm">
+        <div className="rounded-3xl border bg-card p-5 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
           <h2 className="text-xl font-bold">Accesos rápidos</h2>
 
           <div className="mt-4 grid gap-2">
             {access.puedeGestionarCitas && (
               <Link
                 href="/dashboard/citas"
-                className="rounded-xl border px-3 py-3 text-center text-sm font-medium transition hover:bg-muted"
+                className="rounded-xl border bg-card px-3 py-3 text-center text-sm font-medium shadow-sm outline-none transition-[background-color,color,box-shadow] duration-200 ease-[var(--ease-out)] hover:bg-accent hover:text-accent-foreground hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Calendario
               </Link>
@@ -275,7 +275,7 @@ export default async function DashboardPage() {
             {access.puedeGestionarClientes && (
               <Link
                 href="/dashboard/clientes"
-                className="rounded-xl border px-3 py-3 text-center text-sm font-medium transition hover:bg-muted"
+                className="rounded-xl border bg-card px-3 py-3 text-center text-sm font-medium shadow-sm outline-none transition-[background-color,color,box-shadow] duration-200 ease-[var(--ease-out)] hover:bg-accent hover:text-accent-foreground hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Clientes
               </Link>
@@ -284,7 +284,7 @@ export default async function DashboardPage() {
             {access.puedeVerReportes && (
               <Link
                 href="/dashboard/reportes"
-                className="rounded-xl border px-3 py-3 text-center text-sm font-medium transition hover:bg-muted"
+                className="rounded-xl border bg-card px-3 py-3 text-center text-sm font-medium shadow-sm outline-none transition-[background-color,color,box-shadow] duration-200 ease-[var(--ease-out)] hover:bg-accent hover:text-accent-foreground hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Reportes
               </Link>
@@ -293,7 +293,7 @@ export default async function DashboardPage() {
             {access.puedeVerTodo && (
               <Link
                 href={`/reservar/${access.negocio.slug}`}
-                className="rounded-xl border px-3 py-3 text-center text-sm font-medium transition hover:bg-muted"
+                className="rounded-xl border bg-card px-3 py-3 text-center text-sm font-medium shadow-sm outline-none transition-[background-color,color,box-shadow] duration-200 ease-[var(--ease-out)] hover:bg-accent hover:text-accent-foreground hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Link público
                 <ExternalLink className="ml-2 inline h-4 w-4" />

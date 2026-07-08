@@ -56,19 +56,19 @@ export function DashboardUserContextCard({
   scopeLabel,
 }: Props) {
   return (
-    <section className="mb-5 rounded-3xl border bg-background px-4 py-3 shadow-sm">
+    <section className="mb-5 rounded-3xl border bg-card px-4 py-3 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex min-w-0 items-center gap-3">
           {userAvatarUrl ? (
             <img
               src={userAvatarUrl}
               alt={userName}
-              className="h-11 w-11 rounded-full border object-cover"
+              className="h-11 w-11 rounded-full border object-cover shadow-sm"
             />
           ) : (
             <div
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-              style={{ backgroundColor: userColor ?? "#111827" }}
+              style={{ backgroundColor: userColor ?? "var(--primary)" }}
             >
               {iniciales(userName, userEmail)}
             </div>
@@ -88,17 +88,17 @@ export function DashboardUserContextCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="rounded-full border bg-muted/30 px-3 py-1 font-medium">
+          <span className="rounded-full border bg-muted/50 px-3 py-1 font-medium text-muted-foreground">
             {negocioNombre}
           </span>
 
-          <span className="rounded-full border bg-muted/30 px-3 py-1 font-medium">
+          <span className="rounded-full border bg-muted/50 px-3 py-1 font-medium text-muted-foreground">
             Plan {planClave}
           </span>
 
           <Link
             href="/dashboard/mi-cuenta"
-            className="rounded-full border px-3 py-1 font-semibold transition hover:bg-muted"
+            className="rounded-full border px-3 py-1 font-semibold outline-none transition-[background-color,color,box-shadow] duration-200 ease-[var(--ease-out)] hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             Mi cuenta
           </Link>

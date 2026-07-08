@@ -102,7 +102,7 @@ function MetricCard({
   description: string;
 }) {
   return (
-    <div className="rounded-3xl border bg-background p-5 shadow-sm">
+    <div className="rounded-3xl border bg-card p-5 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
       <p className="text-sm text-muted-foreground">{title}</p>
       <p className="mt-2 text-3xl font-bold">{value}</p>
       <p className="mt-3 text-sm text-muted-foreground">{description}</p>
@@ -124,7 +124,7 @@ function BarList({
   const max = Math.max(...items.map((item) => item.value), 1);
 
   return (
-    <section className="rounded-3xl border bg-background p-5 shadow-sm">
+    <section className="rounded-3xl border bg-card p-5 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
       <h2 className="text-xl font-bold">{title}</h2>
 
       <div className="mt-4 space-y-4">
@@ -144,7 +144,7 @@ function BarList({
 
               <div className="h-3 overflow-hidden rounded-full bg-muted">
                 <div
-                  className="h-full rounded-full bg-foreground"
+                  className="h-full rounded-full bg-primary"
                   style={{ width: `${Math.max((item.value / max) * 100, 4)}%` }}
                 />
               </div>
@@ -185,7 +185,7 @@ function LineChart({
   const polyline = points.map((point) => `${point.x},${point.y}`).join(" ");
 
   return (
-    <section className="rounded-3xl border bg-background p-5 shadow-sm">
+    <section className="rounded-3xl border bg-card p-5 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
       <h2 className="text-xl font-bold">{title}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Evolución de ingresos estimados por día.
@@ -419,7 +419,7 @@ export default async function ReportesPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-3xl border bg-background p-5 shadow-sm">
+      <section className="rounded-3xl border bg-card p-5 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
         <p className="text-sm text-muted-foreground">
           {access.scope === "global"
             ? "Reporte global"
@@ -442,7 +442,7 @@ export default async function ReportesPage({ searchParams }: PageProps) {
               type="date"
               name="desde"
               defaultValue={desde}
-              className="mt-2 h-11 w-full rounded-xl border bg-background px-3"
+              className="mt-2 h-11 w-full rounded-xl border bg-background px-3 outline-none transition-[border-color,box-shadow] duration-200 ease-[var(--ease-out)] focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
             />
           </div>
 
@@ -452,7 +452,7 @@ export default async function ReportesPage({ searchParams }: PageProps) {
               type="date"
               name="hasta"
               defaultValue={hasta}
-              className="mt-2 h-11 w-full rounded-xl border bg-background px-3"
+              className="mt-2 h-11 w-full rounded-xl border bg-background px-3 outline-none transition-[border-color,box-shadow] duration-200 ease-[var(--ease-out)] focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
             />
           </div>
 
@@ -462,7 +462,7 @@ export default async function ReportesPage({ searchParams }: PageProps) {
               <select
                 name="sucursalId"
                 defaultValue={sucursalIdParam}
-                className="mt-2 h-11 w-full rounded-xl border bg-background px-3"
+                className="mt-2 h-11 w-full rounded-xl border bg-background px-3 outline-none transition-[border-color,box-shadow] duration-200 ease-[var(--ease-out)] focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
               >
                 <option value="todas">Todas las sucursales</option>
                 {(sucursales ?? []).map((sucursal) => (
@@ -477,14 +477,14 @@ export default async function ReportesPage({ searchParams }: PageProps) {
           <div className="flex items-end gap-2">
             <button
               type="submit"
-              className="h-11 rounded-xl bg-foreground px-5 text-sm font-semibold text-background transition hover:opacity-90"
+              className="h-11 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-sm shadow-primary/20 outline-none transition-[background-color,box-shadow,color] duration-200 ease-[var(--ease-out)] hover:bg-primary/90 hover:shadow-primary/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Filtrar
             </button>
 
             <Link
               href="/dashboard/reportes"
-              className="inline-flex h-11 items-center justify-center rounded-xl border px-4 text-sm font-semibold transition hover:bg-muted"
+              className="inline-flex h-11 items-center justify-center rounded-xl border px-4 text-sm font-semibold outline-none transition-[background-color,color,box-shadow] duration-200 ease-[var(--ease-out)] hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Limpiar
             </Link>
@@ -547,7 +547,7 @@ export default async function ReportesPage({ searchParams }: PageProps) {
       <LineChart title="Ingresos por día" items={serieIngresos} />
 
       {access.puedeVerReportesGlobales && comparativoSucursal.length > 0 && (
-        <section className="rounded-3xl border bg-background p-5 shadow-sm">
+        <section className="rounded-3xl border bg-card p-5 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
           <h2 className="text-xl font-bold">Comparación por sucursal</h2>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -556,12 +556,12 @@ export default async function ReportesPage({ searchParams }: PageProps) {
                 <p className="font-bold">{item.label}</p>
 
                 <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                  <div className="rounded-xl bg-background p-3">
+                  <div className="rounded-xl border bg-muted/30 p-3">
                     <p className="text-muted-foreground">Citas</p>
                     <p className="mt-1 text-xl font-bold">{item.citas}</p>
                   </div>
 
-                  <div className="rounded-xl bg-background p-3">
+                  <div className="rounded-xl border bg-muted/30 p-3">
                     <p className="text-muted-foreground">Ingresos estimados</p>
                     <p className="mt-1 text-xl font-bold">
                       {formatGs(item.ingresos)}
@@ -613,7 +613,7 @@ export default async function ReportesPage({ searchParams }: PageProps) {
         />
       </section>
 
-      <section className="rounded-3xl border bg-background p-5 shadow-sm">
+      <section className="rounded-3xl border bg-card p-5 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
         <h2 className="text-xl font-bold">Lectura rápida</h2>
 
         <div className="mt-4 space-y-2 text-sm text-muted-foreground">

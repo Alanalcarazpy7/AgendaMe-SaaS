@@ -33,7 +33,7 @@ export function DashboardUsageCard({
 
   return (
     <>
-      <div className="rounded-3xl border bg-background p-6 shadow-sm">
+      <div className="rounded-3xl border bg-card p-6 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-muted-foreground">{title}</p>
@@ -45,8 +45,8 @@ export function DashboardUsageCard({
               </p>
 
               {!hasLimit && (
-                <span className="mb-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700">
-                  Ilimitado
+                <span className="mb-1 rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">
+                  Sin límite definido
                 </span>
               )}
             </div>
@@ -57,7 +57,7 @@ export function DashboardUsageCard({
           {(reached || nearLimit) && (
             <div
               className={`rounded-2xl p-3 ${
-                reached ? "bg-red-100 text-red-600" : "bg-yellow-100 text-yellow-700"
+                reached ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
               }`}
             >
               <AlertTriangle className="h-5 w-5" />
@@ -69,8 +69,8 @@ export function DashboardUsageCard({
           <div className="mt-5">
             <div className="h-3 overflow-hidden rounded-full bg-muted">
               <div
-                className={`h-full rounded-full transition-all ${
-                  reached ? "bg-red-500" : nearLimit ? "bg-yellow-500" : "bg-green-500"
+                className={`h-full rounded-full transition-[width,background-color] duration-300 ease-[var(--ease-out)] ${
+                  reached ? "bg-destructive" : nearLimit ? "bg-primary" : "bg-chart-4"
                 }`}
                 style={{ width: `${percent}%` }}
               />
@@ -84,8 +84,8 @@ export function DashboardUsageCard({
         )}
 
         {hasLimit && (reached || nearLimit) && (
-          <div className="mt-5 rounded-2xl border bg-muted/30 p-4">
-            <p className={`text-sm font-medium ${reached ? "text-red-600" : "text-yellow-700"}`}>
+          <div className="mt-5 rounded-2xl border bg-muted/50 p-4 shadow-sm">
+            <p className={`text-sm font-medium ${reached ? "text-destructive" : "text-primary"}`} >
               {reached ? "Llegaste al límite de tu plan." : "Estás cerca de llegar al límite."}
             </p>
 

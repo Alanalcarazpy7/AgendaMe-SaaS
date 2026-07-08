@@ -79,14 +79,14 @@ export default async function ConfiguracionPage() {
       <BrandingNegocioCard />
 
       <IntervaloReservaCard />
-      <section>
+      <section className="rounded-3xl border bg-card p-5 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
         <h1 className="text-3xl font-bold tracking-tight">Configuración</h1>
         <p className="mt-1 text-muted-foreground">
           Ajustá la información básica y los horarios de atención.
         </p>
       </section>
 
-      <Card>
+      <Card className="shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
         <CardHeader>
           <CardTitle>Negocio</CardTitle>
         </CardHeader>

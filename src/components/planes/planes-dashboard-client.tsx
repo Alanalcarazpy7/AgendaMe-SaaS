@@ -14,27 +14,23 @@ import {
   Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { nivelPlan } from "@/lib/planes/plan-access";
+import {
+  formatLimit,
+  formatPlanPrice,
+  getAhorroAnualLabel,
+  getAhorroAnualMontoLabel,
+  type PlanPublico,
+} from "@/lib/planes/planes-shared";
+import { buildWhatsappUrl } from "@/lib/contact/whatsapp";
 
-export type PlanDashboardItem = {
-  id: string;
-  clave: string;
-  nombre: string;
-  precio_gs: number | string | null;
-  limite_citas_mensuales: number | null;
-  limite_clientes: number | null;
-  limite_empleados: number | null;
-  limite_servicios: number | null;
-  permite_reportes_avanzados: boolean | null;
-  permite_exportacion_csv: boolean | null;
-  permite_personalizacion: boolean | null;
-  permite_multiples_sucursales: boolean | null;
-};
+export type PlanDashboardItem = PlanPublico;
 
 type PlanesDashboardClientProps = {
   negocioNombre: string;
   planActualClave: string;
   planActualNombre: string;
-  planActualPrecio: number | string | null;
+  planActual: PlanPublico | null;
   uso: {
     citas: number;
     clientes: number;
@@ -43,18 +39,6 @@ type PlanesDashboardClientProps = {
   };
   planes: PlanDashboardItem[];
 };
-
-function formatGs(valor: number | string | null) {
-  const numero = Number(valor ?? 0);
-
-  if (!numero) return "Gs. 0";
-
-  return `Gs. ${numero.toLocaleString("es-PY")}`;
-}
-
-function limite(valor: number | null) {
-  return valor === null ? "Ilimitado" : valor.toString();
-}
 
 function descripcionPlan(clave: string) {
   const descripciones: Record<string, string> = {
@@ -67,28 +51,12 @@ function descripcionPlan(clave: string) {
   return descripciones[clave] ?? "Plan para gestionar tu negocio con AgendaMe.";
 }
 
-function nivelPlan(clave: string) {
-  const niveles: Record<string, number> = {
-    gratis: 0,
-    free: 0,
-    basico: 1,
-    básico: 1,
-    basic: 1,
-    profesional: 2,
-    professional: 2,
-    empresarial: 3,
-    enterprise: 3,
-  };
-
-  return niveles[String(clave).toLowerCase()] ?? 0;
-}
-
 function featuresPlan(plan: PlanDashboardItem) {
   const features = [
-    `${limite(plan.limite_citas_mensuales)} citas mensuales`,
-    `${limite(plan.limite_clientes)} clientes activos`,
-    `${limite(plan.limite_empleados)} empleados activos`,
-    `${limite(plan.limite_servicios)} servicios activos`,
+    formatLimit(plan.limite_citas_mensuales, "cita mensual", "citas mensuales"),
+    formatLimit(plan.limite_clientes, "cliente activo", "clientes activos"),
+    formatLimit(plan.limite_empleados, "empleado activo", "empleados activos"),
+    formatLimit(plan.limite_servicios, "servicio activo", "servicios activos"),
   ];
 
   if (nivelPlan(plan.clave) >= 1) {
@@ -104,11 +72,11 @@ function featuresPlan(plan: PlanDashboardItem) {
   }
 
   if (plan.permite_exportacion_csv) {
-    features.push("Exportación CSV");
+    features.push("Exportación XLSX / CSV");
   }
 
   if (plan.permite_multiples_sucursales) {
-    features.push("Múltiples sucursales");
+    features.push(formatLimit(plan.limite_sucursales, "sucursal", "sucursales"));
   }
 
   return features;
@@ -159,7 +127,7 @@ export function PlanesDashboardClient({
   negocioNombre,
   planActualClave,
   planActualNombre,
-  planActualPrecio,
+  planActual,
   uso,
   planes,
 }: PlanesDashboardClientProps) {
@@ -224,9 +192,11 @@ export function PlanesDashboardClient({
               Plan actual
             </p>
             <p className="mt-1 text-xl font-bold">{planActualNombre}</p>
-            <p className="text-sm text-muted-foreground">
-              {formatGs(planActualPrecio)} / mes
-            </p>
+            {planActual && (
+              <p className="text-sm text-muted-foreground">
+                {formatPlanPrice(planActual, "mensual")} / mes
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -276,8 +246,10 @@ export function PlanesDashboardClient({
         <div className="grid gap-5 lg:grid-cols-4">
           {planes.map((plan) => {
             const actual = plan.clave === planActualClave;
-            const recomendado = plan.clave === "basico";
+            const recomendado = plan.destacado;
             const loading = loadingPlan === plan.clave;
+            const ahorroLabel = getAhorroAnualLabel(plan);
+            const ahorroMontoLabel = getAhorroAnualMontoLabel(plan);
 
             return (
               <article
@@ -306,9 +278,18 @@ export function PlanesDashboardClient({
                 </p>
 
                 <p className="mt-4 text-3xl font-bold">
-                  {formatGs(plan.precio_gs)}
+                  {formatPlanPrice(plan, "mensual")}
                 </p>
                 <p className="text-sm text-muted-foreground">/ mes</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {formatPlanPrice(plan, "anual")} / año
+                </p>
+
+                {ahorroLabel && (
+                  <p className="mt-1 text-xs font-semibold text-green-700">
+                    {ahorroLabel} · {ahorroMontoLabel}
+                  </p>
+                )}
 
                 <div className="mt-5 space-y-3">
                   {featuresPlan(plan).map((feature) => (
@@ -379,7 +360,7 @@ export function PlanesDashboardClient({
           />
 
           <PremiumFeature
-            titulo="Exportar CSV"
+            titulo="Exportar XLSX / CSV"
             descripcion="Descargar reportes y datos para análisis externo."
             desde="Profesional"
             activo={nivelActual >= 2}
@@ -409,10 +390,10 @@ export function PlanesDashboardClient({
             type="button"
             variant="outline"
             onClick={() => {
-              const texto = encodeURIComponent(
+              const url = buildWhatsappUrl(
                 `Hola, necesito ayuda para elegir un plan para mi negocio ${negocioNombre}.`
               );
-              window.open(`https://wa.me/?text=${texto}`, "_blank", "noopener,noreferrer");
+              window.open(url, "_blank", "noopener,noreferrer");
             }}
           >
             <MessageCircle className="mr-2 h-4 w-4" />

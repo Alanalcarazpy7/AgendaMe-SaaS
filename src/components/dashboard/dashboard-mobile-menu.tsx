@@ -24,6 +24,7 @@ import type {
   DashboardAccessRole,
   DashboardAccessScope,
 } from "@/lib/dashboard/access-context";
+import { AgendaMeIcon, AgendaMeLogo } from "@/components/brand/agendame-logo";
 import { SignOutButton } from "@/components/dashboard/sign-out-button";
 
 type Props = {
@@ -214,17 +215,21 @@ export function DashboardMobileMenu({
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-40 border-b bg-background/92 shadow-sm shadow-slate-950/5 backdrop-blur-xl lg:hidden dark:shadow-black/20">
         <div className="flex h-16 items-center justify-between px-4">
-          <Link href="/dashboard" className="flex min-w-0 items-center gap-3">
+          <Link href="/dashboard" className="flex min-w-0 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border bg-card shadow-sm">
+              <AgendaMeIcon size="sm" />
+            </span>
+
             {negocioLogoUrl ? (
               <img
                 src={negocioLogoUrl}
                 alt={negocioNombre}
-                className="h-9 w-9 rounded-xl border object-cover"
+                className="hidden h-9 w-9 rounded-xl border object-cover sm:block"
               />
             ) : (
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-foreground text-xs font-bold text-background">
+              <div className="hidden h-9 w-9 items-center justify-center rounded-xl bg-primary text-xs font-bold text-primary-foreground sm:flex">
                 {iniciales(negocioNombre)}
               </div>
             )}
@@ -238,7 +243,7 @@ export function DashboardMobileMenu({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border bg-card shadow-sm outline-none transition-[background-color,box-shadow,color] duration-200 ease-[var(--ease-out)] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             aria-label="Abrir menú"
           >
             <Menu className="h-5 w-5" />
@@ -250,22 +255,22 @@ export function DashboardMobileMenu({
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-black/40"
+            className="ag-dashboard-overlay absolute inset-0"
             onClick={() => setOpen(false)}
             aria-label="Cerrar menú"
           />
 
-          <aside className="absolute right-0 top-0 flex h-full w-[88%] max-w-sm flex-col bg-background shadow-xl">
+          <aside className="ag-dashboard-drawer absolute right-0 top-0 flex h-full w-[88%] max-w-sm flex-col border-l bg-background shadow-2xl shadow-slate-950/25 dark:shadow-black/50">
             <div className="flex items-center justify-between border-b p-4">
               <div>
-                <p className="text-sm font-bold">Menú</p>
-                <p className="text-xs text-muted-foreground">{negocioNombre}</p>
+                <AgendaMeLogo size="sm" />
+                <p className="mt-2 text-xs text-muted-foreground">{negocioNombre}</p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border bg-card outline-none transition-[background-color,box-shadow,color] duration-200 ease-[var(--ease-out)] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 aria-label="Cerrar menú"
               >
                 <X className="h-5 w-5" />
@@ -276,8 +281,8 @@ export function DashboardMobileMenu({
               <Link
                 href="/dashboard/mi-cuenta"
                 onClick={() => setOpen(false)}
-                className={`flex items-center gap-3 rounded-2xl border p-3 transition hover:bg-muted ${
-                  pathname === "/dashboard/mi-cuenta" ? "bg-muted" : "bg-background"
+                className={`flex items-center gap-3 rounded-2xl border p-3 outline-none transition-[background-color,box-shadow,color] duration-200 ease-[var(--ease-out)] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+                  pathname === "/dashboard/mi-cuenta" ? "bg-accent shadow-sm" : "bg-card"
                 }`}
               >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-bold">
@@ -318,13 +323,13 @@ export function DashboardMobileMenu({
                     key={item.href}
                     href={item.href}
                     onClick={() => setOpen(false)}
-                    className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition ${
+                    className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium outline-none transition-[background-color,color,box-shadow] duration-200 ease-[var(--ease-out)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                       active
-                        ? "bg-foreground text-background"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                     }`}
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-4 w-4 shrink-0" />
                     {item.label}
                   </Link>
                 );
@@ -340,3 +345,5 @@ export function DashboardMobileMenu({
     </>
   );
 }
+
+

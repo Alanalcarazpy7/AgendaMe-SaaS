@@ -6,6 +6,19 @@ export async function proxy(request: NextRequest) {
     request,
   });
 
+  const pathname = request.nextUrl.pathname;
+
+  const isDashboard = pathname.startsWith("/dashboard");
+  const isLogin = pathname === "/login" || pathname === "/auth/login";
+  const isRegistro =
+    pathname === "/registro" ||
+    pathname === "/signup" ||
+    pathname === "/auth/registro";
+
+  if (!isDashboard && !isLogin && !isRegistro) {
+    return response;
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -37,12 +50,6 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const pathname = request.nextUrl.pathname;
-
-  const isDashboard = pathname.startsWith("/dashboard");
-  const isLogin = pathname === "/login";
-  const isRegistro = pathname === "/registro" || pathname === "/signup";
 
   if (isDashboard && !user) {
     const url = request.nextUrl.clone();
