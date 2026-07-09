@@ -33,13 +33,13 @@ export function DashboardUsageCard({
 
   return (
     <>
-      <div className="rounded-3xl border bg-card p-6 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
+      <div className="rounded-[1.75rem] border border-border/80 bg-card/90 p-6 shadow-[0_20px_65px_rgb(15_23_42/0.08)] ring-1 ring-white/60 backdrop-blur-xl dark:bg-card/80 dark:shadow-black/25 dark:ring-white/5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-muted-foreground">{title}</p>
 
             <div className="mt-4 flex items-end gap-2">
-              <p className="text-4xl font-bold">
+              <p className="text-4xl font-bold tracking-tight">
                 {used}
                 {hasLimit && <span className="text-muted-foreground"> / {limit}</span>}
               </p>
@@ -67,10 +67,14 @@ export function DashboardUsageCard({
 
         {hasLimit && (
           <div className="mt-5">
-            <div className="h-3 overflow-hidden rounded-full bg-muted">
+            <div className="h-3 overflow-hidden rounded-full bg-muted shadow-inner">
               <div
                 className={`h-full rounded-full transition-[width,background-color] duration-300 ease-[var(--ease-out)] ${
-                  reached ? "bg-destructive" : nearLimit ? "bg-primary" : "bg-chart-4"
+                  reached
+                    ? "bg-destructive"
+                    : nearLimit
+                      ? "bg-gradient-to-r from-primary to-cyan-400"
+                      : "bg-gradient-to-r from-teal-500 to-emerald-500"
                 }`}
                 style={{ width: `${percent}%` }}
               />

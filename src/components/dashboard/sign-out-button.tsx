@@ -6,7 +6,12 @@ import { LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
-export function SignOutButton() {
+type SignOutButtonProps = {
+  compact?: boolean;
+  className?: string;
+};
+
+export function SignOutButton({ compact = false, className }: SignOutButtonProps) {
   const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
@@ -24,12 +29,15 @@ export function SignOutButton() {
     <Button
       type="button"
       variant="outline"
-      className="w-full justify-start"
+      size={compact ? "icon" : "default"}
+      className={className ?? (compact ? "w-full" : "w-full justify-start")}
       onClick={handleSignOut}
       disabled={loading}
+      title="Cerrar sesión"
+      aria-label="Cerrar sesión"
     >
-      <LogOut className="mr-2 h-4 w-4" />
-      {loading ? "Saliendo..." : "Cerrar sesión"}
+      <LogOut className={compact ? "h-4 w-4" : "mr-2 h-4 w-4"} />
+      {!compact && (loading ? "Saliendo..." : "Cerrar sesión")}
     </Button>
   );
 }

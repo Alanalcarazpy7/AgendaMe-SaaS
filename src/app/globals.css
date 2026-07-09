@@ -368,5 +368,34 @@
       transform: none;
     }
   }
-}
 
+  .ag-private-bg {
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--background) 92%, var(--primary)) 0%, var(--background) 44%, color-mix(in srgb, var(--background) 94%, var(--ring)) 100%),
+      linear-gradient(90deg, color-mix(in srgb, var(--foreground) 5%, transparent) 1px, transparent 1px),
+      linear-gradient(0deg, color-mix(in srgb, var(--foreground) 4%, transparent) 1px, transparent 1px);
+    background-size: auto, 42px 42px, 42px 42px;
+  }
+
+  .ag-private-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(180deg, transparent, color-mix(in srgb, var(--background) 82%, transparent));
+  }
+
+  .ag-public-booking-bg {
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--background) 88%, var(--primary)) 0%, var(--background) 48%, color-mix(in srgb, var(--background) 90%, var(--ring)) 100%),
+      linear-gradient(90deg, color-mix(in srgb, var(--foreground) 4%, transparent) 1px, transparent 1px),
+      linear-gradient(0deg, color-mix(in srgb, var(--foreground) 3%, transparent) 1px, transparent 1px);
+    background-size: auto, 44px 44px, 44px 44px;
+  }
+
+  .ag-public-booking-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--background) 76%, transparent) 72%, var(--background) 100%);
+  }
+}

@@ -198,9 +198,9 @@ export default async function DashboardPlanesPage() {
       <section className="rounded-3xl border bg-card p-5 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
         <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
-            <p className="text-sm text-muted-foreground">Planes y suscripciÃ³n</p>
+            <p className="text-sm text-muted-foreground">Planes y suscripción</p>
             <h1 className="mt-1 text-3xl font-bold tracking-tight">
-              GestionÃ¡ tu plan
+              Gestioná tu plan
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Negocio: {negocio.nombre}
@@ -249,7 +249,7 @@ export default async function DashboardPlanesPage() {
       <section>
         <h2 className="text-2xl font-bold">Planes disponibles</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          ElegÃ­ el plan que mejor se adapte al crecimiento de tu negocio.
+          Elegí el plan que mejor se adapte al crecimiento de tu negocio.
         </p>
 
         <div className="mt-5 grid gap-5 lg:grid-cols-4">
@@ -283,12 +283,12 @@ export default async function DashboardPlanesPage() {
                 <p className="text-sm text-muted-foreground">/ mes</p>
 
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {formatPlanPrice(plan, "anual")} / aÃ±o
+                  {formatPlanPrice(plan, "anual")} / año
                 </p>
 
                 {ahorroLabel && (
                   <p className="mt-1 text-xs font-semibold text-green-700">
-                    {ahorroLabel} Â· {ahorroMontoLabel}
+                    {ahorroLabel} · {ahorroMontoLabel}
                   </p>
                 )}
 
@@ -309,9 +309,9 @@ export default async function DashboardPlanesPage() {
                     activo
                     texto={formatLimit(plan.limite_servicios, "servicio activo", "servicios activos")}
                   />
-                  <PlanFeature activo={nivelPlan(plan.clave) >= 1} texto="Reportes bÃ¡sicos" />
+                  <PlanFeature activo={nivelPlan(plan.clave) >= 1} texto="Reportes básicos" />
                   <PlanFeature activo={!!plan.permite_reportes_avanzados} texto="Reportes avanzados" />
-                  <PlanFeature activo={!!plan.permite_exportacion_csv} texto="ExportaciÃ³n XLSX / CSV" />
+                  <PlanFeature activo={!!plan.permite_exportacion_csv} texto="Exportación XLSX / CSV" />
                   <PlanFeature
                     activo={!!plan.permite_multiples_sucursales}
                     texto={formatLimit(plan.limite_sucursales, "sucursal", "sucursales")}
@@ -334,21 +334,21 @@ export default async function DashboardPlanesPage() {
         </div>
 
         <p className="mt-1 text-sm text-muted-foreground">
-          Estas funciones se activan segÃºn el plan del negocio.
+          Estas funciones se activan según el plan del negocio.
         </p>
 
         <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <PremiumCard
-            titulo="Reportes bÃ¡sicos"
-            descripcion="Ingresos, citas por estado y servicios mÃ¡s reservados."
-            desde="BÃ¡sico"
+            titulo="Reportes básicos"
+            descripcion="Ingresos, citas por estado y servicios más reservados."
+            desde="Básico"
             activo={nivelActual >= 1}
             icon={BarChart3}
           />
 
           <PremiumCard
             titulo="Exportar XLSX / CSV"
-            descripcion="Descargar reportes y datos para anÃ¡lisis externo."
+            descripcion="Descargar reportes y datos para análisis externo."
             desde="Profesional"
             activo={nivelActual >= 2}
             icon={FileDown}
@@ -364,7 +364,7 @@ export default async function DashboardPlanesPage() {
 
           <PremiumCard
             titulo="Sucursales"
-            descripcion="GestiÃ³n para negocios con mÃ¡s de una ubicaciÃ³n."
+            descripcion="Gestión para negocios con más de una ubicación."
             desde="Empresarial"
             activo={nivelActual >= 3}
             icon={Store}

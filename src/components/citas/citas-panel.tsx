@@ -715,7 +715,7 @@ export function CitasPanel({
                             event.stopPropagation();
                             abrirDetalle(cita);
                           }}
-                          className="absolute z-10 cursor-pointer overflow-hidden rounded-lg border bg-white text-left shadow-sm ring-1 ring-black/5 transition hover:z-20 hover:shadow-md hover:ring-black/10"
+                          className="absolute z-10 cursor-pointer overflow-hidden rounded-lg border bg-card text-left shadow-sm ring-1 ring-foreground/5 transition hover:z-20 hover:shadow-md hover:ring-foreground/15"
                           style={{
                             top,
                             height,
