@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Camera, KeyRound, Loader2, Save } from "lucide-react";
+import { Camera, KeyRound, Loader2, Save, ShieldCheck } from "lucide-react";
 
 type Perfil = {
   usuario_id: string;
@@ -66,6 +66,7 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordFieldsUnlocked, setPasswordFieldsUnlocked] = useState(false);
 
   const [loadingPerfil, setLoadingPerfil] = useState(false);
   const [loadingAvatar, setLoadingAvatar] = useState(false);
@@ -193,6 +194,7 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
 
       setPassword("");
       setConfirmPassword("");
+      setPasswordFieldsUnlocked(false);
       setMensaje("Contraseña actualizada correctamente.");
     } catch {
       setError("No se pudo cambiar la contraseña.");
@@ -366,31 +368,63 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
           </section>
 
           <section className="rounded-3xl border bg-background p-5 shadow-sm">
-            <h2 className="text-lg font-bold">Seguridad</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Cambiá tu contraseña de acceso al dashboard.
-            </p>
-
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
-                <label className="text-sm font-medium">Nueva contraseña</label>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Acceso</p>
+                    <h2 className="text-lg font-bold">Seguridad</h2>
+                  </div>
+                </div>
+                <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
+                  La contraseña no se muestra ni se precarga. Escribi una nueva solo cuando quieras cambiarla.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border bg-muted/30 px-4 py-3 text-xs font-medium text-muted-foreground">
+                Minimo 8 caracteres
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border bg-muted/20 p-3">
+                <label className="text-sm font-semibold">Nueva contraseña</label>
                 <input
                   type="password"
+                  name="agendame_password_new"
+                  autoComplete="new-password"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  readOnly={!passwordFieldsUnlocked}
                   value={password}
+                  onFocus={() => setPasswordFieldsUnlocked(true)}
+                  onMouseDown={() => setPasswordFieldsUnlocked(true)}
                   onChange={(event) => setPassword(event.target.value)}
                   className="mt-2 h-11 w-full rounded-xl border bg-background px-3 text-sm"
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder="Escribi la nueva contraseña"
+                  spellCheck={false}
                 />
               </div>
 
-              <div>
-                <label className="text-sm font-medium">Repetir contraseña</label>
+              <div className="rounded-2xl border bg-muted/20 p-3">
+                <label className="text-sm font-semibold">Confirmar contraseña</label>
                 <input
                   type="password"
+                  name="agendame_password_confirm"
+                  autoComplete="new-password"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  readOnly={!passwordFieldsUnlocked}
                   value={confirmPassword}
+                  onFocus={() => setPasswordFieldsUnlocked(true)}
+                  onMouseDown={() => setPasswordFieldsUnlocked(true)}
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   className="mt-2 h-11 w-full rounded-xl border bg-background px-3 text-sm"
-                  placeholder="Repetí la contraseña"
+                  placeholder="Repeti la nueva contraseña"
+                  spellCheck={false}
                 />
               </div>
             </div>

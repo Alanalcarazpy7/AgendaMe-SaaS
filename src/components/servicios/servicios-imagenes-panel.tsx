@@ -1,7 +1,14 @@
-﻿"use client";
+"use client";
 
-import { useEffect, useRef, useState } from "react";
-import { ImagePlus, Loader2, Trash2, UploadCloud } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  CheckCircle2,
+  ImagePlus,
+  Loader2,
+  RefreshCw,
+  Trash2,
+  UploadCloud,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type ServicioImagenItem = {
@@ -12,6 +19,10 @@ type ServicioImagenItem = {
   imagen_url: string | null;
 };
 
+function panelBase(extra = "") {
+  return `rounded-[1.5rem] border border-border/80 bg-card/90 shadow-[0_16px_48px_rgb(15_23_42/0.07)] ring-1 ring-white/60 backdrop-blur-xl dark:bg-card/80 dark:shadow-black/20 dark:ring-white/5 ${extra}`;
+}
+
 export function ServiciosImagenesPanel() {
   const [servicios, setServicios] = useState<ServicioImagenItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +31,16 @@ export function ServiciosImagenesPanel() {
   const [error, setError] = useState("");
 
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const resumen = useMemo(() => {
+    const conImagen = servicios.filter((servicio) => Boolean(servicio.imagen_url)).length;
+
+    return {
+      total: servicios.length,
+      conImagen,
+      sinImagen: servicios.length - conImagen,
+    };
+  }, [servicios]);
 
   async function cargarServicios() {
     try {
@@ -131,150 +152,202 @@ export function ServiciosImagenesPanel() {
   }
 
   return (
-    <section className="rounded-3xl border bg-background p-6 shadow-sm">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <ImagePlus className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-bold">Imágenes de servicios</h2>
-          </div>
+    <section className={panelBase("overflow-hidden")}>
+      <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="p-5 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="inline-flex items-center gap-2 rounded-2xl border bg-muted/50 px-3 py-1.5 text-xs font-semibold text-muted-foreground">
+                <ImagePlus className="h-3.5 w-3.5 text-primary" />
+                Galería pública
+              </p>
 
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Agregá una imagen opcional para que el cliente vea mejor cada
-            servicio en el link público de reservas. Recomendado: formato
-            horizontal, JPG/PNG/WEBP y menos de 2 MB.
-          </p>
+              <h2 className="mt-4 text-2xl font-bold tracking-tight">
+                Imágenes de servicios
+              </h2>
+
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                Sumá una imagen clara para que el cliente reconozca cada servicio antes de reservar. Ideal: horizontal, JPG/PNG/WEBP y menos de 2 MB.
+              </p>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={cargarServicios}
+              disabled={loading}
+              className="rounded-2xl"
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Actualizar
+            </Button>
+          </div>
         </div>
 
-        <Button
-          type="button"
-          variant="outline"
-          onClick={cargarServicios}
-          disabled={loading}
-        >
-          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Actualizar
-        </Button>
+        <aside className="border-t border-border/70 bg-muted/25 p-4 xl:border-l xl:border-t-0">
+          <div className="grid gap-2">
+            <div className="rounded-2xl border bg-background/60 p-3">
+              <p className="text-xs text-muted-foreground">Servicios</p>
+              <p className="mt-1 text-2xl font-bold">{resumen.total}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-2xl border bg-background/60 p-3">
+                <p className="text-xs text-muted-foreground">Con imagen</p>
+                <p className="mt-1 text-lg font-bold">{resumen.conImagen}</p>
+              </div>
+              <div className="rounded-2xl border bg-background/60 p-3">
+                <p className="text-xs text-muted-foreground">Pendientes</p>
+                <p className="mt-1 text-lg font-bold">{resumen.sinImagen}</p>
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
 
-      {error && (
-        <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      <div className="border-t p-5 sm:p-6">
+        {error && (
+          <div className="mb-4 rounded-2xl border border-destructive/25 bg-destructive/10 p-4 text-sm font-medium text-destructive">
+            {error}
+          </div>
+        )}
 
-      {loading ? (
-        <div className="mt-6 flex items-center gap-2 rounded-2xl border bg-muted/30 p-4 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Cargando servicios...
-        </div>
-      ) : servicios.length === 0 ? (
-        <div className="mt-6 rounded-2xl border bg-muted/30 p-4 text-sm text-muted-foreground">
-          Todavía no hay servicios cargados.
-        </div>
-      ) : (
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          {servicios.map((servicio) => {
-            const uploading = uploadingId === servicio.id;
-            const deleting = deletingId === servicio.id;
-
-            return (
-              <article
-                key={servicio.id}
-                className="overflow-hidden rounded-3xl border bg-background shadow-sm"
-              >
-                <div className="aspect-[16/9] bg-muted">
-                  {servicio.imagen_url ? (
-                    <img
-                      src={servicio.imagen_url}
-                      alt={servicio.nombre}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full flex-col items-center justify-center text-muted-foreground">
-                      <ImagePlus className="h-8 w-8" />
-                      <p className="mt-2 text-sm">Sin imagen</p>
-                    </div>
-                  )}
+        {loading ? (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="overflow-hidden rounded-[1.25rem] border bg-background/60">
+                <div className="aspect-[16/9] animate-pulse bg-muted" />
+                <div className="space-y-3 p-4">
+                  <div className="h-4 w-2/3 animate-pulse rounded-full bg-muted" />
+                  <div className="h-3 w-full animate-pulse rounded-full bg-muted" />
+                  <div className="h-9 w-36 animate-pulse rounded-2xl bg-muted" />
                 </div>
+              </div>
+            ))}
+          </div>
+        ) : servicios.length === 0 ? (
+          <div className="rounded-[1.25rem] border border-dashed bg-muted/35 p-6 text-center text-sm text-muted-foreground">
+            Todavía no hay servicios cargados.
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {servicios.map((servicio) => {
+              const uploading = uploadingId === servicio.id;
+              const deleting = deletingId === servicio.id;
 
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold">{servicio.nombre}</p>
-
-                      {servicio.descripcion && (
-                        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                          {servicio.descripcion}
-                        </p>
-                      )}
-                    </div>
+              return (
+                <article
+                  key={servicio.id}
+                  className="group overflow-hidden rounded-[1.25rem] border bg-background/70 shadow-sm transition-[transform,border-color,box-shadow] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-lg hover:shadow-primary/10"
+                >
+                  <div className="relative aspect-[16/9] bg-muted">
+                    {servicio.imagen_url ? (
+                      <img
+                        src={servicio.imagen_url}
+                        alt={servicio.nombre}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full flex-col items-center justify-center text-muted-foreground">
+                        <ImagePlus className="h-9 w-9" />
+                        <p className="mt-2 text-sm font-semibold">Sin imagen</p>
+                      </div>
+                    )}
 
                     <span
-                      className={`rounded-full px-3 py-1 text-xs font-medium ${
-                        servicio.estado === "activo"
-                          ? "bg-green-50 text-green-700"
-                          : "bg-muted text-muted-foreground"
+                      className={`absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-2xl px-3 py-1 text-xs font-bold shadow-lg backdrop-blur ${
+                        servicio.imagen_url
+                          ? "bg-emerald-500/90 text-white"
+                          : "bg-background/85 text-muted-foreground"
                       }`}
                     >
-                      {servicio.estado}
+                      {servicio.imagen_url && <CheckCircle2 className="h-3.5 w-3.5" />}
+                      {servicio.imagen_url ? "Lista" : "Pendiente"}
                     </span>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <input
-                      ref={(element) => {
-                        inputRefs.current[servicio.id] = element;
-                      }}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      className="hidden"
-                      onChange={(event) =>
-                        subirImagen(
-                          servicio.id,
-                          event.target.files?.[0] ?? null
-                        )
-                      }
-                    />
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-bold">{servicio.nombre}</p>
+                        {servicio.descripcion && (
+                          <p className="mt-1 line-clamp-2 text-sm leading-6 text-muted-foreground">
+                            {servicio.descripcion}
+                          </p>
+                        )}
+                      </div>
 
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={uploading || deleting}
-                      onClick={() => inputRefs.current[servicio.id]?.click()}
-                    >
-                      {uploading ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <UploadCloud className="mr-2 h-4 w-4" />
-                      )}
-                      {servicio.imagen_url ? "Cambiar imagen" : "Subir imagen"}
-                    </Button>
+                      <span
+                        className={`shrink-0 rounded-2xl px-2.5 py-1 text-xs font-bold ${
+                          servicio.estado === "activo"
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {servicio.estado}
+                      </span>
+                    </div>
 
-                    {servicio.imagen_url && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <input
+                        ref={(element) => {
+                          inputRefs.current[servicio.id] = element;
+                        }}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(event) =>
+                          subirImagen(
+                            servicio.id,
+                            event.target.files?.[0] ?? null
+                          )
+                        }
+                      />
+
                       <Button
                         type="button"
-                        variant="destructive"
+                        variant="outline"
                         size="sm"
                         disabled={uploading || deleting}
-                        onClick={() => eliminarImagen(servicio.id)}
+                        onClick={() => inputRefs.current[servicio.id]?.click()}
+                        className="rounded-2xl"
                       >
-                        {deleting ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {uploading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <Trash2 className="mr-2 h-4 w-4" />
+                          <UploadCloud className="h-4 w-4" />
                         )}
-                        Quitar
+                        {servicio.imagen_url ? "Cambiar" : "Subir"}
                       </Button>
-                    )}
+
+                      {servicio.imagen_url && (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          disabled={uploading || deleting}
+                          onClick={() => eliminarImagen(servicio.id)}
+                          className="rounded-2xl"
+                        >
+                          {deleting ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                          Quitar
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      )}
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </section>
   );
 }

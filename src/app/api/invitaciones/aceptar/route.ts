@@ -72,6 +72,7 @@ export async function POST(request: Request) {
         id,
         negocio_id,
         sucursal_id,
+        empleado_id,
         email,
         rol,
         estado,
@@ -176,6 +177,7 @@ export async function POST(request: Request) {
           nombre: nombreFinal,
           sucursal_id: invitacion.sucursal_id,
           rol: invitacion.rol,
+          empleado_id: invitacion.empleado_id ?? null,
           activo: true,
         })
         .eq("id", accesoExistente.id);
@@ -191,6 +193,7 @@ export async function POST(request: Request) {
           nombre: nombreFinal,
           email,
           rol: invitacion.rol,
+          empleado_id: invitacion.empleado_id ?? null,
           activo: true,
         });
 

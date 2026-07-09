@@ -97,6 +97,32 @@ async function validarSucursal({
   return data;
 }
 
+async function validarEmpleado({
+  supabase,
+  negocioId,
+  sucursalId,
+  empleadoId,
+}: {
+  supabase: any;
+  negocioId: string;
+  sucursalId: string;
+  empleadoId: string;
+}) {
+  const { data, error } = await supabase
+    .from("empleados")
+    .select("id, nombre, sucursal_id, estado")
+    .eq("id", empleadoId)
+    .eq("negocio_id", negocioId)
+    .eq("estado", "activo")
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+
+  if (!data || data.sucursal_id !== sucursalId) return null;
+
+  return data;
+}
+
 export async function GET() {
   try {
     const guard = await requireGestionSucursalesApi();
@@ -117,6 +143,7 @@ export async function GET() {
           negocio_id,
           sucursal_id,
           usuario_id,
+          empleado_id,
           email,
           rol,
           activo,
@@ -182,6 +209,7 @@ export async function POST(request: Request) {
     const email = normalizarEmail(body.email);
     const sucursalId = limpiar(body.sucursal_id);
     const rol = limpiar(body.rol);
+    const empleadoIdInput = limpiar(body.empleado_id);
 
     if (!email || !email.includes("@")) {
       return NextResponse.json(
@@ -219,6 +247,33 @@ export async function POST(request: Request) {
       );
     }
 
+    let empleadoId: string | null = null;
+
+    if (rol === "empleado_sucursal") {
+      if (!empleadoIdInput) {
+        return NextResponse.json(
+          { error: "Elegí a qué empleado de la plantilla corresponde este acceso." },
+          { status: 400 }
+        );
+      }
+
+      const empleado = await validarEmpleado({
+        supabase,
+        negocioId: guard.access.negocio.id,
+        sucursalId,
+        empleadoId: empleadoIdInput,
+      });
+
+      if (!empleado) {
+        return NextResponse.json(
+          { error: "El empleado elegido no existe o no pertenece a esta sucursal." },
+          { status: 400 }
+        );
+      }
+
+      empleadoId = empleado.id;
+    }
+
     // Si ya tenía acceso activo, lo pasamos a inactivo mientras acepta la nueva invitación.
     // Esto sirve para migrar usuarios viejos creados con contraseña temporal.
     await supabase
@@ -252,6 +307,7 @@ export async function POST(request: Request) {
         sucursal_id: sucursalId,
         email,
         rol,
+        empleado_id: empleadoId,
         token_hash: tokenHash,
         estado: "pendiente",
         created_by: guard.access.user.id,
@@ -393,6 +449,48 @@ export async function PATCH(request: Request) {
     if (rol) updateData.rol = rol;
     if (typeof activo === "boolean") updateData.activo = activo;
 
+    if (Object.prototype.hasOwnProperty.call(body, "empleado_id")) {
+      const empleadoIdInput = limpiar(body.empleado_id);
+
+      if (!empleadoIdInput) {
+        updateData.empleado_id = null;
+      } else {
+        const { data: accesoActual, error: accesoActualError } = await supabase
+          .from("sucursal_usuarios")
+          .select("sucursal_id")
+          .eq("id", id)
+          .eq("negocio_id", guard.access.negocio.id)
+          .maybeSingle();
+
+        if (accesoActualError) throw new Error(accesoActualError.message);
+
+        if (!accesoActual) {
+          return NextResponse.json(
+            { error: "El acceso no existe." },
+            { status: 404 }
+          );
+        }
+
+        const sucursalParaValidar = sucursalId || accesoActual.sucursal_id;
+
+        const empleado = await validarEmpleado({
+          supabase,
+          negocioId: guard.access.negocio.id,
+          sucursalId: sucursalParaValidar,
+          empleadoId: empleadoIdInput,
+        });
+
+        if (!empleado) {
+          return NextResponse.json(
+            { error: "El empleado elegido no existe o no pertenece a esta sucursal." },
+            { status: 400 }
+          );
+        }
+
+        updateData.empleado_id = empleado.id;
+      }
+    }
+
     const { data, error } = await supabase
       .from("sucursal_usuarios")
       .update(updateData)
@@ -404,6 +502,7 @@ export async function PATCH(request: Request) {
         negocio_id,
         sucursal_id,
         usuario_id,
+        empleado_id,
         email,
         rol,
         activo,

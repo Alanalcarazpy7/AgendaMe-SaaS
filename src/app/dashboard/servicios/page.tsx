@@ -53,12 +53,9 @@ export default async function ServiciosPage() {
   const servicios = (serviciosData ?? []) as ServicioItem[];
 
   return (
-    <>
+    <div className="space-y-5">
       <ServiciosPanel servicios={servicios} />
-
-      <div className="mt-6">
-        <ServiciosImagenesPanel />
-      </div>
-    </>
+      <ServiciosImagenesPanel />
+    </div>
   );
 }

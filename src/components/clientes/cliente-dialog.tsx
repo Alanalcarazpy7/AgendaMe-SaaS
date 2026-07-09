@@ -104,13 +104,13 @@ export function ClienteDialog({ cliente, variant }: ClienteDialogProps) {
   return (
     <>
       {esEditar ? (
-        <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
-          <Pencil className="mr-2 h-4 w-4" />
+        <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)} className="rounded-2xl">
+          <Pencil className="h-4 w-4" />
           Editar
         </Button>
       ) : (
-        <Button type="button" onClick={() => setOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
+        <Button type="button" onClick={() => setOpen(true)} className="rounded-2xl">
+          <Plus className="h-4 w-4" />
           Nuevo cliente
         </Button>
       )}
@@ -189,11 +189,11 @@ export function ClienteDialog({ cliente, variant }: ClienteDialogProps) {
             )}
 
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading} className="rounded-2xl">
                 Cancelar
               </Button>
 
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading} className="rounded-2xl">
                 {loading ? "Guardando..." : esEditar ? "Guardar cambios" : "Crear cliente"}
               </Button>
             </div>

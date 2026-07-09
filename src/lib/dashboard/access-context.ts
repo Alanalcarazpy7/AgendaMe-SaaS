@@ -37,6 +37,7 @@ type AccessOk = {
   rol: DashboardAccessRole;
   sucursalId: string | null;
   sucursalNombre: string | null;
+  empleadoId: string | null;
   puedeVerTodo: boolean;
   puedeGestionarPlanes: boolean;
   puedeGestionarConfiguracion: boolean;
@@ -292,6 +293,7 @@ export async function resolveDashboardAccess(): Promise<DashboardAccessResult> {
       rol: "admin_global",
       sucursalId: null,
       sucursalNombre: null,
+      empleadoId: null,
       ...permisos,
     };
   }
@@ -311,6 +313,7 @@ export async function resolveDashboardAccess(): Promise<DashboardAccessResult> {
       negocio_id,
       sucursal_id,
       usuario_id,
+      empleado_id,
       nombre,
       cargo,
       avatar_url,
@@ -340,6 +343,7 @@ export async function resolveDashboardAccess(): Promise<DashboardAccessResult> {
         negocio_id,
         sucursal_id,
         usuario_id,
+        empleado_id,
         nombre,
         cargo,
         avatar_url,
@@ -454,6 +458,7 @@ export async function resolveDashboardAccess(): Promise<DashboardAccessResult> {
     rol,
     sucursalId: (accesoSucursal as any).sucursal_id,
     sucursalNombre: (sucursal as any).nombre ?? "Sucursal",
+    empleadoId: (accesoSucursal as any).empleado_id ?? null,
     ...permisos,
   };
 }

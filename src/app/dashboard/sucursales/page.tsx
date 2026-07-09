@@ -39,6 +39,7 @@ export default async function SucursalesPage() {
     { data: sucursales, error: sucursalesError },
     { data: accesos, error: accesosError },
     { data: invitaciones, error: invitacionesError },
+    { data: empleados, error: empleadosError },
   ] = await Promise.all([
     supabase
       .from("sucursales")
@@ -55,6 +56,7 @@ export default async function SucursalesPage() {
         negocio_id,
         sucursal_id,
         usuario_id,
+        empleado_id,
         nombre,
         email,
         rol,
@@ -91,11 +93,19 @@ export default async function SucursalesPage() {
       .eq("negocio_id", access.negocio.id)
       .eq("estado", "pendiente")
       .order("created_at", { ascending: false }),
+
+    supabase
+      .from("empleados")
+      .select("id, nombre, sucursal_id, estado")
+      .eq("negocio_id", access.negocio.id)
+      .eq("estado", "activo")
+      .order("nombre", { ascending: true }),
   ]);
 
   if (sucursalesError) throw new Error(sucursalesError.message);
   if (accesosError) throw new Error(accesosError.message);
   if (invitacionesError) throw new Error(invitacionesError.message);
+  if (empleadosError) throw new Error(empleadosError.message);
 
   return (
     <div className="space-y-5">
@@ -138,6 +148,7 @@ export default async function SucursalesPage() {
         initialSucursales={sucursales ?? []}
         accesos={accesos ?? []}
         invitaciones={invitaciones ?? []}
+        empleados={empleados ?? []}
       />
     </div>
   );

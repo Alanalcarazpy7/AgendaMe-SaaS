@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type EmpleadoEstadoButtonProps = {
@@ -45,12 +46,16 @@ export function EmpleadoEstadoButton({
       size="sm"
       onClick={handleClick}
       disabled={loading}
+      className="rounded-2xl"
     >
-      {loading
-        ? "Actualizando..."
-        : estado === "activo"
-          ? "Inactivar"
-          : "Activar"}
+      {loading ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : estado === "activo" ? (
+        <EyeOff className="h-4 w-4" />
+      ) : (
+        <Eye className="h-4 w-4" />
+      )}
+      {loading ? "Actualizando..." : estado === "activo" ? "Ocultar" : "Activar"}
     </Button>
   );
 }

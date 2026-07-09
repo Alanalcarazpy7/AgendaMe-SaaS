@@ -5,14 +5,74 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 type Relacion<T> = T | T[] | null;
 
+type ClienteDashboard = {
+  id: string;
+  nombre_completo: string;
+  telefono: string | null;
+  email?: string | null;
+  estado: "activo" | "inactivo";
+};
+
+type ClienteSucursalRow = {
+  clientes: Relacion<ClienteDashboard>;
+};
+
+type EmpleadoServicioRow = {
+  servicio_id: string | null;
+};
+
+type HorarioEmpleadoRow = {
+  id: string;
+  dia_semana: number;
+  activo: boolean;
+  hora_inicio: string | null;
+  hora_fin: string | null;
+  descanso_inicio: string | null;
+  descanso_fin: string | null;
+};
+
+type EmpleadoDashboard = {
+  id: string;
+  nombre: string;
+  email?: string | null;
+  telefono?: string | null;
+  color_calendario: string | null;
+  estado: "activo" | "inactivo";
+  sucursal_id?: string | null;
+  empleado_servicios?: EmpleadoServicioRow[] | null;
+  horarios_empleado?: HorarioEmpleadoRow[] | null;
+};
+
+type PageProps = {
+  searchParams?: Promise<{
+    fecha?: string;
+    hora?: string;
+    cita?: string;
+  }>;
+};
+
 function obtenerObjeto<T>(valor: Relacion<T>): T | null {
   if (!valor) return null;
   return Array.isArray(valor) ? valor[0] ?? null : valor;
 }
 
-export default async function CitasPage() {
+export default async function CitasPage({ searchParams }: PageProps) {
   const access = await requireDashboardAccess();
   requirePermission(access, "puedeGestionarCitas");
+  const params = (await searchParams) ?? {};
+
+  if (access.rol === "empleado_sucursal" && !access.empleadoId) {
+    return (
+      <div className="rounded-3xl border bg-card p-8 text-center shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
+        <h1 className="text-2xl font-bold">Tu cuenta todavía no está vinculada</h1>
+        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-muted-foreground">
+          Tu acceso de personal no está asociado a ningún empleado de la plantilla
+          todavía. Pedile al gerente de tu sucursal que te vincule desde
+          Sucursales → Usuarios para poder ver tu agenda.
+        </p>
+      </div>
+    );
+  }
 
   const supabase = createServiceRoleClient();
 
@@ -66,6 +126,10 @@ export default async function CitasPage() {
 
   citasQuery = applySucursalScope(citasQuery, access);
 
+  if (access.rol === "empleado_sucursal" && access.empleadoId) {
+    citasQuery = citasQuery.eq("empleado_id", access.empleadoId);
+  }
+
   let empleadosQuery = supabase
     .from("empleados")
     .select(
@@ -97,7 +161,7 @@ export default async function CitasPage() {
 
   empleadosQuery = applySucursalScope(empleadosQuery, access);
 
-  let clientes: any[] = [];
+  let clientes: ClienteDashboard[] = [];
 
   if (access.scope === "sucursal" && access.sucursalId) {
     const { data: clientesSucursal, error: clientesSucursalError } = await supabase
@@ -120,10 +184,12 @@ export default async function CitasPage() {
       throw new Error(clientesSucursalError.message);
     }
 
-    clientes = (clientesSucursal ?? [])
-      .map((row: any) => obtenerObjeto(row.clientes))
-      .filter(Boolean)
-      .filter((cliente: any) => cliente.estado === "activo");
+    const clientesSucursalRows = (clientesSucursal ?? []) as ClienteSucursalRow[];
+
+    clientes = clientesSucursalRows
+      .map((row) => obtenerObjeto(row.clientes))
+      .filter((cliente): cliente is ClienteDashboard => Boolean(cliente))
+      .filter((cliente) => cliente.estado === "activo");
   } else {
     const { data: clientesData, error: clientesError } = await supabase
       .from("clientes")
@@ -136,7 +202,7 @@ export default async function CitasPage() {
       throw new Error(clientesError.message);
     }
 
-    clientes = clientesData ?? [];
+    clientes = (clientesData ?? []) as ClienteDashboard[];
   }
 
   const [
@@ -160,10 +226,10 @@ export default async function CitasPage() {
   if (empleadosError) throw new Error(empleadosError.message);
   if (serviciosError) throw new Error(serviciosError.message);
 
-  const empleadosNormalizados = (empleados ?? []).map((empleado: any) => {
+  const empleadosNormalizados = ((empleados ?? []) as EmpleadoDashboard[]).map((empleado) => {
     const servicioIds = (empleado.empleado_servicios ?? [])
-      .map((item: any) => item.servicio_id)
-      .filter(Boolean);
+      .map((item) => item.servicio_id)
+      .filter((servicioId): servicioId is string => Boolean(servicioId));
 
     const horarios = empleado.horarios_empleado ?? [];
 
@@ -177,22 +243,29 @@ export default async function CitasPage() {
     };
   });
 
-  const empleadoServicios = empleadosNormalizados.flatMap((empleado: any) => {
+  const empleadoServicios = empleadosNormalizados.flatMap((empleado) => {
     return (empleado.empleado_servicios ?? [])
-      .map((relacion: any) => ({
+      .map((relacion) => ({
         empleado_id: empleado.id,
         servicio_id: relacion.servicio_id,
       }))
-      .filter((relacion: any) => relacion.empleado_id && relacion.servicio_id);
+      .filter(
+        (relacion): relacion is { empleado_id: string; servicio_id: string } =>
+          Boolean(relacion.empleado_id && relacion.servicio_id)
+      );
   });
 
   return (
     <CitasPanel
+      key={`${params.fecha ?? ""}-${params.hora ?? ""}-${params.cita ?? ""}`}
       citas={citas ?? []}
       clientes={clientes}
       servicios={servicios ?? []}
       empleados={empleadosNormalizados}
       empleadoServicios={empleadoServicios}
+      initialFecha={params.fecha}
+      initialHora={params.hora}
+      highlightCitaId={params.cita}
     />
   );
 }

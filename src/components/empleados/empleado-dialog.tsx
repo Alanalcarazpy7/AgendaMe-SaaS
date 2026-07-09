@@ -241,13 +241,14 @@ export function EmpleadoDialog({
           variant="outline"
           size="sm"
           onClick={() => setOpen(true)}
+          className="rounded-2xl"
         >
-          <Pencil className="mr-2 h-4 w-4" />
+          <Pencil className="h-4 w-4" />
           Editar
         </Button>
       ) : (
-        <Button type="button" onClick={() => setOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
+        <Button type="button" onClick={() => setOpen(true)} className="rounded-2xl">
+          <Plus className="h-4 w-4" />
           Nuevo empleado
         </Button>
       )}
@@ -478,11 +479,12 @@ export function EmpleadoDialog({
                 variant="outline"
                 onClick={() => setOpen(false)}
                 disabled={loading}
+                className="rounded-2xl"
               >
                 Cancelar
               </Button>
 
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading} className="rounded-2xl">
                 {loading
                   ? "Guardando..."
                   : esEditar

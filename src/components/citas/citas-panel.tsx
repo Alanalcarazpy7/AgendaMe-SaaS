@@ -280,12 +280,6 @@ export function CitasPanel({
 
   const timelineHeight = (END_HOUR - START_HOUR) * 60 * PX_PER_MINUTE;
 
-  // Sincronizar calendario con fecha recibida por URL.
-  useEffect(() => {
-    if (!initialFecha) return;
-    setFechaBase(fechaLocalDesdeIso(initialFecha));
-  }, [initialFecha]);
-
   useEffect(() => {
     if (!highlightCitaId) return;
 
@@ -487,7 +481,7 @@ export function CitasPanel({
     : null;
 
   return (
-    <div className="mx-auto max-w-none space-y-4">
+    <div className="mx-auto max-w-full space-y-4 overflow-hidden">
       <section className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Calendario</h1>
@@ -521,7 +515,7 @@ export function CitasPanel({
         </div>
       </section>
 
-      <div className="overflow-hidden rounded-3xl border bg-background shadow-sm">
+      <div className="max-w-full overflow-hidden rounded-3xl border bg-background shadow-sm">
         <div className="border-b bg-background px-4 py-3">
           <div className="flex flex-col gap-3">
             <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
@@ -608,10 +602,10 @@ export function CitasPanel({
           </div>
         </div>
 
-        <div ref={calendarioScrollRef} className="overflow-x-auto">
-          <div className="min-w-[1420px]">
-            <div className="sticky top-0 z-20 grid grid-cols-[76px_repeat(7,minmax(185px,1fr))] border-b bg-background">
-              <div className="border-r px-3 py-2 text-xs font-medium text-muted-foreground">
+        <div ref={calendarioScrollRef} className="max-w-full overflow-x-auto">
+          <div className="min-w-[900px] xl:w-full xl:min-w-0">
+            <div className="sticky top-0 z-20 grid grid-cols-[64px_repeat(7,minmax(108px,1fr))] border-b bg-background xl:grid-cols-[64px_repeat(7,minmax(0,1fr))]">
+              <div className="border-r px-2 py-2 text-xs font-medium text-muted-foreground">
                 Hora
               </div>
 
@@ -624,14 +618,14 @@ export function CitasPanel({
                     key={iso}
                     type="button"
                     onClick={() => abrirNuevaCita(iso, "09:00")}
-                    className={`cursor-pointer border-r px-3 py-2 text-center transition hover:bg-blue-50 ${
+                    className={`cursor-pointer border-r px-2 py-2 text-center transition hover:bg-blue-50 ${
                       esHoy ? "bg-blue-50" : ""
                     }`}
                   >
                     <p className="text-xs text-muted-foreground">
                       {diasCortos[index]}
                     </p>
-                    <p className="text-xl font-bold leading-none">
+                    <p className="text-lg font-bold leading-none sm:text-xl">
                       {dia.getDate()}
                     </p>
                   </button>
@@ -640,14 +634,14 @@ export function CitasPanel({
             </div>
 
             <div
-              className="grid grid-cols-[76px_repeat(7,minmax(185px,1fr))]"
+              className="grid grid-cols-[64px_repeat(7,minmax(108px,1fr))] xl:grid-cols-[64px_repeat(7,minmax(0,1fr))]"
               style={{ height: timelineHeight }}
             >
               <div className="relative border-r bg-background">
                 {horas.map((horaNumero) => (
                   <div
                     key={horaNumero}
-                    className="absolute left-0 right-0 border-t px-2 pt-1 text-xs text-muted-foreground"
+                    className="absolute left-0 right-0 border-t px-1.5 pt-1 text-[11px] text-muted-foreground"
                     style={{
                       top: (horaNumero - START_HOUR) * 60 * PX_PER_MINUTE,
                     }}
@@ -705,6 +699,7 @@ export function CitasPanel({
                       );
 
                       const layout = obtenerLayoutSolapado(cita, citasDia);
+                      const estaResaltada = highlightCitaId === cita.id;
 
                       return (
                         <button
@@ -715,41 +710,50 @@ export function CitasPanel({
                             event.stopPropagation();
                             abrirDetalle(cita);
                           }}
-                          className="absolute z-10 cursor-pointer overflow-hidden rounded-lg border bg-card text-left shadow-sm ring-1 ring-foreground/5 transition hover:z-20 hover:shadow-md hover:ring-foreground/15"
+                          className={`absolute cursor-pointer overflow-hidden rounded-lg border text-left transition ${
+                            estaResaltada
+                              ? "z-40 border-cyan-300 bg-cyan-50 text-slate-950 outline outline-2 outline-offset-2 outline-cyan-300 shadow-[0_0_0_1px_rgb(34_211_238),0_0_24px_rgb(34_211_238/0.55),0_16px_38px_rgb(8_145_178/0.38)] ring-2 ring-cyan-300/80 dark:border-cyan-200 dark:bg-cyan-950/95 dark:text-white dark:outline-cyan-200 dark:shadow-[0_0_0_1px_rgb(103_232_249),0_0_28px_rgb(34_211_238/0.65),0_18px_42px_rgb(34_211_238/0.26)] dark:ring-cyan-200"
+                              : "z-10 border-border bg-card shadow-sm ring-1 ring-foreground/5 hover:z-20 hover:shadow-md hover:ring-foreground/15"
+                          }`}
                           style={{
                             top,
                             height,
-                            boxShadow:
-                              highlightCitaId === cita.id
-                                ? "0 0 0 3px rgba(37, 99, 235, 0.35), 0 12px 30px rgba(37, 99, 235, 0.18)"
-                                : undefined,
                             left: `calc(${layout.left} + 6px)`,
                             width: `calc(${layout.width} - 12px)`,
-                            borderLeftWidth: 5,
+                            borderLeftWidth: estaResaltada ? 7 : 5,
                             borderLeftColor:
-                              servicio?.color ??
-                              empleado?.color_calendario ??
-                              colorEstado(cita.estado),
+                              estaResaltada
+                                ? "#22d3ee"
+                                : servicio?.color ??
+                                  empleado?.color_calendario ??
+                                  colorEstado(cita.estado),
                           }}
                           title={`${hora(cita.hora_inicio)} - ${hora(cita.hora_fin)} · ${cliente?.nombre_completo ?? "Cliente"} · ${servicio?.nombre ?? "Servicio"}`}
                         >
+                          {estaResaltada && (
+                            <span
+                              aria-hidden="true"
+                              className="pointer-events-none absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-cyan-500 shadow-[0_0_0_3px_rgb(34_211_238/0.20),0_0_14px_rgb(34_211_238)] dark:bg-cyan-200"
+                            />
+                          )}
+
                           <div className="flex h-full min-h-0 flex-col justify-center gap-0.5 px-2 py-1">
                             <div className="flex min-w-0 items-center gap-1">
                               <span
-                                className="h-1.5 w-1.5 shrink-0 rounded-full"
-                                style={{ backgroundColor: colorEstado(cita.estado) }}
+                                className={`h-1.5 w-1.5 shrink-0 rounded-full ${estaResaltada ? "bg-cyan-500 dark:bg-cyan-200" : ""}`}
+                                style={{ backgroundColor: estaResaltada ? undefined : colorEstado(cita.estado) }}
                               />
 
-                              <p className="min-w-0 truncate text-[11px] font-bold leading-tight">
+                              <p className={`min-w-0 truncate text-[11px] font-bold leading-tight ${estaResaltada ? "text-cyan-950 dark:text-white" : ""}`}>
                                 {hora(cita.hora_inicio)} - {hora(cita.hora_fin)}
                               </p>
                             </div>
 
-                            <p className="truncate text-[12px] font-semibold leading-tight">
+                            <p className={`truncate text-[12px] font-semibold leading-tight ${estaResaltada ? "text-cyan-950 dark:text-white" : ""}`}>
                               {cliente?.nombre_completo ?? "Cliente"}
                             </p>
 
-                            <p className="truncate text-[11px] leading-tight text-muted-foreground">
+                            <p className={`truncate text-[11px] leading-tight ${estaResaltada ? "text-cyan-800 dark:text-cyan-100" : "text-muted-foreground"}`}>
                               {servicio?.nombre ?? "Servicio"}
                             </p>
                           </div>

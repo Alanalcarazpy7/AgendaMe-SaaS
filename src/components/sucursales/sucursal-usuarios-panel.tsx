@@ -24,6 +24,7 @@ type Acceso = {
   negocio_id?: string;
   sucursal_id: string;
   usuario_id?: string | null;
+  empleado_id?: string | null;
   email: string;
   rol: string;
   activo: boolean;
@@ -32,6 +33,13 @@ type Acceso = {
     id: string;
     nombre: string;
   }>;
+};
+
+type Empleado = {
+  id: string;
+  nombre: string;
+  sucursal_id: string;
+  estado?: string;
 };
 
 type Invitacion = {
@@ -55,6 +63,7 @@ type Props = {
   accesos?: Acceso[];
   usuarios?: Acceso[];
   invitaciones?: Invitacion[];
+  empleados?: Empleado[];
 };
 
 const ROLES = [
@@ -101,6 +110,7 @@ export function SucursalUsuariosPanel({
   accesos,
   usuarios,
   invitaciones = [],
+  empleados = [],
 }: Props) {
   const sucursalesSafe = sucursales ?? initialSucursales ?? [];
   const [items, setItems] = useState<Acceso[]>(accesos ?? usuarios ?? []);
@@ -108,17 +118,40 @@ export function SucursalUsuariosPanel({
   const [email, setEmail] = useState("");
   const [sucursalId, setSucursalId] = useState(sucursalesSafe[0]?.id ?? "");
   const [rol, setRol] = useState("recepcionista_sucursal");
+  const [empleadoId, setEmpleadoId] = useState("");
   const [loading, setLoading] = useState("");
   const [error, setError] = useState("");
   const [inviteLink, setInviteLink] = useState<{
     email: string;
     url: string;
   } | null>(null);
+  const [vinculando, setVinculando] = useState<Record<string, string>>({});
 
   const sucursalesActivas = useMemo(
     () => sucursalesSafe.filter((sucursal) => sucursal.estado !== "inactivo"),
     [sucursalesSafe]
   );
+
+  const empleadosDeSucursal = useMemo(
+    () =>
+      empleados.filter(
+        (empleado) => empleado.sucursal_id === sucursalId && empleado.estado !== "inactivo"
+      ),
+    [empleados, sucursalId]
+  );
+
+  const esRolPersonal = rol === "empleado_sucursal";
+
+  function nombreEmpleado(empleadoId?: string | null) {
+    if (!empleadoId) return null;
+    return empleados.find((empleado) => empleado.id === empleadoId)?.nombre ?? null;
+  }
+
+  function empleadosDe(sucursalIdAcceso: string) {
+    return empleados.filter(
+      (empleado) => empleado.sucursal_id === sucursalIdAcceso && empleado.estado !== "inactivo"
+    );
+  }
 
   function nombreSucursal(acceso: Acceso | Invitacion) {
     const sucursalRelacionada = obtenerObjeto(acceso.sucursales);
@@ -150,12 +183,20 @@ export function SucursalUsuariosPanel({
     email?: string;
     sucursal_id?: string;
     rol?: string;
+    empleado_id?: string | null;
     fromActive?: boolean;
   }) {
     try {
       const emailFinal = payload?.email ?? email;
       const sucursalFinal = payload?.sucursal_id ?? sucursalId;
       const rolFinal = payload?.rol ?? rol;
+      const empleadoIdFinal =
+        payload?.empleado_id !== undefined ? payload.empleado_id : empleadoId;
+
+      if (rolFinal === "empleado_sucursal" && !empleadoIdFinal) {
+        setError("Elegí a qué empleado de la plantilla corresponde este acceso.");
+        return;
+      }
 
       if (payload?.fromActive) {
         const confirmar = window.confirm(
@@ -178,6 +219,7 @@ export function SucursalUsuariosPanel({
           email: emailFinal,
           sucursal_id: sucursalFinal,
           rol: rolFinal,
+          empleado_id: rolFinal === "empleado_sucursal" ? empleadoIdFinal : null,
         }),
       });
 
@@ -195,6 +237,7 @@ export function SucursalUsuariosPanel({
 
       if (!payload?.fromActive) {
         setEmail("");
+        setEmpleadoId("");
       }
 
       await refrescar();
@@ -432,11 +475,37 @@ export function SucursalUsuariosPanel({
           </select>
         </div>
 
+        {esRolPersonal && (
+          <div className="lg:col-span-4">
+            <label className="text-sm font-medium">
+              ¿A qué empleado de la plantilla corresponde?
+            </label>
+            <select
+              value={empleadoId}
+              onChange={(event) => setEmpleadoId(event.target.value)}
+              className="mt-2 h-11 w-full rounded-xl border bg-background px-3"
+            >
+              <option value="">Elegí un empleado</option>
+              {empleadosDeSucursal.map((empleadoItem) => (
+                <option key={empleadoItem.id} value={empleadoItem.id}>
+                  {empleadoItem.nombre}
+                </option>
+              ))}
+            </select>
+            {empleadosDeSucursal.length === 0 && (
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Esta sucursal todavía no tiene empleados activos en la plantilla.
+                Creá uno primero en la sección Empleados.
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="flex items-end">
           <button
             type="button"
             onClick={() => crearInvitacion()}
-            disabled={loading === "crear"}
+            disabled={loading === "crear" || (esRolPersonal && !empleadoId)}
             className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-foreground px-4 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60"
           >
             {loading === "crear" ? (
@@ -551,6 +620,7 @@ export function SucursalUsuariosPanel({
                   <th className="px-4 py-3 font-bold">Usuario</th>
                   <th className="px-4 py-3 font-bold">Sucursal</th>
                   <th className="px-4 py-3 font-bold">Rol</th>
+                  <th className="px-4 py-3 font-bold">Empleado</th>
                   <th className="px-4 py-3 font-bold">Estado</th>
                   <th className="px-4 py-3 font-bold">Auth</th>
                   <th className="px-4 py-3 text-right font-bold">Acciones</th>
@@ -570,6 +640,55 @@ export function SucursalUsuariosPanel({
                       <span className="rounded-full border bg-muted/30 px-3 py-1 text-xs font-semibold">
                         {rolLabel(acceso.rol)}
                       </span>
+                    </td>
+
+                    <td className="px-4 py-4">
+                      {acceso.rol !== "empleado_sucursal" ? (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      ) : acceso.empleado_id ? (
+                        <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                          {nombreEmpleado(acceso.empleado_id) ?? "Vinculado"}
+                        </span>
+                      ) : (
+                        <div className="flex flex-col gap-1.5">
+                          <span className="w-fit rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
+                            Sin vincular
+                          </span>
+                          <div className="flex gap-1.5">
+                            <select
+                              value={vinculando[acceso.id] ?? ""}
+                              onChange={(event) =>
+                                setVinculando((prev) => ({
+                                  ...prev,
+                                  [acceso.id]: event.target.value,
+                                }))
+                              }
+                              className="h-8 rounded-lg border bg-background px-2 text-xs"
+                            >
+                              <option value="">Elegí un empleado</option>
+                              {empleadosDe(acceso.sucursal_id).map((empleadoItem) => (
+                                <option key={empleadoItem.id} value={empleadoItem.id}>
+                                  {empleadoItem.nombre}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const empleadoElegido = vinculando[acceso.id];
+                                if (!empleadoElegido) return;
+                                actualizarAcceso(acceso, { empleado_id: empleadoElegido });
+                              }}
+                              disabled={
+                                !vinculando[acceso.id] || loading === `${acceso.id}-update`
+                              }
+                              className="inline-flex h-8 items-center rounded-lg bg-foreground px-2 text-xs font-semibold text-background disabled:opacity-60"
+                            >
+                              Vincular
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </td>
 
                     <td className="px-4 py-4">
@@ -594,6 +713,7 @@ export function SucursalUsuariosPanel({
                               email: acceso.email,
                               sucursal_id: acceso.sucursal_id,
                               rol: acceso.rol,
+                              empleado_id: acceso.empleado_id ?? null,
                               fromActive: true,
                             })
                           }

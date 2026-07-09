@@ -1,17 +1,19 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   CalendarDays,
   CheckCircle2,
-  Clock,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
   Eye,
   Loader2,
-  User,
-  Scissors,
+  Search,
   XCircle,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 type Relacion<T> = T | T[] | null | undefined;
 
@@ -62,6 +64,8 @@ type Reserva = {
   sucursales?: Relacion<Sucursal>;
 };
 
+type FiltroTiempo = "todas" | "hoy" | "proximas" | "vencidas";
+
 type ReservasPendientesPanelProps = {
   reservas?: Reserva[];
   initialReservas?: Reserva[];
@@ -69,6 +73,8 @@ type ReservasPendientesPanelProps = {
   servicios?: Servicio[];
   empleados?: Empleado[];
 };
+
+const RESERVAS_PAGE_SIZE = 20;
 
 function obtenerObjeto<T>(valor: Relacion<T>): T | null {
   if (!valor) return null;
@@ -88,7 +94,7 @@ function fechaDisplay(fecha: string) {
 }
 
 function fechaRecibidaDisplay(fecha?: string | null) {
-  if (!fecha) return "-";
+  if (!fecha) return "Sin fecha";
 
   try {
     return new Intl.DateTimeFormat("es-PY", {
@@ -100,16 +106,23 @@ function fechaRecibidaDisplay(fecha?: string | null) {
   }
 }
 
-function estadoBadge(estado: string) {
-  const styles: Record<string, string> = {
-    pendiente: "border-yellow-200 bg-yellow-50 text-yellow-700",
-    confirmada: "border-blue-200 bg-blue-50 text-blue-700",
-    completada: "border-green-200 bg-green-50 text-green-700",
-    cancelada: "border-red-200 bg-red-50 text-red-700",
-    no_asistio: "border-orange-200 bg-orange-50 text-orange-700",
-  };
+function hoyLocal() {
+  const ahora = new Date();
 
-  return styles[estado] ?? "border-muted bg-muted text-muted-foreground";
+  return `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(ahora.getDate()).padStart(2, "0")}`;
+}
+
+function cardBase(extra = "") {
+  return `rounded-[1.5rem] border border-border/80 bg-card/90 shadow-[0_16px_48px_rgb(15_23_42/0.07)] ring-1 ring-white/60 backdrop-blur-xl dark:bg-card/80 dark:shadow-black/20 dark:ring-white/5 ${extra}`;
+}
+
+function estadoTiempo(reserva: Reserva, hoy: string): FiltroTiempo {
+  if (reserva.fecha < hoy) return "vencidas";
+  if (reserva.fecha === hoy) return "hoy";
+  return "proximas";
 }
 
 export function ReservasPendientesPanel({
@@ -122,15 +135,11 @@ export function ReservasPendientesPanel({
   const [items, setItems] = useState<Reserva[]>(reservas ?? initialReservas ?? []);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroTiempo, setFiltroTiempo] = useState<FiltroTiempo>("todas");
+  const [pagina, setPagina] = useState(1);
 
-  const reservasOrdenadas = useMemo(() => {
-    return [...items].sort((a, b) => {
-      const fechaA = `${a.fecha} ${horaCorta(a.hora_inicio)}`;
-      const fechaB = `${b.fecha} ${horaCorta(b.hora_inicio)}`;
-
-      return fechaA.localeCompare(fechaB);
-    });
-  }, [items]);
+  const hoy = hoyLocal();
 
   function clienteDe(reserva: Reserva) {
     return (
@@ -159,6 +168,58 @@ export function ReservasPendientesPanel({
   function sucursalDe(reserva: Reserva) {
     return obtenerObjeto(reserva.sucursales);
   }
+
+  const resumen = useMemo(() => {
+    return {
+      total: items.length,
+      hoy: items.filter((reserva) => estadoTiempo(reserva, hoy) === "hoy").length,
+      proximas: items.filter((reserva) => estadoTiempo(reserva, hoy) === "proximas").length,
+      vencidas: items.filter((reserva) => estadoTiempo(reserva, hoy) === "vencidas").length,
+    };
+  }, [items, hoy]);
+
+  const query = busqueda.trim().toLowerCase();
+  const reservasFiltradas = [...items]
+    .sort((a, b) => {
+      const fechaA = `${a.fecha} ${horaCorta(a.hora_inicio)}`;
+      const fechaB = `${b.fecha} ${horaCorta(b.hora_inicio)}`;
+
+      return fechaA.localeCompare(fechaB);
+    })
+    .filter((reserva) => {
+      const cliente = clienteDe(reserva);
+      const servicio = servicioDe(reserva);
+      const empleado = empleadoDe(reserva);
+      const sucursal = sucursalDe(reserva);
+      const tiempo = estadoTiempo(reserva, hoy);
+      const coincideTiempo = filtroTiempo === "todas" || tiempo === filtroTiempo;
+      const coincideBusqueda =
+        !query ||
+        cliente?.nombre_completo.toLowerCase().includes(query) ||
+        cliente?.telefono?.toLowerCase().includes(query) ||
+        servicio?.nombre.toLowerCase().includes(query) ||
+        empleado?.nombre.toLowerCase().includes(query) ||
+        sucursal?.nombre.toLowerCase().includes(query);
+
+      return coincideTiempo && coincideBusqueda;
+    });
+
+  const totalPaginas = Math.max(1, Math.ceil(reservasFiltradas.length / RESERVAS_PAGE_SIZE));
+  const paginaActual = Math.min(pagina, totalPaginas);
+  const desdeResultado =
+    reservasFiltradas.length === 0 ? 0 : (paginaActual - 1) * RESERVAS_PAGE_SIZE + 1;
+  const hastaResultado = Math.min(paginaActual * RESERVAS_PAGE_SIZE, reservasFiltradas.length);
+  const reservasVisibles = reservasFiltradas.slice(
+    (paginaActual - 1) * RESERVAS_PAGE_SIZE,
+    paginaActual * RESERVAS_PAGE_SIZE
+  );
+
+  const filtros: { value: FiltroTiempo; label: string; count: number }[] = [
+    { value: "todas", label: "Todas", count: resumen.total },
+    { value: "hoy", label: "Hoy", count: resumen.hoy },
+    { value: "proximas", label: "Proximas", count: resumen.proximas },
+    { value: "vencidas", label: "Vencidas", count: resumen.vencidas },
+  ];
 
   async function cambiarEstado(reserva: Reserva, estado: "confirmada" | "cancelada") {
     try {
@@ -189,171 +250,278 @@ export function ReservasPendientesPanel({
   }
 
   return (
-    <div className="space-y-5">
-      <section className="rounded-3xl border bg-background p-5 shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">
-              Solicitudes recibidas desde el link público
+    <div className="mx-auto max-w-7xl space-y-5">
+      <section className={cardBase("overflow-hidden")}>
+        <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_24rem]">
+          <div className="relative p-5 sm:p-6">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-cyan-500 to-teal-500" />
+
+            <p className="inline-flex items-center gap-2 rounded-2xl border bg-muted/50 px-3 py-1.5 text-xs font-semibold text-muted-foreground">
+              <Clock3 className="h-3.5 w-3.5 text-primary" />
+              Solicitudes desde el link publico
             </p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight">
+
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-balance">
               Reservas pendientes
             </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Revisá, confirmá o cancelá las reservas que todavía están pendientes.
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+              Tabla operativa para confirmar, cancelar o abrir una reserva sin revisar cards una por una.
             </p>
+
+            <div className="mt-5">
+              <Link
+                href="/dashboard/citas"
+                className="inline-flex h-10 items-center justify-center rounded-2xl border bg-background/70 px-4 text-sm font-semibold transition-[background-color,color,box-shadow,transform] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:bg-accent hover:text-accent-foreground"
+              >
+                <CalendarDays className="mr-2 h-4 w-4" />
+                Ver calendario
+              </Link>
+            </div>
           </div>
 
-          <Link
-            href="/dashboard/citas"
-            className="inline-flex h-11 items-center justify-center rounded-xl border px-4 text-sm font-semibold transition hover:bg-muted"
-          >
-            <CalendarDays className="mr-2 h-4 w-4" />
-            Ver calendario
-          </Link>
+          <aside className="border-t border-border/70 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary)_92%,#0b1120),color-mix(in_srgb,var(--ring)_72%,#0b1120))] p-4 text-white xl:border-l xl:border-t-0">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-2xl border border-white/15 bg-white/10 p-3">
+                <p className="text-xs text-cyan-50/80">Pendientes</p>
+                <p className="mt-1 text-3xl font-bold">{resumen.total}</p>
+              </div>
+              <div className="rounded-2xl border border-white/15 bg-white/10 p-3">
+                <p className="text-xs text-cyan-50/80">Para hoy</p>
+                <p className="mt-1 text-3xl font-bold">{resumen.hoy}</p>
+              </div>
+              <div className="rounded-2xl border border-white/15 bg-white/10 p-3">
+                <p className="text-xs text-cyan-50/80">Proximas</p>
+                <p className="mt-1 text-2xl font-bold">{resumen.proximas}</p>
+              </div>
+              <div className="rounded-2xl border border-white/15 bg-white/10 p-3">
+                <p className="text-xs text-cyan-50/80">Vencidas</p>
+                <p className="mt-1 text-2xl font-bold">{resumen.vencidas}</p>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section className={cardBase("p-4")}>
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <div className="flex min-h-11 items-center gap-2 rounded-2xl border border-border/80 bg-background/70 px-3">
+            <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <Input
+              value={busqueda}
+              onChange={(event) => {
+                setBusqueda(event.target.value);
+                setPagina(1);
+              }}
+              placeholder="Buscar cliente, telefono, servicio, empleado o sucursal..."
+              className="h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {filtros.map((filtro) => {
+              const activo = filtroTiempo === filtro.value;
+
+              return (
+                <button
+                  key={filtro.value}
+                  type="button"
+                  onClick={() => {
+                    setFiltroTiempo(filtro.value);
+                    setPagina(1);
+                  }}
+                  className={`inline-flex h-10 items-center gap-2 rounded-2xl border px-3 text-sm font-semibold transition-[background-color,color,border-color,box-shadow,transform] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 ${
+                    activo
+                      ? "border-primary/40 bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                      : "border-border/80 bg-background/70 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  }`}
+                >
+                  {filtro.label}
+                  <span className={`rounded-xl px-2 py-0.5 text-xs ${activo ? "bg-white/20" : "bg-muted"}`}>
+                    {filtro.count}
+                  </span>
+                </button>
+              );
+            })}
+            {(busqueda || filtroTiempo !== "todas") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setBusqueda("");
+                  setFiltroTiempo("todas");
+                  setPagina(1);
+                }}
+                className="inline-flex h-10 items-center rounded-2xl border border-border/80 bg-background/70 px-3 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-accent-foreground"
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
         </div>
       </section>
 
       {error && (
-        <p className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <p className="rounded-2xl border border-destructive/25 bg-destructive/10 p-4 text-sm font-medium text-destructive">
           {error}
         </p>
       )}
 
-      <section className="overflow-hidden rounded-3xl border bg-background shadow-sm">
-        {reservasOrdenadas.length === 0 ? (
-          <div className="p-6">
-            <p className="rounded-2xl border bg-muted/30 p-5 text-sm text-muted-foreground">
-              No hay reservas pendientes para esta vista.
-            </p>
+      {items.length === 0 ? (
+        <section className={cardBase("p-8 text-center")}>
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-primary/10 text-primary">
+            <CheckCircle2 className="h-7 w-7" />
           </div>
-        ) : (
+          <h2 className="mt-4 text-xl font-bold tracking-tight">Sin reservas pendientes</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+            Cuando entren nuevas solicitudes desde el link publico, apareceran aca para confirmar o cancelar.
+          </p>
+        </section>
+      ) : reservasFiltradas.length === 0 ? (
+        <section className={cardBase("p-8 text-center")}>
+          <h2 className="text-xl font-bold tracking-tight">No encontramos reservas</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Proba con otro filtro o busca por cliente, servicio o empleado.
+          </p>
+        </section>
+      ) : (
+        <section className={cardBase("overflow-hidden")}>
+          <div className="flex flex-col gap-3 border-b p-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              Mostrando{" "}
+              <strong className="text-foreground">
+                {desdeResultado}-{hastaResultado}
+              </strong>{" "}
+              de <strong className="text-foreground">{reservasFiltradas.length}</strong> reservas
+            </p>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPagina(Math.max(1, paginaActual - 1))}
+                disabled={paginaActual <= 1}
+                className="inline-flex h-9 items-center gap-1 rounded-2xl border bg-background/70 px-3 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Anterior
+              </button>
+              <span className="rounded-2xl bg-muted px-3 py-2 text-xs font-bold text-muted-foreground">
+                {paginaActual}/{totalPaginas}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPagina(Math.min(totalPaginas, paginaActual + 1))}
+                disabled={paginaActual >= totalPaginas}
+                className="inline-flex h-9 items-center gap-1 rounded-2xl border bg-background/70 px-3 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                Siguiente
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1050px] text-sm">
-              <thead className="bg-muted/40 text-left">
+            <table className="w-full min-w-[1120px] text-sm">
+              <thead className="border-b bg-muted/40 text-left text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 <tr>
-                  <th className="px-5 py-4 font-bold">Cliente</th>
-                  <th className="px-5 py-4 font-bold">Servicio</th>
-                  <th className="px-5 py-4 font-bold">Empleado</th>
-                  <th className="px-5 py-4 font-bold">Fecha del turno</th>
-                  <th className="px-5 py-4 font-bold">Sucursal</th>
-                  <th className="px-5 py-4 font-bold">Recibida</th>
-                  <th className="px-5 py-4 font-bold">Estado</th>
-                  <th className="px-5 py-4 text-right font-bold">Acciones</th>
+                  <th className="px-4 py-3">Cliente</th>
+                  <th className="px-4 py-3">Servicio</th>
+                  <th className="px-4 py-3">Fecha y hora</th>
+                  <th className="px-4 py-3">Empleado</th>
+                  <th className="px-4 py-3">Sucursal</th>
+                  <th className="px-4 py-3">Recibida</th>
+                  <th className="px-4 py-3">Estado</th>
+                  <th className="px-4 py-3 text-right">Acciones</th>
                 </tr>
               </thead>
 
-              <tbody>
-                {reservasOrdenadas.map((reserva) => {
+              <tbody className="divide-y divide-border/70">
+                {reservasVisibles.map((reserva) => {
                   const cliente = clienteDe(reserva);
                   const servicio = servicioDe(reserva);
                   const empleado = empleadoDe(reserva);
                   const sucursal = sucursalDe(reserva);
-
-                  const calendarioHref = `/dashboard/citas?fecha=${reserva.fecha}&cita=${reserva.id}`;
+                  const tiempo = estadoTiempo(reserva, hoy);
+                  const calendarioHref = `/dashboard/citas?fecha=${reserva.fecha}&hora=${horaCorta(reserva.hora_inicio)}&cita=${reserva.id}`;
+                  const cargandoConfirmar = loadingId === `${reserva.id}-confirmada`;
+                  const cargandoCancelar = loadingId === `${reserva.id}-cancelada`;
 
                   return (
-                    <tr key={reserva.id} className="border-t align-top">
-                      <td className="px-5 py-5">
-                        <div className="flex gap-3">
-                          <User className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="font-semibold">
-                              {cliente?.nombre_completo ?? "Sin cliente"}
-                            </p>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {cliente?.telefono ?? "Sin teléfono"}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="px-5 py-5">
-                        <div className="flex gap-3">
-                          <Scissors className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <p className="font-semibold">
-                              {servicio?.nombre ?? "Sin servicio"}
-                            </p>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {servicio?.duracion_minutos
-                                ? `${servicio.duracion_minutos} min`
-                                : "Duración no cargada"}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="px-5 py-5">
-                        <p className="font-semibold">
-                          {empleado?.nombre ?? "Sin empleado"}
+                    <tr key={reserva.id} className="bg-card/40 transition-colors hover:bg-muted/35">
+                      <td className="px-4 py-3">
+                        <p className="max-w-[14rem] truncate font-semibold">
+                          {cliente?.nombre_completo ?? "Sin cliente"}
+                        </p>
+                        <p className="mt-1 max-w-[14rem] truncate text-xs text-muted-foreground">
+                          {cliente?.telefono ?? "Sin telefono"}
                         </p>
                       </td>
-
-                      <td className="px-5 py-5">
-                        <p className="font-bold">{fechaDisplay(reserva.fecha)}</p>
-                        <p className="mt-1 flex items-center text-xs text-muted-foreground">
-                          <Clock className="mr-1 h-3.5 w-3.5" />
+                      <td className="px-4 py-3">
+                        <p className="max-w-[13rem] truncate font-medium">
+                          {servicio?.nombre ?? "Sin servicio"}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {servicio?.duracion_minutos ? `${servicio.duracion_minutos} min` : "Sin duracion"}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="font-semibold">{fechaDisplay(reserva.fecha)}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
                           {horaCorta(reserva.hora_inicio)} - {horaCorta(reserva.hora_fin)}
                         </p>
                       </td>
-
-                      <td className="px-5 py-5">
-                        <p className="font-medium">
-                          {sucursal?.nombre ?? "Sucursal principal"}
-                        </p>
+                      <td className="max-w-[12rem] px-4 py-3 text-muted-foreground">
+                        <span className="block truncate">{empleado?.nombre ?? "Sin empleado"}</span>
                       </td>
-
-                      <td className="px-5 py-5 text-muted-foreground">
+                      <td className="max-w-[12rem] px-4 py-3 text-muted-foreground">
+                        <span className="block truncate">{sucursal?.nombre ?? "Sucursal principal"}</span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
                         {fechaRecibidaDisplay(reserva.created_at)}
                       </td>
-
-                      <td className="px-5 py-5">
+                      <td className="px-4 py-3">
                         <span
-                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${estadoBadge(
-                            reserva.estado
-                          )}`}
+                          className={`inline-flex rounded-xl px-2.5 py-1 text-xs font-bold ${
+                            tiempo === "vencidas"
+                              ? "bg-destructive/10 text-destructive"
+                              : tiempo === "hoy"
+                                ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-300"
+                                : "bg-primary/10 text-primary"
+                          }`}
                         >
-                          {reserva.estado}
+                          {tiempo === "vencidas" ? "Vencida" : tiempo === "hoy" ? "Hoy" : "Proxima"}
                         </span>
                       </td>
-
-                      <td className="px-5 py-5">
-                        <div className="flex flex-wrap justify-end gap-2">
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
                           <Link
                             href={calendarioHref}
-                            className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-sm font-semibold transition hover:bg-muted"
+                            className="inline-flex h-9 items-center justify-center rounded-xl border bg-background/70 px-3 text-sm font-semibold transition hover:bg-accent hover:text-accent-foreground"
                           >
-                            <Eye className="mr-2 h-4 w-4" />
-                            Ver / editar
+                            <Eye className="h-4 w-4" />
                           </Link>
-
                           <button
                             type="button"
                             onClick={() => cambiarEstado(reserva, "confirmada")}
                             disabled={Boolean(loadingId)}
-                            className="inline-flex h-10 items-center justify-center rounded-xl bg-foreground px-3 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60"
+                            className="inline-flex h-9 items-center justify-center rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
                           >
-                            {loadingId === `${reserva.id}-confirmada` ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            {cargandoConfirmar ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                              <CheckCircle2 className="mr-2 h-4 w-4" />
+                              <CheckCircle2 className="h-4 w-4" />
                             )}
-                            Confirmar
                           </button>
-
                           <button
                             type="button"
                             onClick={() => cambiarEstado(reserva, "cancelada")}
                             disabled={Boolean(loadingId)}
-                            className="inline-flex h-10 items-center justify-center rounded-xl bg-red-600 px-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                            className="inline-flex h-9 items-center justify-center rounded-xl bg-destructive px-3 text-sm font-semibold text-white transition hover:bg-destructive/90 disabled:opacity-60"
                           >
-                            {loadingId === `${reserva.id}-cancelada` ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            {cargandoCancelar ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                              <XCircle className="mr-2 h-4 w-4" />
+                              <XCircle className="h-4 w-4" />
                             )}
-                            Cancelar
                           </button>
                         </div>
                       </td>
@@ -363,8 +531,8 @@ export function ReservasPendientesPanel({
               </tbody>
             </table>
           </div>
-        )}
-      </section>
+        </section>
+      )}
     </div>
   );
 }
