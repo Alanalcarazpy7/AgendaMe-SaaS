@@ -452,9 +452,11 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error("Error exportando datos:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo preparar la exportación." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo preparar la exportación.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }

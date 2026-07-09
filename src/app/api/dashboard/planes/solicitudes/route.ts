@@ -158,9 +158,11 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error creando solicitud de cambio de plan:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo registrar la solicitud." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo registrar la solicitud.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }

@@ -291,9 +291,11 @@ export async function PATCH(request: Request, context: RouteContext) {
   } catch (error) {
     console.error("Error editando cita:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo actualizar la cita." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo actualizar la cita.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }

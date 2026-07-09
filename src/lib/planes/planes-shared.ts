@@ -20,7 +20,7 @@ export type PlanPublico = {
   orden: number;
 };
 
-const FUNCIONALIDADES_A_MEDIDA = "Funcionalidades a medida bajo evaluacion";
+const FUNCIONALIDADES_A_MEDIDA = "Funcionalidades a medida bajo evaluación";
 
 export function formatGs(valor: number | string | null | undefined) {
   const numero = Number(valor ?? 0);
@@ -72,7 +72,7 @@ export function getAhorroAnualMontoLabel(plan: PlanPublico) {
 
   if (ahorro <= 0) return "";
 
-  return `Ahorras ${formatGs(ahorro)} al ano`;
+  return `Ahorras ${formatGs(ahorro)} al año`;
 }
 
 export function generarFeaturesPlan(plan: PlanPublico): string[] {
@@ -81,19 +81,19 @@ export function generarFeaturesPlan(plan: PlanPublico): string[] {
     formatLimit(plan.limite_clientes, "cliente activo", "clientes activos"),
     formatLimit(plan.limite_empleados, "empleado activo", "empleados activos"),
     formatLimit(plan.limite_servicios, "servicio activo", "servicios activos"),
-    "Pagina publica de reservas",
+    "Página pública de reservas",
   ];
 
   features.push(
-    plan.permite_reportes_avanzados ? "Reportes avanzados" : "Estadisticas basicas"
+    plan.permite_reportes_avanzados ? "Reportes avanzados" : "Estadísticas básicas"
   );
 
   if (plan.permite_exportacion_csv) {
-    features.push("Exportacion XLSX / CSV");
+    features.push("Exportación XLSX / CSV");
   }
 
   if (plan.permite_personalizacion) {
-    features.push("Logo, banner e imagenes de servicios");
+    features.push("Logo, banner e imágenes de servicios");
   }
 
   if (plan.permite_multiples_sucursales) {
@@ -116,6 +116,6 @@ export function generarMensajeWhatsAppPlan(
   const precio = formatPlanPrice(plan, periodo);
   const frecuencia = periodo === "anual" ? "anual" : "mensual";
 
-  return `Hola, quiero contratar el Plan ${plan.nombre} de AgendaMe (${frecuencia}, ${precio}). Podemos coordinar el alta?`;
+  return `Hola, quiero contratar el Plan ${plan.nombre} de AgendaMe (${frecuencia}, ${precio}). ¿Podemos coordinar el alta?`;
 }
 

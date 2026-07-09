@@ -90,7 +90,7 @@ export async function PATCH(
 
   if (membresiaError) {
     return NextResponse.json(
-      { error: "No se pudo validar tu negocio." },
+      { error: membresiaError.message || "No se pudo validar tu negocio." },
       { status: 500 }
     );
   }

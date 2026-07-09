@@ -131,10 +131,12 @@ export async function GET() {
   } catch (error) {
     console.error("Error obteniendo branding:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo cargar la personalización." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo cargar la personalización.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }
 
@@ -240,10 +242,12 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error actualizando branding:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo subir la imagen." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo subir la imagen.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }
 
@@ -302,9 +306,11 @@ export async function DELETE(request: Request) {
   } catch (error) {
     console.error("Error eliminando branding:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo eliminar la imagen." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo eliminar la imagen.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }

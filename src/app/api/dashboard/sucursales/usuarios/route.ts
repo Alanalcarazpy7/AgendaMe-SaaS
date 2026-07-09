@@ -285,10 +285,12 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error creando invitación de sucursal:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo crear la invitación." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo crear la invitación.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }
 
@@ -423,10 +425,12 @@ export async function PATCH(request: Request) {
   } catch (error) {
     console.error("Error actualizando acceso de sucursal:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo actualizar el acceso." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo actualizar el acceso.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }
 
@@ -481,9 +485,11 @@ export async function DELETE(request: Request) {
   } catch (error) {
     console.error("Error eliminando acceso de sucursal:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo eliminar." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo eliminar el acceso.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }

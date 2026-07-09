@@ -17,7 +17,7 @@ export function ContactWhatsappForm({ planes }: ContactWhatsappFormProps) {
   const [rubro, setRubro] = useState("");
   const [telefono, setTelefono] = useState("");
   const [plan, setPlan] = useState(planes[0] ?? "Gratis");
-  const [mensaje, setMensaje] = useState("Quiero probar AgendaMe y entender cual plan conviene para mi negocio.");
+  const [mensaje, setMensaje] = useState("Quiero probar AgendaMe y entender cuál plan conviene para mi negocio.");
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -27,8 +27,8 @@ export function ContactWhatsappForm({ planes }: ContactWhatsappFormProps) {
       nombre ? `Nombre: ${nombre}` : "",
       negocio ? `Negocio: ${negocio}` : "",
       rubro ? `Rubro: ${rubro}` : "",
-      telefono ? `Telefono: ${telefono}` : "",
-      plan ? `Plan de interes: ${plan}` : "",
+      telefono ? `Teléfono: ${telefono}` : "",
+      plan ? `Plan de interés: ${plan}` : "",
       mensaje ? `Mensaje: ${mensaje}` : "",
     ]
       .filter(Boolean)
@@ -48,7 +48,7 @@ export function ContactWhatsappForm({ planes }: ContactWhatsappFormProps) {
           <input
             value={nombre}
             onChange={(event) => setNombre(event.target.value)}
-            placeholder="Ej: Ana Gonzalez"
+            placeholder="Ej: Ana González"
             className={inputClass}
           />
         </label>
@@ -58,7 +58,7 @@ export function ContactWhatsappForm({ planes }: ContactWhatsappFormProps) {
           <input
             value={negocio}
             onChange={(event) => setNegocio(event.target.value)}
-            placeholder="Ej: Barberia San Miguel"
+            placeholder="Ej: Barbería San Miguel"
             className={inputClass}
           />
         </label>
@@ -68,13 +68,13 @@ export function ContactWhatsappForm({ planes }: ContactWhatsappFormProps) {
           <input
             value={rubro}
             onChange={(event) => setRubro(event.target.value)}
-            placeholder="Barberia, veterinaria, estetica..."
+            placeholder="Barbería, veterinaria, estética..."
             className={inputClass}
           />
         </label>
 
         <label className="space-y-2 text-sm font-medium">
-          <span>Telefono</span>
+          <span>Teléfono</span>
           <input
             value={telefono}
             onChange={(event) => setTelefono(event.target.value)}
@@ -84,7 +84,7 @@ export function ContactWhatsappForm({ planes }: ContactWhatsappFormProps) {
         </label>
 
         <label className="space-y-2 text-sm font-medium sm:col-span-2">
-          <span>Plan de interes</span>
+          <span>Plan de interés</span>
           <select
             value={plan}
             onChange={(event) => setPlan(event.target.value)}

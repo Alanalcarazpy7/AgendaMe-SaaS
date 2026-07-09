@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
   if (miembroExistenteError) {
     return NextResponse.json(
-      { error: "No se pudo verificar tu negocio actual." },
+      { error: miembroExistenteError.message || "No se pudo verificar tu negocio actual." },
       { status: 500 }
     );
   }
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
 
   if (perfilError) {
     return NextResponse.json(
-      { error: "No se pudo crear el perfil del usuario." },
+      { error: perfilError.message || "No se pudo crear el perfil del usuario." },
       { status: 500 }
     );
   }
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
     await admin.from("negocios").delete().eq("id", negocio.id);
 
     return NextResponse.json(
-      { error: "No se pudo asociar el usuario al negocio." },
+      { error: relacionError.message || "No se pudo asociar el usuario al negocio." },
       { status: 500 }
     );
   }

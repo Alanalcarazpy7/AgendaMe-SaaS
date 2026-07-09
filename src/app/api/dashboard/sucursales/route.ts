@@ -110,10 +110,12 @@ export async function GET() {
   } catch (error) {
     console.error("Error listando sucursales:", error);
 
-    return NextResponse.json(
-      { error: "No se pudieron cargar las sucursales." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudieron cargar las sucursales.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }
 
@@ -157,10 +159,12 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error creando sucursal:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo crear la sucursal." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo crear la sucursal.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }
 
@@ -246,10 +250,12 @@ export async function PATCH(request: Request) {
   } catch (error) {
     console.error("Error actualizando sucursal:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo actualizar la sucursal." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo actualizar la sucursal.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }
 
@@ -314,9 +320,11 @@ export async function DELETE(request: Request) {
   } catch (error) {
     console.error("Error desactivando sucursal:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo desactivar la sucursal." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo desactivar la sucursal.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }

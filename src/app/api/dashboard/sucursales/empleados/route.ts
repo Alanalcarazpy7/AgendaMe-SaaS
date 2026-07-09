@@ -69,10 +69,12 @@ export async function GET() {
   } catch (error) {
     console.error("Error listando empleados por sucursal:", error);
 
-    return NextResponse.json(
-      { error: "No se pudieron cargar los empleados." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudieron cargar los empleados.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }
 
@@ -163,9 +165,11 @@ export async function PATCH(request: Request) {
   } catch (error) {
     console.error("Error asignando empleado a sucursal:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo asignar el empleado a la sucursal." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo asignar el empleado a la sucursal.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }

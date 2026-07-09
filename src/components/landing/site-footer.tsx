@@ -44,7 +44,7 @@ export function SiteFooter() {
               <p className="text-xs font-bold uppercase tracking-wider text-cyan-300">Cuenta</p>
               <div className="mt-4 flex flex-col gap-3 text-sm text-slate-400">
                 <Link href="/#contacto" className="w-fit transition hover:translate-x-0.5 hover:text-white">Contacto</Link>
-                <Link href="/auth/login" className="w-fit transition hover:translate-x-0.5 hover:text-white">Iniciar sesion</Link>
+                <Link href="/auth/login" className="w-fit transition hover:translate-x-0.5 hover:text-white">Iniciar sesión</Link>
                 <Link href="/auth/registro" className="w-fit transition hover:translate-x-0.5 hover:text-white">Crear cuenta</Link>
               </div>
             </div>

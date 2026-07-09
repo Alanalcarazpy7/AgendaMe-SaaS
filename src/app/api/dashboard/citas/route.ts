@@ -254,9 +254,11 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error creando cita:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo crear la cita." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo crear la cita.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }

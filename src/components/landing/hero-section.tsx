@@ -21,7 +21,7 @@ function gratisBadge(planes: PlanPublico[]) {
   const gratis = planes.find((plan) => plan.clave === "gratis");
   const limite = gratis?.limite_citas_mensuales;
 
-  if (!limite) return "Proba AgendaMe gratis";
+  if (!limite) return "Probá AgendaMe gratis";
 
   return `Gratis hasta ${limite.toLocaleString("es-PY")} citas al mes`;
 }
@@ -85,7 +85,7 @@ function DashboardMockup() {
           <div className="mt-4 grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="rounded-2xl border bg-card p-3.5">
               <div className="mb-2.5 flex items-center justify-between">
-                <p className="text-sm font-semibold">Proximos turnos</p>
+                <p className="text-sm font-semibold">Próximos turnos</p>
                 <CalendarCheck2 className="h-3.5 w-3.5 text-primary" />
               </div>
               {[
@@ -153,7 +153,7 @@ function MobileBookingMockup() {
         </div>
 
         <div className="px-4 pb-5 pt-8">
-          <p className="text-[11px] font-medium text-muted-foreground">Reserva publica</p>
+          <p className="text-[11px] font-medium text-muted-foreground">Reserva pública</p>
           <p className="mt-0.5 text-base font-bold">Elegi tu turno</p>
 
           <div className="mt-4 space-y-2.5">
@@ -245,7 +245,7 @@ export function HeroSection({ planes }: { planes: PlanPublico[] }) {
           <Reveal delay={340}>
             <div className="mt-10 flex items-center gap-4 text-sm text-muted-foreground">
               <BriefcaseBusiness className="h-5 w-5 shrink-0 text-primary" />
-              <span>Para barberias, veterinarias, clinicas, estetica, spa y profesionales.</span>
+              <span>Para barberías, veterinarias, clínicas, estética, spa y profesionales.</span>
             </div>
           </Reveal>
         </div>
@@ -256,7 +256,7 @@ export function HeroSection({ planes }: { planes: PlanPublico[] }) {
 
           <div className="ag-animate-float absolute -left-4 top-6 hidden -rotate-6 items-center gap-2 rounded-2xl border bg-card px-4 py-2.5 shadow-xl shadow-slate-950/10 sm:flex" style={{ animationDelay: "0.6s" }}>
             <span className="flex h-2 w-2 rounded-full bg-chart-4" />
-            <span className="text-xs font-bold">Panel siempre al dia</span>
+            <span className="text-xs font-bold">Panel siempre al día</span>
           </div>
         </Reveal>
       </div>

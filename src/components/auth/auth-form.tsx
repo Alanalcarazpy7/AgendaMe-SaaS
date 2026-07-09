@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState } from "react";
+import type { AuthError } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -20,6 +21,74 @@ type AuthFormProps = {
   mode: "login" | "registro";
 };
 
+function traducirErrorLogin(error: AuthError) {
+  const mensaje = error.message.toLowerCase();
+
+  if (error.code === "invalid_credentials" || mensaje.includes("invalid login credentials")) {
+    return "El correo o la contraseña son incorrectos.";
+  }
+
+  if (error.code === "email_not_confirmed" || mensaje.includes("email not confirmed")) {
+    return "Todavía no confirmaste tu correo. Revisá tu bandeja de entrada para activar la cuenta.";
+  }
+
+  if (error.code === "user_banned" || mensaje.includes("banned")) {
+    return "Esta cuenta está bloqueada. Contactanos si creés que es un error.";
+  }
+
+  if (
+    error.code === "over_request_rate_limit" ||
+    error.code === "over_email_send_rate_limit" ||
+    mensaje.includes("rate limit")
+  ) {
+    return "Hiciste demasiados intentos. Esperá unos minutos y volvé a intentar.";
+  }
+
+  if (mensaje.includes("failed to fetch") || mensaje.includes("network")) {
+    return "No pudimos conectar con el servidor. Revisá tu conexión a internet.";
+  }
+
+  return "No pudimos iniciar sesión. Revisá tus datos e intentá de nuevo.";
+}
+
+function traducirErrorRegistro(error: AuthError) {
+  const mensaje = error.message.toLowerCase();
+
+  if (
+    error.code === "user_already_exists" ||
+    mensaje.includes("already registered") ||
+    mensaje.includes("already exists")
+  ) {
+    return "Ya existe una cuenta con ese correo. Iniciá sesión o recuperá tu contraseña.";
+  }
+
+  if (error.code === "weak_password" || mensaje.includes("password")) {
+    return "La contraseña es muy corta. Usá al menos 6 caracteres.";
+  }
+
+  if (error.code === "email_address_invalid" || mensaje.includes("invalid format") || mensaje.includes("invalid email")) {
+    return "El correo ingresado no es válido.";
+  }
+
+  if (error.code === "signup_disabled") {
+    return "El registro de nuevas cuentas está deshabilitado por ahora.";
+  }
+
+  if (
+    error.code === "over_request_rate_limit" ||
+    error.code === "over_email_send_rate_limit" ||
+    mensaje.includes("rate limit")
+  ) {
+    return "Hiciste demasiados intentos. Esperá unos minutos y volvé a intentar.";
+  }
+
+  if (mensaje.includes("failed to fetch") || mensaje.includes("network")) {
+    return "No pudimos conectar con el servidor. Revisá tu conexión a internet.";
+  }
+
+  return "No pudimos crear tu cuenta. Revisá tus datos e intentá de nuevo.";
+}
+
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
   const supabase = createClient();
@@ -34,8 +103,42 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   const isRegistro = mode === "registro";
 
+  function validarFormulario() {
+    if (isRegistro && nombre.trim().length < 2) {
+      return "Ingresá tu nombre completo.";
+    }
+
+    const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+    if (!email.trim()) {
+      return "Ingresá tu correo electrónico.";
+    }
+
+    if (!emailValido) {
+      return "El correo ingresado no es válido.";
+    }
+
+    if (!password) {
+      return "Ingresá tu contraseña.";
+    }
+
+    if (isRegistro && password.length < 6) {
+      return "La contraseña debe tener al menos 6 caracteres.";
+    }
+
+    return null;
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    const errorValidacion = validarFormulario();
+
+    if (errorValidacion) {
+      setError(errorValidacion);
+      setMensaje(null);
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -55,12 +158,12 @@ export function AuthForm({ mode }: AuthFormProps) {
         });
 
         if (signUpError) {
-          setError(signUpError.message);
+          setError(traducirErrorRegistro(signUpError));
           return;
         }
 
         setMensaje(
-          "Cuenta creada. Si Supabase tiene confirmación por email activada, revisá tu correo. Si no, ya podés iniciar sesión."
+          "Cuenta creada correctamente. Si te pedimos confirmar tu correo, revisá tu bandeja de entrada. Si no, ya podés iniciar sesión."
         );
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -69,7 +172,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         });
 
         if (signInError) {
-          setError(signInError.message);
+          setError(traducirErrorLogin(signInError));
           return;
         }
 
@@ -95,7 +198,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       </CardHeader>
 
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           {isRegistro && (
             <div className="space-y-2">
               <Label htmlFor="nombre">Nombre</Label>
@@ -105,7 +208,6 @@ export function AuthForm({ mode }: AuthFormProps) {
                 value={nombre}
                 onChange={(event) => setNombre(event.target.value)}
                 placeholder="Tu nombre"
-                required
               />
             </div>
           )}
@@ -118,7 +220,6 @@ export function AuthForm({ mode }: AuthFormProps) {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="correo@ejemplo.com"
-              required
             />
           </div>
 
@@ -129,9 +230,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="Mínimo 6 caracteres"
-              required
-              minLength={6}
+              placeholder={isRegistro ? "Mínimo 6 caracteres" : "Tu contraseña"}
             />
           </div>
 

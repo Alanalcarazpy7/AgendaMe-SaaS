@@ -8,7 +8,7 @@ import { AgendaMeLogo } from "@/components/brand/agendame-logo";
 import { WhatsAppIcon } from "@/components/landing/social-icons";
 
 const links = [
-  { label: "Como funciona", href: "/#como-funciona" },
+  { label: "Cómo funciona", href: "/#como-funciona" },
   { label: "Funciones", href: "/#funciones" },
   { label: "Nichos", href: "/#nichos" },
   { label: "Planes", href: "/planes" },
@@ -129,7 +129,7 @@ export function SiteNavbar() {
             href="/auth/login"
             className="hidden h-10 items-center justify-center rounded-xl border bg-card px-4 text-sm font-semibold shadow-sm transition-[background-color,color,box-shadow] duration-200 ease-[var(--ease-out)] hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:inline-flex"
           >
-            Iniciar sesion
+            Iniciar sesión
           </Link>
 
           <Link
@@ -143,7 +143,7 @@ export function SiteNavbar() {
             type="button"
             onClick={() => setOpen(true)}
             className="inline-flex h-11 w-11 items-center justify-center rounded-xl border bg-card transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background lg:hidden"
-            aria-label="Abrir menu"
+            aria-label="Abrir menú"
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -158,7 +158,7 @@ export function SiteNavbar() {
             className="ag-reveal ag-reveal-visible absolute inset-0 bg-slate-950/55 backdrop-blur-sm"
             style={{ transitionDuration: "200ms" }}
             onClick={() => setOpen(false)}
-            aria-label="Cerrar menu"
+            aria-label="Cerrar menú"
           />
 
           <div className="absolute inset-y-0 right-0 flex w-[88%] max-w-sm flex-col bg-background shadow-2xl">
@@ -168,7 +168,7 @@ export function SiteNavbar() {
                 type="button"
                 onClick={() => setOpen(false)}
                 className="inline-flex h-11 w-11 items-center justify-center rounded-xl border transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                aria-label="Cerrar menu"
+                aria-label="Cerrar menú"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -205,7 +205,7 @@ export function SiteNavbar() {
                 onClick={() => setOpen(false)}
                 className="flex h-12 items-center justify-center rounded-xl border bg-card text-sm font-semibold shadow-sm transition hover:bg-accent"
               >
-                Iniciar sesion
+                Iniciar sesión
               </Link>
               <Link
                 href="/auth/registro"

@@ -41,89 +41,89 @@ import { getWhatsappNumber } from "@/lib/contact/whatsapp";
 export const revalidate = 60;
 
 const pasos = [
-  "Crea tu cuenta y configura tu negocio",
-  "Comparte tu enlace de reservas",
-  "Recibi citas y gestiona todo desde el panel",
+  "Creá tu cuenta y configurá tu negocio",
+  "Compartí tu enlace de reservas",
+  "Recibí citas y gestioná todo desde el panel",
 ];
 
 const funciones = [
-  [CalendarCheck2, "Agenda online", "Organiza turnos por fecha, horario, servicio y profesional."],
-  [Clock3, "Citas y reservas", "Revisa solicitudes, estados y proximos turnos desde un solo panel."],
-  [Users, "Clientes", "Centraliza datos de clientes y su historial de reservas."],
-  [Store, "Servicios", "Configura servicios, duracion, precios de referencia e imagenes."],
-  [BriefcaseBusiness, "Empleados", "Gestiona equipo, disponibilidad y asignaciones."],
-  [MessageSquareText, "Recordatorios", "Prepara comunicaciones para reducir olvidos y ausencias."],
-  [BarChart3, "Reportes", "Visualiza movimiento mensual, citas e ingresos estimados."],
-  [ShieldCheck, "Planes y limites", "Controla capacidad y crecimiento por plan contratado."],
-  [Building2, "Sucursales", "Suma ubicaciones a medida que tu negocio crece."],
-  [FileText, "Exportacion", "Descarga datos de citas y clientes para analizarlos."],
-  [Globe, "Pagina publica de reservas", "Un enlace propio para que tus clientes reserven solos."],
+  [CalendarCheck2, "Agenda online", "Organizá turnos por fecha, horario, servicio y profesional."],
+  [Clock3, "Citas y reservas", "Revisá solicitudes, estados y próximos turnos desde un solo panel."],
+  [Users, "Clientes", "Centralizá datos de clientes y su historial de reservas."],
+  [Store, "Servicios", "Configurá servicios, duración, precios de referencia e imágenes."],
+  [BriefcaseBusiness, "Empleados", "Gestioná equipo, disponibilidad y asignaciones."],
+  [MessageSquareText, "Recordatorios", "Prepará comunicaciones para reducir olvidos y ausencias."],
+  [BarChart3, "Reportes", "Visualizá movimiento mensual, citas e ingresos estimados."],
+  [ShieldCheck, "Planes y límites", "Controlá capacidad y crecimiento por plan contratado."],
+  [Building2, "Sucursales", "Sumá ubicaciones a medida que tu negocio crece."],
+  [FileText, "Exportación", "Descargá datos de citas y clientes para analizarlos."],
+  [Globe, "Página pública de reservas", "Un enlace propio para que tus clientes reserven solos."],
   [LockKeyhole, "Panel administrativo", "Acceso por roles para vos y tu equipo."],
 ] as const;
 
 const nichos = [
-  [Scissors, "Barberias", "Turnos que se pisan y clientes que esperan sin saber cuanto.", "Agenda diaria clara por profesional, sin dobles reservas."],
+  [Scissors, "Barberías", "Turnos que se pisan y clientes que esperan sin saber cuánto.", "Agenda diaria clara por profesional, sin dobles reservas."],
   [Stethoscope, "Veterinarias", "Controles y revisiones que se mezclan en la misma agenda.", "Reservas organizadas por horario y seguimiento de cada mascota."],
-  [Building2, "Clinicas", "Varios profesionales, una sola agenda dificil de coordinar.", "Cada profesional con su disponibilidad y sus propios turnos."],
+  [Building2, "Clínicas", "Varios profesionales, una sola agenda difícil de coordinar.", "Cada profesional con su disponibilidad y sus propios turnos."],
   [FileText, "Consultorios", "Seguimiento de pacientes disperso entre planillas y mensajes.", "Historial simple de citas y datos de contacto en un panel."],
-  [Sparkles, "Estetica", "Servicios de distinta duracion dificiles de encajar en el dia.", "Disponibilidad real segun la duracion de cada servicio."],
-  [BadgeCheck, "Spa", "Paquetes y experiencias que se reservan por telefono.", "Reservas online con horarios y disponibilidad siempre al dia."],
-  [Scissors, "Peluquerias", "Estilistas con agendas separadas y clientes confundidos.", "Turnos visibles por estilista, sin cruces de horario."],
-  [Users, "Profesionales independientes", "Todo el trabajo de agenda cae en vos, a mano.", "Una agenda digital propia para trabajar con mas orden."],
+  [Sparkles, "Estética", "Servicios de distinta duración difíciles de encajar en el día.", "Disponibilidad real según la duración de cada servicio."],
+  [BadgeCheck, "Spa", "Paquetes y experiencias que se reservan por teléfono.", "Reservas online con horarios y disponibilidad siempre al día."],
+  [Scissors, "Peluquerías", "Estilistas con agendas separadas y clientes confundidos.", "Turnos visibles por estilista, sin cruces de horario."],
+  [Users, "Profesionales independientes", "Todo el trabajo de agenda cae en vos, a mano.", "Una agenda digital propia para trabajar con más orden."],
 ] as const;
 
 const confianza = [
   [Database, "Datos organizados"],
   [Users, "Acceso por roles"],
-  [ListChecks, "Limites claros por plan"],
+  [ListChecks, "Límites claros por plan"],
   [LayoutDashboard, "Panel administrativo"],
-  [MonitorSmartphone, "Diseno responsive"],
+  [MonitorSmartphone, "Diseño responsive"],
   [MapPin, "Pensado para negocios de Paraguay"],
 ] as const;
 
 const casosDeUso = [
-  ["Barberia con agenda llena", "Ordena turnos por profesional y reduce conversaciones repetidas por WhatsApp."],
-  ["Veterinaria con revisiones y controles", "Centraliza citas, clientes y seguimiento de cada mascota por horario."],
-  ["Estetica con servicios por horario", "Muestra disponibilidad real y organiza servicios segun su duracion."],
-  ["Clinica con varios profesionales", "Coordina agenda de varios profesionales sin cruzar horarios."],
-  ["Consultorio con seguimiento de pacientes", "Lleva un historial simple de citas y datos de contacto."],
-  ["Spa con paquetes y servicios", "Ordena paquetes, duracion y disponibilidad por dia."],
+  ["Barbería con agenda llena", "Ordená turnos por profesional y reducí conversaciones repetidas por WhatsApp."],
+  ["Veterinaria con revisiones y controles", "Centralizá citas, clientes y seguimiento de cada mascota por horario."],
+  ["Estética con servicios por horario", "Mostrá disponibilidad real y organizá servicios según su duración."],
+  ["Clínica con varios profesionales", "Coordiná agenda de varios profesionales sin cruzar horarios."],
+  ["Consultorio con seguimiento de pacientes", "Llevá un historial simple de citas y datos de contacto."],
+  ["Spa con paquetes y servicios", "Ordená paquetes, duración y disponibilidad por día."],
 ] as const;
 
 const comentarios = [
   [
     "B",
-    "Dueno de barberia",
-    "Antes perdia turnos por WhatsApp todo el tiempo. Desde que uso AgendaMe mis clientes reservan solos y llego al local con la agenda del dia ya ordenada.",
+    "Dueño de barbería",
+    "Antes perdía turnos por WhatsApp todo el tiempo. Desde que uso AgendaMe mis clientes reservan solos y llego al local con la agenda del día ya ordenada.",
   ],
   [
     "V",
     "Encargada de veterinaria",
-    "Mis clientes reservan las consultas desde el celular sin escribirme a cada rato. Se lo recomiendo a cualquier veterinaria que todavia use WhatsApp como agenda.",
+    "Mis clientes reservan las consultas desde el celular sin escribirme a cada rato. Se lo recomiendo a cualquier veterinaria que todavía use WhatsApp como agenda.",
   ],
   [
     "E",
-    "Responsable de estetica",
-    "Puedo ver cuantas citas tengo en el mes de un vistazo y organizar los servicios segun su duracion. Cambio por completo como manejo el dia a dia del local.",
+    "Responsable de estética",
+    "Puedo ver cuántas citas tengo en el mes de un vistazo y organizar los servicios según su duración. Cambió por completo cómo manejo el día a día del local.",
   ],
   [
     "P",
     "Profesional independiente",
-    "Organizo servicios, horarios y clientes desde un solo panel. Deje de depender de cuadernos y mensajes sueltos para llevar mi agenda.",
+    "Organizo servicios, horarios y clientes desde un solo panel. Dejé de depender de cuadernos y mensajes sueltos para llevar mi agenda.",
   ],
 ] as const;
 
 const faq = [
-  ["Puedo empezar gratis?", "Si. Podes crear tu cuenta y probar AgendaMe con el plan gratis disponible."],
-  ["Necesito tarjeta para registrarme?", "No. La cuenta gratis no requiere tarjeta para empezar."],
-  ["Puedo cambiar de plan despues?", "Si. Desde el panel podes revisar planes y solicitar el cambio cuando tu negocio crezca."],
-  ["Puedo usar AgendaMe para barberia, veterinaria o estetica?", "Si. AgendaMe esta pensado para negocios que trabajan con turnos y citas."],
-  ["Los clientes pueden reservar desde el celular?", "Si. El enlace publico de reservas funciona desde celular, tablet o computadora."],
-  ["Que pasa si llego al limite de citas?", "El panel te muestra tu uso actual y te ayuda a evaluar el siguiente plan disponible."],
-  ["Puedo pedir adaptaciones a medida?", "Si. Las funcionalidades a medida se evaluan segun la necesidad del negocio."],
-  ["Los precios se actualizan automaticamente?", "Si. Las secciones de planes muestran siempre la informacion actualizada."],
-  ["AgendaMe funciona desde el celular?", "Si. El panel administrativo es responsive y se puede usar desde el celular."],
-  ["Puedo usarlo con varios empleados?", "Si. Cada plan define cuantos empleados activos podes tener en tu equipo."],
+  ["¿Puedo empezar gratis?", "Sí. Podés crear tu cuenta y probar AgendaMe con el plan gratis disponible."],
+  ["¿Necesito tarjeta para registrarme?", "No. La cuenta gratis no requiere tarjeta para empezar."],
+  ["¿Puedo cambiar de plan después?", "Sí. Desde el panel podés revisar planes y solicitar el cambio cuando tu negocio crezca."],
+  ["¿Puedo usar AgendaMe para barbería, veterinaria o estética?", "Sí. AgendaMe está pensado para negocios que trabajan con turnos y citas."],
+  ["¿Los clientes pueden reservar desde el celular?", "Sí. El enlace público de reservas funciona desde celular, tablet o computadora."],
+  ["¿Qué pasa si llego al límite de citas?", "El panel te muestra tu uso actual y te ayuda a evaluar el siguiente plan disponible."],
+  ["¿Puedo pedir adaptaciones a medida?", "Sí. Las funcionalidades a medida se evalúan según la necesidad del negocio."],
+  ["¿Los precios se actualizan automáticamente?", "Sí. Las secciones de planes muestran siempre la información actualizada."],
+  ["¿AgendaMe funciona desde el celular?", "Sí. El panel administrativo es responsive y se puede usar desde el celular."],
+  ["¿Puedo usarlo con varios empleados?", "Sí. Cada plan define cuántos empleados activos podés tener en tu equipo."],
 ] as const;
 
 function SectionHeader({
@@ -223,7 +223,7 @@ export default async function HomePage() {
       <section id="como-funciona" className="relative overflow-hidden px-4 py-20 sm:px-6">
         <div className="ag-bg-dots-soft absolute inset-0 -z-10 opacity-50" />
         <div className="mx-auto max-w-7xl">
-          <SectionHeader eyebrow="Como funciona" title="Tu agenda online en tres pasos" />
+          <SectionHeader eyebrow="Cómo funciona" title="Tu agenda online en tres pasos" />
           <div className="relative mt-14 grid gap-8 md:grid-cols-3">
             <div className="pointer-events-none absolute left-0 right-0 top-5 hidden h-px bg-[linear-gradient(90deg,transparent,var(--border)_15%,var(--border)_85%,transparent)] md:block" />
             {pasos.map((paso, index) => (
@@ -247,14 +247,14 @@ export default async function HomePage() {
 
         <div className="relative mx-auto max-w-7xl">
           <SectionHeader align="left" tone="dark" eyebrow="Beneficios" title="Pensado para el negocio, el cliente y tu equipo">
-            Menos trabajo administrativo para vos, una mejor experiencia de reserva para tus clientes y mas orden para todo tu equipo.
+            Menos trabajo administrativo para vos, una mejor experiencia de reserva para tus clientes y más orden para todo tu equipo.
           </SectionHeader>
 
           <div className="mt-12 grid gap-5 lg:grid-cols-3">
             {[
-              ["Para el negocio", ["Mas organizacion", "Menos mensajes manuales", "Mejor control de clientes", "Seguimiento del movimiento mensual"], ShieldCheck],
-              ["Para los clientes", ["Reservan mas rapido", "Ven servicios disponibles", "Reciben confirmacion", "Menos olvidos con recordatorios"], CheckCircle2],
-              ["Para tu equipo", ["Cada uno ve su propia agenda", "Sabe su disponibilidad real", "Menos coordinacion manual", "Acceso segun su rol"], Users],
+              ["Para el negocio", ["Más organización", "Menos mensajes manuales", "Mejor control de clientes", "Seguimiento del movimiento mensual"], ShieldCheck],
+              ["Para los clientes", ["Reservan más rápido", "Ven servicios disponibles", "Reciben confirmación", "Menos olvidos con recordatorios"], CheckCircle2],
+              ["Para tu equipo", ["Cada uno ve su propia agenda", "Sabe su disponibilidad real", "Menos coordinación manual", "Acceso según su rol"], Users],
             ].map(([title, items, HeaderIcon], index) => (
               <Reveal key={String(title)} delay={index * 120}>
                 <article className="h-full rounded-[2rem] border border-white/10 bg-white/4 p-7 shadow-lg shadow-black/20 backdrop-blur transition-all duration-300 ease-[var(--ease-out)] hover:-translate-y-1 hover:border-cyan-400/30 hover:bg-white/10">
@@ -305,8 +305,8 @@ export default async function HomePage() {
         <div className="pointer-events-none absolute -left-32 top-1/3 -z-10 h-72 w-72 rounded-full bg-chart-3/10 blur-3xl" />
         <div className="pointer-events-none absolute -right-24 bottom-0 -z-10 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
         <div className="mx-auto max-w-7xl">
-          <SectionHeader eyebrow="Funciones" title={<>Todo lo que tu <AccentWord>operacion</AccentWord> necesita</>}>
-            Modulos claros para organizar reservas, clientes, equipo, servicios y crecimiento.
+          <SectionHeader eyebrow="Funciones" title={<>Todo lo que tu <AccentWord>operación</AccentWord> necesita</>}>
+            Módulos claros para organizar reservas, clientes, equipo, servicios y crecimiento.
           </SectionHeader>
           <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {funciones.map(([Icon, title, text], index) => (
@@ -386,8 +386,8 @@ export default async function HomePage() {
         <div className="pointer-events-none absolute -right-24 top-1/3 -z-10 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl" />
 
         <div className="relative mx-auto max-w-7xl">
-          <SectionHeader tone="dark" eyebrow="Testimonios" title="Asi usan AgendaMe distintos negocios">
-            Ejemplos de como negocios como el tuyo ordenaron su agenda con AgendaMe.
+          <SectionHeader tone="dark" eyebrow="Testimonios" title="Así usan AgendaMe distintos negocios">
+            Ejemplos de cómo negocios como el tuyo ordenaron su agenda con AgendaMe.
           </SectionHeader>
           <div className="mt-12 grid gap-5 sm:grid-cols-2">
             {comentarios.map(([inicial, rol, texto], index) => (
@@ -427,7 +427,7 @@ export default async function HomePage() {
 
           <Reveal delay={120} className="mt-8 flex justify-center">
             <div className="flex flex-col items-center gap-3 rounded-2xl border bg-card px-6 py-5 text-center shadow-sm ring-1 ring-foreground/5 sm:flex-row sm:gap-5">
-              <p className="text-sm text-muted-foreground">No encontras lo que buscas?</p>
+              <p className="text-sm text-muted-foreground">¿No encontrás lo que buscás?</p>
               <a
                 href="#contacto"
                 className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground shadow-sm shadow-primary/25 transition hover:-translate-y-0.5 hover:bg-primary/90"
@@ -453,7 +453,7 @@ export default async function HomePage() {
                 <div className="ag-bg-dots pointer-events-none absolute inset-0 opacity-[0.08]" />
 
                 <div className="relative">
-                  <p className="text-sm font-semibold text-background/70">Atencion directa</p>
+                  <p className="text-sm font-semibold text-background/70">Atención directa</p>
                   <h3 className="mt-2 text-2xl font-bold">Te respondemos por WhatsApp</h3>
                   <p className="mt-3 text-sm leading-6 text-background/75">
                     Contanos tu negocio y coordinamos el alta o resolvemos tus dudas sobre planes y funciones.
@@ -507,7 +507,7 @@ export default async function HomePage() {
             </Reveal>
 
             <Reveal delay={120}>
-              <ContactWhatsappForm planes={planNames.length ? planNames : ["Gratis", "Basico", "Profesional", "Empresarial"]} />
+              <ContactWhatsappForm planes={planNames.length ? planNames : ["Gratis", "Básico", "Profesional", "Empresarial"]} />
             </Reveal>
           </div>
         </div>
@@ -517,9 +517,9 @@ export default async function HomePage() {
         <div className="ag-bg-dots pointer-events-none absolute inset-0 opacity-10" />
         <Reveal className="relative mx-auto grid max-w-7xl gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
-            <h2 className="text-4xl font-extrabold tracking-tight text-balance sm:text-6xl">Empeza a organizar tu negocio con AgendaMe</h2>
+            <h2 className="text-4xl font-extrabold tracking-tight text-balance sm:text-6xl">Empezá a organizar tu negocio con AgendaMe</h2>
             <p className="mt-4 max-w-2xl text-lg text-primary-foreground/85">
-              Proba gratis hasta 20 citas al mes y pasa de mensajes desordenados a una agenda profesional.
+              Probá gratis hasta 20 citas al mes y pasá de mensajes desordenados a una agenda profesional.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">

@@ -102,9 +102,11 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error subiendo avatar:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo subir el avatar." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo subir el avatar.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }

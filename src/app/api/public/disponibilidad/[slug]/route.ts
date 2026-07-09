@@ -41,9 +41,11 @@ export async function GET(request: Request, context: RouteContext) {
   } catch (error) {
     console.error("Error consultando disponibilidad:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo consultar la disponibilidad." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo consultar la disponibilidad.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }

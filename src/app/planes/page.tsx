@@ -13,12 +13,12 @@ import { getWhatsappNumber } from "@/lib/contact/whatsapp";
 export const revalidate = 60;
 
 const faq = [
-  ["Puedo empezar gratis?", "Si. Podes crear una cuenta y probar AgendaMe con el plan gratis disponible."],
-  ["Puedo cambiar de plan despues?", "Si. Desde el dashboard podes revisar tu uso y solicitar un cambio de plan."],
-  ["Los precios se actualizan automaticamente?", "Si. Los precios, limites y funciones de cada plan siempre estan al dia en esta pagina."],
-  ["Que significa el plan anual?", "Pagas 10 meses y usas el servicio los 12 meses del año, segun el ahorro de cada plan."],
-  ["Que pasa si necesito mas capacidad que el plan Empresarial?", "Las funcionalidades a medida se evaluan segun la necesidad puntual del negocio."],
-  ["Puedo solicitar un plan por WhatsApp?", "Si. Cada card tiene un boton que arma el mensaje con el plan y periodo elegidos."],
+  ["¿Puedo empezar gratis?", "Sí. Podés crear una cuenta y probar AgendaMe con el plan gratis disponible."],
+  ["¿Puedo cambiar de plan después?", "Sí. Desde el dashboard podés revisar tu uso y solicitar un cambio de plan."],
+  ["¿Los precios se actualizan automáticamente?", "Sí. Los precios, límites y funciones de cada plan siempre están al día en esta página."],
+  ["¿Qué significa el plan anual?", "Pagás 10 meses y usás el servicio los 12 meses del año, según el ahorro de cada plan."],
+  ["¿Qué pasa si necesito más capacidad que el plan Empresarial?", "Las funcionalidades a medida se evalúan según la necesidad puntual del negocio."],
+  ["¿Puedo solicitar un plan por WhatsApp?", "Sí. Cada card tiene un botón que arma el mensaje con el plan y período elegidos."],
 ] as const;
 
 function AccentWord({ children }: { children: React.ReactNode }) {
@@ -54,7 +54,7 @@ export default async function PlanesPage() {
               Un plan para cada <AccentWord>etapa</AccentWord> de tu negocio
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
-              Limites, funciones y precios siempre actualizados. El plan Profesional se destaca automaticamente cuando esta marcado como recomendado.
+              Límites, funciones y precios siempre actualizados. El plan Profesional se destaca automáticamente cuando está marcado como recomendado.
             </p>
           </Reveal>
         </div>
@@ -77,7 +77,7 @@ export default async function PlanesPage() {
               Compara cada plan en <AccentWord>detalle</AccentWord>
             </h2>
             <p className="mt-5 text-lg leading-8 text-slate-300">
-              Revisa que incluye cada plan antes de elegir.
+              Revisá qué incluye cada plan antes de elegir.
             </p>
           </Reveal>
 
@@ -108,7 +108,7 @@ export default async function PlanesPage() {
 
           <Reveal delay={200} className="mt-8 flex justify-center">
             <div className="flex flex-col items-center gap-3 rounded-2xl border bg-card px-6 py-5 text-center shadow-sm ring-1 ring-foreground/5 sm:flex-row sm:gap-5">
-              <p className="text-sm text-muted-foreground">No encontras lo que buscas?</p>
+              <p className="text-sm text-muted-foreground">¿No encontrás lo que buscás?</p>
               <a
                 href={`https://wa.me/${whatsappNumero}`}
                 target="_blank"
@@ -127,9 +127,9 @@ export default async function PlanesPage() {
         <div className="ag-bg-dots pointer-events-none absolute inset-0 opacity-10" />
         <Reveal className="relative mx-auto grid max-w-7xl gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
-            <h2 className="text-4xl font-extrabold tracking-tight text-balance sm:text-6xl">Proba AgendaMe con el plan gratis</h2>
+            <h2 className="text-4xl font-extrabold tracking-tight text-balance sm:text-6xl">Probá AgendaMe con el plan gratis</h2>
             <p className="mt-4 max-w-2xl text-lg text-primary-foreground/85">
-              Crea tu cuenta, configura tu negocio y solicita un plan pago cuando necesites mas capacidad.
+              Creá tu cuenta, configurá tu negocio y solicitá un plan pago cuando necesites más capacidad.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">

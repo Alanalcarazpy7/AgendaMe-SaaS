@@ -9,13 +9,13 @@ import {
 } from "lucide-react";
 
 const rubros = [
-  [Scissors, "Barberias"],
+  [Scissors, "Barberías"],
   [Stethoscope, "Veterinarias"],
-  [Building2, "Clinicas"],
+  [Building2, "Clínicas"],
   [FileText, "Consultorios"],
-  [Sparkles, "Estetica"],
+  [Sparkles, "Estética"],
   [BadgeCheck, "Spa"],
-  [Scissors, "Peluquerias"],
+  [Scissors, "Peluquerías"],
   [Users, "Profesionales independientes"],
 ] as const;
 

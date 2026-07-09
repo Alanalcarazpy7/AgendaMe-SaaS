@@ -21,12 +21,12 @@ export function PlanesPublicosSection({ planes }: PlanesPublicosSectionProps) {
           </div>
 
           <h2 className="mt-6 text-4xl font-bold tracking-tight sm:text-5xl">
-            Empeza gratis y mejora cuando tu negocio crezca
+            Empezá gratis y mejorá cuando tu negocio crezca
           </h2>
 
           <p className="mt-4 text-lg text-muted-foreground">
             AgendaMe te permite gestionar reservas, clientes, empleados,
-            servicios, horarios y reportes segun el plan que elijas.
+            servicios, horarios y reportes según el plan que elijas.
           </p>
         </Reveal>
 

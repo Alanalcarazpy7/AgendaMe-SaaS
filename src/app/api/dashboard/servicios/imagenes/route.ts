@@ -80,13 +80,11 @@ export async function GET() {
   } catch (error) {
     console.error("Error listando imágenes de servicios:", error);
 
-    return NextResponse.json(
-      {
-        error: "No se pudieron cargar los servicios.",
-      },
-      {
-        status: 500,
-      }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudieron cargar los servicios.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }

@@ -165,9 +165,11 @@ export async function POST(request: Request, context: RouteContext) {
   } catch (error) {
     console.error("Error creando reserva pública:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo crear la reserva." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo crear la reserva.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }

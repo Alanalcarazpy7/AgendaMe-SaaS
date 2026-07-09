@@ -14,7 +14,7 @@ const antes = [
 const despues = [
   "Reservas organizadas en un panel",
   "Clientes registrados con su historial",
-  "Agenda clara por dia y por empleado",
+  "Agenda clara por día y por empleado",
   "Seguimiento del movimiento mensual",
   "Clientes reservan solos desde su celular",
   "Datos de clientes centralizados en un solo lugar",
@@ -34,10 +34,10 @@ export function AntesDespues() {
             De mensajes sueltos a agenda profesional
           </span>
           <h2 className="mt-5 text-4xl font-extrabold tracking-tight text-balance text-white sm:text-6xl">
-            Pasa de WhatsApp desordenado a una agenda profesional
+            Pasá de WhatsApp desordenado a una agenda profesional
           </h2>
           <p className="mt-5 text-lg leading-8 text-slate-300">
-            El mismo negocio, dos formas muy distintas de llevar la agenda del dia a dia.
+            El mismo negocio, dos formas muy distintas de llevar la agenda del día a día.
           </p>
         </Reveal>
 
@@ -86,7 +86,7 @@ export function AntesDespues() {
             href="/auth/registro"
             className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-[background-color,box-shadow,transform] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-primary/35"
           >
-            Empeza a ordenar tu agenda hoy
+            Empezá a ordenar tu agenda hoy
             <ArrowRight className="h-4 w-4" />
           </Link>
         </Reveal>

@@ -44,9 +44,11 @@ export async function PATCH(request: Request) {
   } catch (error) {
     console.error("Error cambiando contraseña:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo cambiar la contraseña." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo cambiar la contraseña.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }

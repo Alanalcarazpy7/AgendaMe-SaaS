@@ -29,7 +29,7 @@ export function PlanPricingCards({ planes }: PlanPricingCardsProps) {
   if (planes.length === 0) {
     return (
       <p className="text-center text-sm text-muted-foreground">
-        No pudimos cargar los planes en este momento. Proba de nuevo mas tarde.
+        No pudimos cargar los planes en este momento. Probá de nuevo más tarde.
       </p>
     );
   }
@@ -82,7 +82,7 @@ export function PlanPricingCards({ planes }: PlanPricingCardsProps) {
         {mesesBonificados > 0 && (
           <p className="flex items-center gap-1.5 text-center text-sm font-medium text-muted-foreground">
             <Sparkles className="h-3.5 w-3.5 shrink-0 text-chart-4" />
-            Con el plan anual pagas {mesesPagados} meses y usas los 12
+            Con el plan anual pagás {mesesPagados} meses y usás los 12
           </p>
         )}
       </div>
@@ -117,7 +117,7 @@ export function PlanPricingCards({ planes }: PlanPricingCardsProps) {
               {plan.destacado && (
                 <div className="ag-animate-badge absolute right-5 top-0 inline-flex -translate-y-1/2 items-center rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/40">
                   <Star className="mr-1 h-3 w-3 fill-current" />
-                  Mas popular
+                  Más popular
                 </div>
               )}
 
@@ -135,7 +135,7 @@ export function PlanPricingCards({ planes }: PlanPricingCardsProps) {
                 <p className="text-4xl font-bold tracking-tight">{formatPlanPrice(plan, periodo)}</p>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
-                {esGratis ? "Gratis para siempre" : periodo === "anual" ? "/ ano" : "/ mes"}
+                {esGratis ? "Gratis para siempre" : periodo === "anual" ? "/ año" : "/ mes"}
               </p>
 
               <div className="mt-1.5 h-6">

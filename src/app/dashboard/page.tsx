@@ -226,6 +226,7 @@ export default async function DashboardPage() {
     return { fecha, total };
   });
   const maxDia = Math.max(...dias.map((dia) => dia.total), 1);
+  const esPlanEmpresarial = access.planClave === "empresarial";
 
   return (
     <div className="space-y-5">
@@ -272,27 +273,47 @@ export default async function DashboardPage() {
           </div>
 
           <aside className="border-t border-border/70 bg-muted/30 p-5 lg:border-l lg:border-t-0 dark:bg-white/[0.03]">
-            <div className="rounded-[1.5rem] border border-cyan-300/40 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary)_92%,#0b1120),color-mix(in_srgb,var(--ring)_72%,#0b1120))] p-5 text-white shadow-xl shadow-cyan-950/20">
+            <div className={`rounded-[1.5rem] border p-5 shadow-xl ${
+              esPlanEmpresarial
+                ? "border-border/80 bg-card/80 text-card-foreground shadow-slate-950/5 dark:bg-white/[0.04] dark:shadow-black/20"
+                : "border-cyan-300/40 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary)_92%,#0b1120),color-mix(in_srgb,var(--ring)_72%,#0b1120))] text-white shadow-cyan-950/20"
+            }`}>
               <div className="flex items-start justify-between gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15">
+                <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
+                  esPlanEmpresarial ? "bg-primary/10 text-primary" : "bg-white/15"
+                }`}>
                   <Sparkles className="h-5 w-5" />
                 </div>
-                <span className="rounded-2xl bg-white/10 px-3 py-1 text-xs font-semibold text-cyan-50">
+                <span className={`rounded-2xl px-3 py-1 text-xs font-semibold ${
+                  esPlanEmpresarial
+                    ? "border bg-muted/40 text-muted-foreground"
+                    : "bg-white/10 text-cyan-50"
+                }`}>
                   Plan {access.planClave}
                 </span>
               </div>
 
-              <h2 className="mt-5 text-xl font-bold">Desbloqueá más control</h2>
-              <p className="mt-2 text-sm leading-6 text-cyan-50/90">
-                Reportes, exportación y herramientas avanzadas según el plan activo.
+              <h2 className="mt-5 text-xl font-bold">
+                {esPlanEmpresarial ? "Plan empresarial activo" : "Desbloqueá más control"}
+              </h2>
+              <p className={`mt-2 text-sm leading-6 ${
+                esPlanEmpresarial ? "text-muted-foreground" : "text-cyan-50/90"
+              }`}>
+                {esPlanEmpresarial
+                  ? "Tu negocio ya tiene activo el plan más alto de AgendaMe."
+                  : "Reportes, exportación y herramientas avanzadas según el plan activo."}
               </p>
 
               {access.puedeGestionarPlanes && (
                 <Link
                   href="/dashboard/planes"
-                  className="mt-5 inline-flex h-10 items-center justify-center rounded-2xl bg-white px-4 text-sm font-bold text-slate-950 outline-none transition-[transform,box-shadow] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-2 focus-visible:ring-white/70"
+                  className={`mt-5 inline-flex h-10 items-center justify-center rounded-2xl px-4 text-sm font-bold outline-none transition-[transform,box-shadow,background-color] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:shadow-lg focus-visible:ring-2 ${
+                    esPlanEmpresarial
+                      ? "border bg-background text-foreground hover:bg-accent focus-visible:ring-ring/50"
+                      : "bg-white text-slate-950 focus-visible:ring-white/70"
+                  }`}
                 >
-                  Gestionar plan
+                  {esPlanEmpresarial ? "Ver plan" : "Gestionar plan"}
                 </Link>
               )}
             </div>

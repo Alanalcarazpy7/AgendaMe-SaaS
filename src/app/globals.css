@@ -369,6 +369,22 @@
     }
   }
 
+  .ag-report-chart .recharts-text,
+  .ag-report-chart .recharts-cartesian-axis-tick-value {
+    fill: var(--muted-foreground) !important;
+    color: var(--muted-foreground);
+    font-weight: 600;
+  }
+
+  .ag-report-chart .recharts-cartesian-grid line {
+    stroke: var(--border);
+  }
+
+  .ag-report-chart .recharts-label,
+  .ag-report-chart .recharts-label-list text {
+    fill: var(--foreground) !important;
+  }
+
   .ag-private-bg {
     background:
       linear-gradient(135deg, color-mix(in srgb, var(--background) 92%, var(--primary)) 0%, var(--background) 44%, color-mix(in srgb, var(--background) 94%, var(--ring)) 100%),

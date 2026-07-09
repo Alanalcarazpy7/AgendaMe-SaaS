@@ -99,14 +99,12 @@ export async function GET() {
   } catch (error) {
     console.error("Error obteniendo intervalo de reserva:", error);
 
-    return NextResponse.json(
-      {
-        error: "No se pudo obtener la configuración.",
-      },
-      {
-        status: 500,
-      }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo obtener la configuración.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }
 
@@ -164,13 +162,11 @@ export async function PATCH(request: Request) {
   } catch (error) {
     console.error("Error actualizando intervalo de reserva:", error);
 
-    return NextResponse.json(
-      {
-        error: "No se pudo actualizar el intervalo.",
-      },
-      {
-        status: 500,
-      }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo actualizar el intervalo.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }

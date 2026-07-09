@@ -218,9 +218,11 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error aceptando invitación:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo aceptar la invitación." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo aceptar la invitación.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }

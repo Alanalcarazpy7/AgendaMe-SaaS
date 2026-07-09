@@ -206,14 +206,12 @@ export async function POST(
   } catch (error) {
     console.error("Error subiendo imagen del servicio:", error);
 
-    return NextResponse.json(
-      {
-        error: "No se pudo subir la imagen.",
-      },
-      {
-        status: 500,
-      }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo subir la imagen.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }
 
@@ -258,13 +256,11 @@ export async function DELETE(
   } catch (error) {
     console.error("Error eliminando imagen del servicio:", error);
 
-    return NextResponse.json(
-      {
-        error: "No se pudo eliminar la imagen.",
-      },
-      {
-        status: 500,
-      }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo eliminar la imagen.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }

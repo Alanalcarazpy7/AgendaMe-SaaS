@@ -70,10 +70,12 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error creando cliente:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo crear el cliente." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo crear el cliente.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }
 
@@ -158,9 +160,11 @@ export async function PATCH(request: Request) {
   } catch (error) {
     console.error("Error editando cliente:", error);
 
-    return NextResponse.json(
-      { error: "No se pudo editar el cliente." },
-      { status: 500 }
-    );
+    const mensaje =
+      error instanceof Error && error.message
+        ? error.message
+        : "No se pudo editar el cliente.";
+
+    return NextResponse.json({ error: mensaje }, { status: 400 });
   }
 }
