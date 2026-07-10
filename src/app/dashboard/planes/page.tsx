@@ -8,6 +8,7 @@ import {
   MessageSquareText,
   Store,
 } from "lucide-react";
+import { ComprobantePagoForm } from "@/components/planes/comprobante-pago-form";
 import { SolicitarPlanButton } from "@/components/planes/solicitar-plan-button";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -21,8 +22,21 @@ import {
 } from "@/lib/planes/planes-shared";
 
 type SuscripcionRaw = {
+  id: string;
   plan_id: string | null;
   fecha_vencimiento: string | null;
+};
+
+type PagoNegocioRaw = {
+  id: string;
+  plan_id: string | null;
+  monto_gs: number | null;
+  metodo: string | null;
+  estado: string;
+  comprobante_url: string | null;
+  notas_cliente: string | null;
+  notas_admin: string | null;
+  created_at: string;
 };
 
 function formatFechaVencimiento(fecha: string | null) {
@@ -136,6 +150,7 @@ export default async function DashboardPlanesPage() {
     { data: suscripcionData },
     { data: planes },
     { data: usoMensual },
+    { data: pagosRecientes },
     { count: clientesCount },
     { count: empleadosCount },
     { count: serviciosCount },
@@ -144,7 +159,7 @@ export default async function DashboardPlanesPage() {
 
     supabase
       .from("suscripciones")
-      .select("plan_id, fecha_vencimiento")
+      .select("id, plan_id, fecha_vencimiento")
       .eq("negocio_id", membresia.negocio_id)
       .eq("estado", "activa")
       .order("created_at", { ascending: false })
@@ -160,6 +175,13 @@ export default async function DashboardPlanesPage() {
       .eq("anio", anio)
       .eq("mes", mes)
       .maybeSingle(),
+
+    supabase
+      .from("pagos_manuales")
+      .select("id, plan_id, monto_gs, metodo, estado, comprobante_url, notas_cliente, notas_admin, created_at")
+      .eq("negocio_id", membresia.negocio_id)
+      .order("created_at", { ascending: false })
+      .limit(8),
 
     supabase
       .from("clientes")
@@ -186,6 +208,7 @@ export default async function DashboardPlanesPage() {
 
   const suscripcion = suscripcionData as SuscripcionRaw | null;
   const listaPlanes = (planes ?? []) as PlanPublico[];
+  const listaPagosRecientes = (pagosRecientes ?? []) as PagoNegocioRaw[];
   const planActual =
     listaPlanes.find((plan) => plan.id === suscripcion?.plan_id) ??
     listaPlanes.find((plan) => plan.clave === "gratis") ??
@@ -245,6 +268,12 @@ export default async function DashboardPlanesPage() {
           <p className="mt-2 text-3xl font-bold">{serviciosCount ?? 0}</p>
         </div>
       </section>
+
+      <ComprobantePagoForm
+        planes={listaPlanes}
+        planActualId={suscripcion?.plan_id ?? null}
+        pagos={listaPagosRecientes}
+      />
 
       <section>
         <h2 className="text-2xl font-bold">Planes disponibles</h2>
@@ -319,7 +348,7 @@ export default async function DashboardPlanesPage() {
                 </div>
 
                 <div className="mt-6">
-                  <SolicitarPlanButton planClave={plan.clave} planActual={actual} />
+                  <SolicitarPlanButton planClave={plan.clave} planNombre={plan.nombre} planActual={actual} />
                 </div>
               </article>
             );
@@ -374,4 +403,3 @@ export default async function DashboardPlanesPage() {
     </div>
   );
 }
-

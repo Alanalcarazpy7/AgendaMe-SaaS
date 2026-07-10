@@ -101,6 +101,7 @@ function fechaRecibidaDisplay(fecha?: string | null) {
     return new Intl.DateTimeFormat("es-PY", {
       dateStyle: "short",
       timeStyle: "short",
+      timeZone: "America/Asuncion",
     }).format(new Date(fecha));
   } catch {
     return fecha;
@@ -108,12 +109,21 @@ function fechaRecibidaDisplay(fecha?: string | null) {
 }
 
 function hoyLocal() {
-  const ahora = new Date();
+  // Fijo a America/Asuncion (no al huso del servidor ni del navegador): evita
+  // que el servidor y el cliente calculen "hoy" distinto cerca de medianoche
+  // (mismatch de hidratación) y usa el huso real del negocio.
+  const partes = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Asuncion",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
 
-  return `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(
-    2,
-    "0"
-  )}-${String(ahora.getDate()).padStart(2, "0")}`;
+  const anio = partes.find((p) => p.type === "year")?.value ?? "";
+  const mes = partes.find((p) => p.type === "month")?.value ?? "";
+  const dia = partes.find((p) => p.type === "day")?.value ?? "";
+
+  return `${anio}-${mes}-${dia}`;
 }
 
 function cardBase(extra = "") {

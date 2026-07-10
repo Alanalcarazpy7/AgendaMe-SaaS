@@ -33,6 +33,18 @@ export function DashboardPreferencesApplier({ tema, colorAcento }: Props) {
 
     aplicarTema();
 
+    // Cachea la preferencia real (perfiles_usuario.tema/color_acento) en
+    // localStorage: el script bloqueante de src/app/layout.tsx la lee antes
+    // del primer paint en la próxima carga, evitando el flash de tema claro.
+    // No cambia la fuente de verdad (sigue siendo la base de datos); esto es
+    // solo una caché de lectura instantánea.
+    try {
+      if (tema) localStorage.setItem("agendame-tema", tema);
+      if (colorAcento) localStorage.setItem("agendame-color-acento", colorAcento);
+    } catch {
+      // localStorage puede no estar disponible (modo privado, etc.); no es crítico.
+    }
+
     if (colorAcento && /^#[0-9A-Fa-f]{6}$/.test(colorAcento)) {
       root.style.setProperty("--agendame-accent", colorAcento);
     }

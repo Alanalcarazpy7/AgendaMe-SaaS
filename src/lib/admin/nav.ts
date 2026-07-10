@@ -27,8 +27,8 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { href: "/admin/renovaciones", label: "Renovaciones", icon: RefreshCcw },
   { href: "/admin/pagos", label: "Pagos", icon: Wallet },
   { href: "/admin/planes", label: "Planes", icon: Layers },
-  { href: "/admin/analitica", label: "Analítica", icon: BarChart3 },
+  { href: "/admin/analitica", label: "Analitica", icon: BarChart3 },
   { href: "/admin/invitaciones", label: "Invitaciones", icon: Mail },
-  { href: "/admin/auditoria", label: "Auditoría", icon: ScrollText },
-  { href: "/admin/configuracion", label: "Configuración", icon: Settings },
+  { href: "/admin/auditoria", label: "Auditoria", icon: ScrollText },
+  { href: "/admin/configuracion", label: "Configuracion", icon: Settings },
 ];

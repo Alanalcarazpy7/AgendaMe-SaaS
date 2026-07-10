@@ -39,6 +39,23 @@ export const rechazarPagoSchema = z.object({
 
 export type RechazarPagoInput = z.infer<typeof rechazarPagoSchema>;
 
+export const aprobarSolicitudCambioPlanSchema = z.object({
+  solicitudId: z.string().uuid(),
+  negocioId: z.string().uuid(),
+  fechaVencimiento: z.string().min(1).optional().nullable(),
+  notas: z.string().max(2000).optional().nullable(),
+});
+
+export type AprobarSolicitudCambioPlanInput = z.infer<typeof aprobarSolicitudCambioPlanSchema>;
+
+export const rechazarSolicitudCambioPlanSchema = z.object({
+  solicitudId: z.string().uuid(),
+  negocioId: z.string().uuid(),
+  notas: z.string().max(2000).optional().nullable(),
+});
+
+export type RechazarSolicitudCambioPlanInput = z.infer<typeof rechazarSolicitudCambioPlanSchema>;
+
 export const agregarNotaSchema = z.object({
   negocioId: z.string().uuid(),
   nota: z.string().min(1).max(2000),

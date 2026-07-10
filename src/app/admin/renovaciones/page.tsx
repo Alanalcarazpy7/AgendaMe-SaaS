@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AlertTriangle, Ban, CalendarClock } from "lucide-react";
 import { requirePlatformOwner } from "@/lib/admin/guard";
 import { obtenerNegociosResumen } from "@/lib/admin/queries/negocios-resumen";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatearFechaCorta } from "@/lib/admin/formatters/date";
 import { formatearNumero } from "@/lib/admin/formatters/currency";
 import { KpiCard } from "@/components/admin/kpi-card";
-import { CalendarClock, AlertTriangle, Ban } from "lucide-react";
+import { AdminEmptyState, AdminPageHeader, AdminPanel, AdminTableShell } from "@/components/admin/admin-ui";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -26,54 +27,37 @@ export default async function AdminRenovacionesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-bold tracking-tight">Renovaciones</h1>
-        <p className="text-sm text-muted-foreground">
-          Negocios que necesitan atención por vencimiento próximo o ya vencido.
-        </p>
-      </div>
+      <AdminPageHeader
+        eyebrow="Agenda comercial"
+        title="Renovaciones"
+        description="Negocios que necesitan seguimiento por vencimiento cercano o suscripcion vencida pendiente de marcar."
+      />
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <KpiCard
-          label="Vencen en 7 días"
-          value={formatearNumero(proximas7.length)}
-          icon={AlertTriangle}
-          tone={proximas7.length > 0 ? "warning" : "default"}
-        />
-        <KpiCard
-          label="Vencen en 30 días"
-          value={formatearNumero(proximas30.length)}
-          icon={CalendarClock}
-          tone={proximas30.length > 0 ? "warning" : "default"}
-        />
-        <KpiCard
-          label="Vencidas (pendientes de marcar)"
-          value={formatearNumero(vencidas.length)}
-          icon={Ban}
-          tone={vencidas.length > 0 ? "danger" : "default"}
-        />
+        <KpiCard label="Vencen en 7 dias" value={formatearNumero(proximas7.length)} icon={AlertTriangle} tone={proximas7.length > 0 ? "warning" : "default"} />
+        <KpiCard label="Vencen en 30 dias" value={formatearNumero(proximas30.length)} icon={CalendarClock} tone={proximas30.length > 0 ? "warning" : "default"} />
+        <KpiCard label="Vencidas por marcar" value={formatearNumero(vencidas.length)} icon={Ban} tone={vencidas.length > 0 ? "danger" : "default"} />
       </section>
 
-      <section className="rounded-2xl border p-4">
-        <h2 className="text-base font-semibold">Próximos 30 días</h2>
+      <AdminPanel title="Proximos 30 dias" description="Ordenado por urgencia para actuar primero donde queda menos tiempo.">
         {proximas30.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">No hay vencimientos en los próximos 30 días.</p>
+          <AdminEmptyState title="Sin vencimientos proximos" description="No hay vencimientos en los proximos 30 dias." />
         ) : (
-          <div className="mt-3 rounded-2xl border">
+          <AdminTableShell>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Negocio</TableHead>
                   <TableHead>Plan</TableHead>
                   <TableHead>Vencimiento</TableHead>
-                  <TableHead>Días restantes</TableHead>
-                  <TableHead className="text-right">Acción</TableHead>
+                  <TableHead>Dias restantes</TableHead>
+                  <TableHead className="text-right">Accion</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {proximas30.map((n) => (
-                  <TableRow key={n.negocio_id}>
-                    <TableCell className="max-w-48 truncate font-medium">{n.nombre}</TableCell>
+                  <TableRow key={n.negocio_id} className="hover:bg-muted/35">
+                    <TableCell className="max-w-48 truncate font-bold">{n.nombre}</TableCell>
                     <TableCell className="text-xs">{n.plan_nombre ?? "Sin plan"}</TableCell>
                     <TableCell className="text-xs">{formatearFechaCorta(n.fecha_vencimiento)}</TableCell>
                     <TableCell>
@@ -84,43 +68,42 @@ export default async function AdminRenovacionesPage() {
                     <TableCell className="text-right">
                       <Link
                         href={`/admin/negocios/${n.negocio_id}`}
-                        className="text-xs font-medium text-primary hover:underline"
+                        className="inline-flex h-8 items-center rounded-xl border border-primary/20 bg-primary/10 px-3 text-xs font-bold text-primary transition hover:bg-primary hover:text-primary-foreground"
                       >
-                        Renovar / extender
+                        Renovar
                       </Link>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </AdminTableShell>
         )}
-      </section>
+      </AdminPanel>
 
-      <section className="rounded-2xl border p-4">
-        <h2 className="text-base font-semibold">Vencidas</h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Suscripciones marcadas &quot;activa&quot; en base cuyo vencimiento ya pasó. No se ejecuta
-          marcar_suscripciones_vencidas() automáticamente: gestioná cada caso desde el detalle del negocio.
-        </p>
+      <AdminPanel
+        title="Vencidas"
+        description="Casos donde el vencimiento ya paso pero la base aun figura activa. Gestiona cada caso desde el detalle."
+      >
         {vencidas.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">No hay suscripciones vencidas pendientes.</p>
+          <AdminEmptyState title="Sin vencidas pendientes" description="No hay suscripciones vencidas pendientes de revisar." />
         ) : (
-          <ul className="mt-3 flex flex-col gap-2">
+          <ul className="grid gap-2 md:grid-cols-2">
             {vencidas.map((n) => (
-              <li key={n.negocio_id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 text-sm">
-                <span className="font-medium">{n.nombre}</span>
-                <span className="text-xs text-muted-foreground">
-                  Venció el {formatearFechaCorta(n.fecha_vencimiento)}
-                </span>
-                <Link href={`/admin/negocios/${n.negocio_id}`} className="text-xs font-medium text-primary hover:underline">
-                  Gestionar
+              <li key={n.negocio_id} className="rounded-2xl border border-border/70 bg-background/60 p-3 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="min-w-0 truncate font-bold">{n.nombre}</span>
+                  <Badge variant="destructive">Vencida</Badge>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">Vencio el {formatearFechaCorta(n.fecha_vencimiento)}</p>
+                <Link href={`/admin/negocios/${n.negocio_id}`} className="mt-3 inline-flex text-xs font-bold text-primary hover:underline">
+                  Gestionar detalle
                 </Link>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </AdminPanel>
     </div>
   );
 }

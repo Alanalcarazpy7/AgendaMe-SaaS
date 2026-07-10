@@ -7,10 +7,12 @@ import { registrarAuditoria } from "@/lib/admin/audit";
 import {
   agregarNotaSchema,
   aprobarPagoSchema,
+  aprobarSolicitudCambioPlanSchema,
   bloquearNegocioSchema,
   cambiarPlanSchema,
   desbloquearNegocioSchema,
   rechazarPagoSchema,
+  rechazarSolicitudCambioPlanSchema,
   registrarPagoSchema,
 } from "@/lib/admin/schemas/negocios";
 
@@ -26,6 +28,7 @@ function revalidarNegocio(negocioId: string) {
   revalidatePath("/admin/suscripciones");
   revalidatePath("/admin/renovaciones");
   revalidatePath("/admin/pagos");
+  revalidatePath("/admin/analitica");
 }
 
 /**
@@ -179,6 +182,107 @@ export async function rechazarPagoAction(input: unknown): Promise<ActionResult> 
   });
 
   revalidarNegocio(negocioId);
+  return auditado ? { ok: true } : { ok: true, auditWarning: AUDIT_WARNING };
+}
+
+export async function aprobarSolicitudCambioPlanAction(input: unknown): Promise<ActionResult> {
+  const owner = await requirePlatformOwner();
+  const parsed = aprobarSolicitudCambioPlanSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Datos invalidos." };
+  const { solicitudId, negocioId, fechaVencimiento, notas } = parsed.data;
+
+  const supabase = await createClient();
+
+  const { data: solicitud, error: solicitudError } = await supabase
+    .from("solicitudes_cambio_plan")
+    .select("id, negocio_id, estado, plan_solicitado_id")
+    .eq("id", solicitudId)
+    .eq("negocio_id", negocioId)
+    .maybeSingle();
+
+  if (solicitudError) return { ok: false, error: solicitudError.message };
+  if (!solicitud) return { ok: false, error: "Solicitud no encontrada." };
+  if (solicitud.estado !== "pendiente") return { ok: false, error: "La solicitud ya fue respondida." };
+  if (!solicitud.plan_solicitado_id) return { ok: false, error: "La solicitud no tiene un plan asociado." };
+
+  const { data: plan, error: planError } = await supabase
+    .from("planes_saas")
+    .select("clave")
+    .eq("id", solicitud.plan_solicitado_id)
+    .maybeSingle();
+
+  if (planError) return { ok: false, error: planError.message };
+  const planClave = plan?.clave as string | undefined;
+  if (!planClave) return { ok: false, error: "La solicitud no tiene un plan valido asociado." };
+
+  const { error: cambioError } = await supabase.rpc("admin_cambiar_plan_negocio", {
+    p_negocio_id: negocioId,
+    p_plan_clave: planClave,
+    p_fecha_vencimiento: fechaVencimiento ?? null,
+    p_notas: notas ?? "Solicitud de cambio de plan aprobada desde operaciones.",
+  });
+
+  if (cambioError) return { ok: false, error: cambioError.message };
+
+  const { error: updateError } = await supabase
+    .from("solicitudes_cambio_plan")
+    .update({
+      estado: "aprobada",
+      respondido_por: owner.id,
+      respondido_at: new Date().toISOString(),
+      notas_admin: notas ?? "Aprobada desde panel admin.",
+    })
+    .eq("id", solicitudId)
+    .eq("negocio_id", negocioId);
+
+  if (updateError) return { ok: false, error: updateError.message };
+
+  const auditado = await registrarAuditoria({
+    usuarioId: owner.id,
+    negocioId,
+    accion: "aprobar_solicitud_plan",
+    tablaAfectada: "solicitudes_cambio_plan",
+    registroId: solicitudId,
+    detalles: { planClave, fechaVencimiento: fechaVencimiento ?? null, notas: notas ?? null },
+  });
+
+  revalidarNegocio(negocioId);
+  revalidatePath("/admin");
+  return auditado ? { ok: true } : { ok: true, auditWarning: AUDIT_WARNING };
+}
+
+export async function rechazarSolicitudCambioPlanAction(input: unknown): Promise<ActionResult> {
+  const owner = await requirePlatformOwner();
+  const parsed = rechazarSolicitudCambioPlanSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Datos invalidos." };
+  const { solicitudId, negocioId, notas } = parsed.data;
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("solicitudes_cambio_plan")
+    .update({
+      estado: "rechazada",
+      respondido_por: owner.id,
+      respondido_at: new Date().toISOString(),
+      notas_admin: notas ?? null,
+    })
+    .eq("id", solicitudId)
+    .eq("negocio_id", negocioId)
+    .eq("estado", "pendiente");
+
+  if (error) return { ok: false, error: error.message };
+
+  const auditado = await registrarAuditoria({
+    usuarioId: owner.id,
+    negocioId,
+    accion: "rechazar_solicitud_plan",
+    tablaAfectada: "solicitudes_cambio_plan",
+    registroId: solicitudId,
+    detalles: { notas: notas ?? null },
+  });
+
+  revalidarNegocio(negocioId);
+  revalidatePath("/admin");
   return auditado ? { ok: true } : { ok: true, auditWarning: AUDIT_WARNING };
 }
 

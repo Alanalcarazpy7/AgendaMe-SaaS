@@ -111,8 +111,9 @@ export function calcularAlertas(args: {
   if (usuariosSinPerfil.length > 0) {
     alertas.push({
       id: "usuarios-sin-perfil",
-      titulo: `${usuariosSinPerfil.length} usuario${usuariosSinPerfil.length === 1 ? "" : "s"} sin perfil en perfiles_usuario`,
-      detalle: "Cuentas de auth.users sin fila correspondiente en perfiles_usuario.",
+      titulo: `${usuariosSinPerfil.length} cuenta${usuariosSinPerfil.length === 1 ? "" : "s"} necesita${usuariosSinPerfil.length === 1 ? "" : "n"} completar perfil`,
+      detalle:
+        "Son usuarios creados en autenticacion que aun no tienen ficha operativa. Revisalos para asignar perfil, rol o completar onboarding.",
       href: "/admin/usuarios",
       severidad: "info",
     });

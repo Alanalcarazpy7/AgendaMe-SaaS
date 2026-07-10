@@ -6,7 +6,7 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 const selectClass =
-  "h-8 rounded-2xl border border-transparent bg-input/50 px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30";
+  "h-10 rounded-2xl border border-border/80 bg-background/70 px-3 text-sm font-semibold outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30";
 
 export function UsuariosFiltros() {
   const router = useRouter();
@@ -22,6 +22,7 @@ export function UsuariosFiltros() {
         if (value) params.set(key, value);
         else params.delete(key);
       }
+      params.delete("pagina");
       startTransition(() => {
         router.push(`${pathname}?${params.toString()}`);
       });
@@ -32,7 +33,7 @@ export function UsuariosFiltros() {
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
       <form
-        className="relative w-full sm:w-64"
+        className="relative w-full sm:w-72"
         onSubmit={(e) => {
           e.preventDefault();
           actualizar({ q: q || null });
@@ -46,8 +47,8 @@ export function UsuariosFiltros() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onBlur={() => actualizar({ q: q || null })}
-          placeholder="Buscar por nombre o email…"
-          className="pl-8"
+          placeholder="Buscar por nombre o email..."
+          className="h-10 rounded-2xl bg-background/70 pl-8"
           aria-label="Buscar usuarios"
         />
       </form>

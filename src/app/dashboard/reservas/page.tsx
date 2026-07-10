@@ -86,52 +86,41 @@ export default async function ReservasPage() {
 
   empleadosQuery = applySucursalScope(empleadosQuery, access);
 
-  let clientes: ClienteReserva[] = [];
+  // Antes, la consulta de clientes se esperaba (await) por separado, ANTES
+  // de arrancar reservas/empleados/servicios: eso sumaba su latencia en vez
+  // de solaparla. Ahora las 4 consultas arrancan juntas y se esperan en un
+  // solo Promise.all, así que el tiempo total es el de la más lenta, no la
+  // suma de todas — reduce el tiempo hasta el primer render en esta página.
+  const clientesPorSucursal = access.scope === "sucursal" && Boolean(access.sucursalId);
 
-  if (access.scope === "sucursal" && access.sucursalId) {
-    const { data: clientesSucursal, error: clientesSucursalError } = await supabase
-      .from("cliente_sucursales")
-      .select(
+  const clientesQuery = clientesPorSucursal
+    ? supabase
+        .from("cliente_sucursales")
+        .select(
+          `
+          clientes (
+            id,
+            nombre_completo,
+            telefono,
+            email,
+            estado
+          )
         `
-        clientes (
-          id,
-          nombre_completo,
-          telefono,
-          email,
-          estado
         )
-      `
-      )
-      .eq("negocio_id", access.negocio.id)
-      .eq("sucursal_id", access.sucursalId);
-
-    if (clientesSucursalError) {
-      throw new Error(clientesSucursalError.message);
-    }
-
-    clientes = ((clientesSucursal ?? []) as ClienteSucursalReserva[])
-      .map((row) => obtenerObjeto(row.clientes))
-      .filter((cliente): cliente is ClienteReserva => cliente !== null)
-      .filter((cliente) => cliente.estado === "activo");
-  } else {
-    const { data: clientesData, error: clientesError } = await supabase
-      .from("clientes")
-      .select("id, nombre_completo, telefono, email, estado")
-      .eq("negocio_id", access.negocio.id)
-      .eq("estado", "activo")
-      .order("nombre_completo", { ascending: true });
-
-    if (clientesError) {
-      throw new Error(clientesError.message);
-    }
-
-    clientes = clientesData ?? [];
-  }
+        .eq("negocio_id", access.negocio.id)
+        .eq("sucursal_id", access.sucursalId as string)
+    : supabase
+        .from("clientes")
+        .select("id, nombre_completo, telefono, email, estado")
+        .eq("negocio_id", access.negocio.id)
+        .eq("estado", "activo")
+        .order("nombre_completo", { ascending: true });
 
   const [
     { data: reservas, error: reservasError },
     { data: empleados, error: empleadosError },
     { data: servicios, error: serviciosError },
+    { data: clientesRaw, error: clientesError },
   ] = await Promise.all([
     reservasQuery,
 
@@ -143,11 +132,21 @@ export default async function ReservasPage() {
       .eq("negocio_id", access.negocio.id)
       .eq("estado", "activo")
       .order("nombre", { ascending: true }),
+
+    clientesQuery,
   ]);
 
   if (reservasError) throw new Error(reservasError.message);
   if (empleadosError) throw new Error(empleadosError.message);
   if (serviciosError) throw new Error(serviciosError.message);
+  if (clientesError) throw new Error(clientesError.message);
+
+  const clientes: ClienteReserva[] = clientesPorSucursal
+    ? ((clientesRaw ?? []) as unknown as ClienteSucursalReserva[])
+        .map((row) => obtenerObjeto(row.clientes))
+        .filter((cliente): cliente is ClienteReserva => cliente !== null)
+        .filter((cliente) => cliente.estado === "activo")
+    : ((clientesRaw ?? []) as unknown as ClienteReserva[]);
 
   return (
     <ReservasPendientesPanel

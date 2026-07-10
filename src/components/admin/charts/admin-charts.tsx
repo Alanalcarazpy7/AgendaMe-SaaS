@@ -30,15 +30,21 @@ const CHART_COLORS = {
   slate: "#64748b",
 };
 
-const PLAN_COLORS = [CHART_COLORS.primary, CHART_COLORS.cyan, CHART_COLORS.teal, CHART_COLORS.green, CHART_COLORS.slate];
+const PLAN_COLORS = [
+  CHART_COLORS.primary,
+  CHART_COLORS.cyan,
+  CHART_COLORS.teal,
+  CHART_COLORS.green,
+  CHART_COLORS.slate,
+];
 const SUS_COLORS = [CHART_COLORS.green, CHART_COLORS.red, CHART_COLORS.cyan];
 
-const AXIS_TICK = { fill: "var(--muted-foreground)", fontSize: 11, fontWeight: 600 };
+const AXIS_TICK = { fill: "var(--muted-foreground)", fontSize: 11, fontWeight: 700 };
 const GRID_STROKE = "var(--border)";
 const CURSOR_FILL = "color-mix(in srgb, var(--muted) 72%, transparent)";
 
 function chartCard(extra = "") {
-  return `ag-report-chart rounded-[1.5rem] border border-border/80 bg-card/90 p-4 shadow-[0_16px_48px_rgb(15_23_42/0.07)] ring-1 ring-white/60 backdrop-blur-xl dark:bg-card/80 dark:shadow-black/20 dark:ring-white/5 ${extra}`;
+  return `ag-report-chart overflow-hidden rounded-[1.6rem] border border-border/75 bg-card/90 p-4 shadow-[0_16px_48px_rgb(15_23_42/0.07)] ring-1 ring-white/60 backdrop-blur-xl transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_20px_60px_rgb(15_23_42/0.11)] dark:bg-card/80 dark:shadow-black/20 dark:ring-white/5 ${extra}`;
 }
 
 function EmptyChart({ children }: { children: string }) {
@@ -97,13 +103,13 @@ export function IngresosPorMesChart({ data }: { data: PuntoIngresoMes[] }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-base font-bold tracking-tight">Ingresos cobrados por mes</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Suma de pagos manuales aprobados (real, no estimado).</p>
+          <p className="mt-1 text-sm text-muted-foreground">Pagos manuales aprobados. Es ingreso real, no estimado.</p>
         </div>
         <TrendingUp className="h-5 w-5 text-primary" aria-hidden="true" />
       </div>
 
       {!hayDatos ? (
-        <EmptyChart>Todavía no hay pagos aprobados registrados.</EmptyChart>
+        <EmptyChart>Todavia no hay pagos aprobados registrados.</EmptyChart>
       ) : (
         <div className="mt-4 h-[240px]">
           <ResponsiveContainer width="100%" height="100%">
@@ -129,13 +135,13 @@ export function NegociosNuevosChart({ data }: { data: PuntoNegociosMes[] }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-base font-bold tracking-tight">Negocios nuevos por mes</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Altas registradas según fecha de creación.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Altas registradas segun fecha de creacion.</p>
         </div>
         <Users2 className="h-5 w-5 text-primary" aria-hidden="true" />
       </div>
 
       {!hayDatos ? (
-        <EmptyChart>Todavía no hay negocios registrados en este rango.</EmptyChart>
+        <EmptyChart>Todavia no hay negocios registrados en este rango.</EmptyChart>
       ) : (
         <div className="mt-4 h-[240px]">
           <ResponsiveContainer width="100%" height="100%">
@@ -160,14 +166,14 @@ export function DistribucionPlanChart({ data }: { data: PuntoDistribucionPlan[] 
     <section className={chartCard()}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-bold tracking-tight">Distribución por plan</h2>
+          <h2 className="text-base font-bold tracking-tight">Distribucion por plan</h2>
           <p className="mt-1 text-sm text-muted-foreground">Negocios agrupados por el plan actual.</p>
         </div>
         <PieChartIcon className="h-5 w-5 text-primary" aria-hidden="true" />
       </div>
 
       {total === 0 ? (
-        <EmptyChart>Todavía no hay negocios para agrupar por plan.</EmptyChart>
+        <EmptyChart>Todavia no hay negocios para agrupar por plan.</EmptyChart>
       ) : (
         <div className="mt-4 grid gap-3 sm:grid-cols-[11rem_1fr] sm:items-center">
           <div className="relative h-[170px]">
@@ -199,9 +205,15 @@ export function DistribucionPlanChart({ data }: { data: PuntoDistribucionPlan[] 
 
           <div className="grid gap-2">
             {data.map((item, index) => (
-              <div key={item.clave} className="flex items-center justify-between gap-3 rounded-xl border bg-background/60 px-3 py-2 text-sm">
+              <div
+                key={item.clave}
+                className="flex items-center justify-between gap-3 rounded-xl border bg-background/60 px-3 py-2 text-sm"
+              >
                 <span className="flex min-w-0 items-center gap-2">
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: PLAN_COLORS[index % PLAN_COLORS.length] }} />
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: PLAN_COLORS[index % PLAN_COLORS.length] }}
+                  />
                   <span className="truncate font-semibold">{item.nombre}</span>
                 </span>
                 <span className="font-bold">{item.cantidad}</span>
@@ -222,13 +234,13 @@ export function SuscripcionesEstadoChart({ data }: { data: PuntoSuscripciones[] 
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-base font-bold tracking-tight">Suscripciones por estado</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Activas, vencidas y por vencer en los próximos 30 días.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Activas, vencidas y por vencer en los proximos 30 dias.</p>
         </div>
         <BarChart3 className="h-5 w-5 text-primary" aria-hidden="true" />
       </div>
 
       {total === 0 ? (
-        <EmptyChart>Todavía no hay suscripciones para mostrar.</EmptyChart>
+        <EmptyChart>Todavia no hay suscripciones para mostrar.</EmptyChart>
       ) : (
         <div className="mt-4 h-[220px]">
           <ResponsiveContainer width="100%" height="100%">

@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 
 type SolicitarPlanButtonProps = {
   planClave: string;
+  planNombre: string;
   planActual: boolean;
 };
 
 export function SolicitarPlanButton({
   planClave,
+  planNombre,
   planActual,
 }: SolicitarPlanButtonProps) {
   const [loading, setLoading] = useState(false);
@@ -30,7 +32,7 @@ export function SolicitarPlanButton({
         },
         body: JSON.stringify({
           planClave,
-          mensaje: "Solicitud desde página interna de planes.",
+          mensaje: `El negocio solicita cambiar al plan ${planNombre} desde su panel.`,
         }),
       });
 
@@ -41,7 +43,7 @@ export function SolicitarPlanButton({
         return;
       }
 
-      setMensaje("Solicitud registrada.");
+      setMensaje(`Solicitud enviada: ${planNombre}. Te contactaremos para coordinar el pago y activacion.`);
 
       if (data.whatsappUrl) {
         window.open(data.whatsappUrl, "_blank", "noopener,noreferrer");
@@ -69,7 +71,7 @@ export function SolicitarPlanButton({
         ) : (
           <Sparkles className="mr-2 h-4 w-4" />
         )}
-        Solicitar cambio
+        Solicitar este plan
       </Button>
 
       {mensaje && <p className="text-xs text-green-700">{mensaje}</p>}

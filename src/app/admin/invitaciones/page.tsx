@@ -1,35 +1,51 @@
 import Link from "next/link";
+import { MailCheck, MailWarning, Send, TimerOff } from "lucide-react";
 import { requirePlatformOwner } from "@/lib/admin/guard";
 import { obtenerInvitaciones, estadoEfectivoInvitacion } from "@/lib/admin/queries/invitaciones";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatearFechaCorta } from "@/lib/admin/formatters/date";
+import { formatearNumero } from "@/lib/admin/formatters/currency";
 import { InvitacionRevocarBoton } from "@/components/admin/invitaciones/invitacion-revocar-boton";
+import { AdminEmptyState, AdminMetricPill, AdminPageHeader, AdminTableShell } from "@/components/admin/admin-ui";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 function badgeEstado(estado: string) {
   if (estado === "pendiente") return <Badge variant="secondary">Pendiente</Badge>;
-  if (estado === "aceptada") return <Badge variant="default">Aceptada</Badge>;
+  if (estado === "aceptada") return <Badge>Aceptada</Badge>;
   if (estado === "revocada") return <Badge variant="outline">Revocada</Badge>;
   if (estado === "expirada") return <Badge variant="destructive">Expirada</Badge>;
   return <Badge variant="outline">{estado}</Badge>;
 }
 
 type PageProps = {
-  searchParams?: Promise<{ estado?: string }>;
+  searchParams?: Promise<{ estado?: string; pagina?: string }>;
 };
+
+function buildHref(estado: string, pagina?: number) {
+  const usp = new URLSearchParams();
+  if (estado) usp.set("estado", estado);
+  if (pagina && pagina > 1) usp.set("pagina", String(pagina));
+  const qs = usp.toString();
+  return qs ? `/admin/invitaciones?${qs}` : "/admin/invitaciones";
+}
 
 export default async function AdminInvitacionesPage({ searchParams }: PageProps) {
   await requirePlatformOwner();
   const params = (await searchParams) ?? {};
+  const paginaActual = Math.max(1, Number(params.pagina ?? 1) || 1);
+  const porPagina = 25;
 
   const invitaciones = await obtenerInvitaciones(500);
   const conEstadoEfectivo = invitaciones.map((inv) => ({ ...inv, estadoEfectivo: estadoEfectivoInvitacion(inv) }));
 
   const filtroEstado = params.estado ?? "";
-  const filas = filtroEstado ? conEstadoEfectivo.filter((i) => i.estadoEfectivo === filtroEstado) : conEstadoEfectivo;
+  const filtradas = filtroEstado ? conEstadoEfectivo.filter((i) => i.estadoEfectivo === filtroEstado) : conEstadoEfectivo;
+  const totalPaginas = Math.max(1, Math.ceil(filtradas.length / porPagina));
+  const pagina = Math.min(paginaActual, totalPaginas);
+  const filas = filtradas.slice((pagina - 1) * porPagina, pagina * porPagina);
 
   const tabs = [
     { key: "", label: "Todas", cantidad: conEstadoEfectivo.length },
@@ -41,20 +57,29 @@ export default async function AdminInvitacionesPage({ searchParams }: PageProps)
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-bold tracking-tight">Invitaciones</h1>
-        <p className="text-sm text-muted-foreground">
-          Invitaciones de acceso a sucursales de todos los negocios. No se muestran tokens.
-        </p>
-      </div>
+      <AdminPageHeader
+        eyebrow="Accesos enviados"
+        title="Invitaciones"
+        description="Control de invitaciones a sucursales. No se muestran tokens ni enlaces sensibles."
+        metrics={
+          <>
+            <AdminMetricPill label="Enviadas" value={formatearNumero(conEstadoEfectivo.length)} icon={Send} />
+            <AdminMetricPill label="Pendientes" value={formatearNumero(tabs[1].cantidad)} icon={MailWarning} tone={tabs[1].cantidad > 0 ? "warning" : "default"} />
+            <AdminMetricPill label="Aceptadas" value={formatearNumero(tabs[2].cantidad)} icon={MailCheck} tone="success" />
+            <AdminMetricPill label="Expiradas" value={formatearNumero(tabs[3].cantidad)} icon={TimerOff} tone={tabs[3].cantidad > 0 ? "danger" : "default"} />
+          </>
+        }
+      />
 
-      <nav className="flex flex-wrap gap-2" aria-label="Filtro de invitaciones">
+      <nav className="flex flex-wrap gap-2 rounded-[1.5rem] border border-border/75 bg-card/85 p-3 shadow-[0_14px_42px_rgb(15_23_42/0.06)] ring-1 ring-white/60 dark:bg-card/75 dark:ring-white/5" aria-label="Filtro de invitaciones">
         {tabs.map((t) => (
           <Link
             key={t.key}
-            href={t.key ? `/admin/invitaciones?estado=${t.key}` : "/admin/invitaciones"}
-            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-              filtroEstado === t.key ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted"
+            href={buildHref(t.key)}
+            className={`inline-flex h-9 items-center rounded-2xl border px-3 text-xs font-bold transition ${
+              filtroEstado === t.key
+                ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                : "border-border/80 bg-background/70 hover:bg-muted"
             }`}
           >
             {t.label} ({t.cantidad})
@@ -63,11 +88,25 @@ export default async function AdminInvitacionesPage({ searchParams }: PageProps)
       </nav>
 
       {filas.length === 0 ? (
-        <div className="flex min-h-[160px] items-center justify-center rounded-2xl border border-dashed text-sm text-muted-foreground">
-          No hay invitaciones en este filtro.
-        </div>
+        <AdminEmptyState title="Sin invitaciones" description="No hay invitaciones en este filtro." />
       ) : (
-        <div className="rounded-2xl border">
+        <AdminTableShell
+          footer={
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p>
+                {formatearNumero(filtradas.length)} invitacion{filtradas.length === 1 ? "" : "es"} - pagina {pagina} de {totalPaginas}
+              </p>
+              <div className="flex gap-2">
+                <Link className={`rounded-xl border px-3 py-2 font-bold ${pagina <= 1 ? "pointer-events-none opacity-40" : "hover:bg-muted"}`} href={buildHref(filtroEstado, pagina - 1)}>
+                  Anterior
+                </Link>
+                <Link className={`rounded-xl border px-3 py-2 font-bold ${pagina >= totalPaginas ? "pointer-events-none opacity-40" : "hover:bg-muted"}`} href={buildHref(filtroEstado, pagina + 1)}>
+                  Siguiente
+                </Link>
+              </div>
+            </div>
+          }
+        >
           <Table>
             <TableHeader>
               <TableRow>
@@ -82,10 +121,10 @@ export default async function AdminInvitacionesPage({ searchParams }: PageProps)
             </TableHeader>
             <TableBody>
               {filas.map((inv) => (
-                <TableRow key={inv.id}>
-                  <TableCell className="max-w-48 truncate text-xs">{inv.email}</TableCell>
-                  <TableCell className="max-w-48 truncate text-xs">
-                    {inv.negocios?.nombre ?? "—"} / {inv.sucursales?.nombre ?? "—"}
+                <TableRow key={inv.id} className="hover:bg-muted/35">
+                  <TableCell className="max-w-52 truncate text-xs font-bold">{inv.email}</TableCell>
+                  <TableCell className="max-w-56 truncate text-xs">
+                    {inv.negocios?.nombre ?? "-"} / {inv.sucursales?.nombre ?? "-"}
                   </TableCell>
                   <TableCell className="text-xs">{inv.rol}</TableCell>
                   <TableCell>{badgeEstado(inv.estadoEfectivo)}</TableCell>
@@ -95,14 +134,14 @@ export default async function AdminInvitacionesPage({ searchParams }: PageProps)
                     {inv.estadoEfectivo === "pendiente" ? (
                       <InvitacionRevocarBoton invitacionId={inv.id} />
                     ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
+                      <span className="text-xs text-muted-foreground">-</span>
                     )}
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </div>
+        </AdminTableShell>
       )}
     </div>
   );

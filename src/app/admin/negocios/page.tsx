@@ -1,9 +1,12 @@
+import { Ban, Building2, CalendarClock, Filter, Sparkles } from "lucide-react";
 import { requirePlatformOwner } from "@/lib/admin/guard";
 import { obtenerNegociosResumen } from "@/lib/admin/queries/negocios-resumen";
 import { obtenerPlanes } from "@/lib/admin/queries/planes";
 import { filtrarYPaginarNegocios, type NegociosFiltro } from "@/lib/admin/negocios-table";
 import { NegociosFiltros } from "@/components/admin/negocios/negocios-filtros";
 import { NegociosTabla } from "@/components/admin/negocios/negocios-tabla";
+import { AdminMetricPill, AdminPageHeader } from "@/components/admin/admin-ui";
+import { formatearNumero } from "@/lib/admin/formatters/currency";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -36,6 +39,11 @@ export default async function AdminNegociosPage({ searchParams }: PageProps) {
   };
 
   const resultado = filtrarYPaginarNegocios(negocios, filtro);
+  const activos = negocios.filter((n) => n.estado === "activo").length;
+  const bloqueados = negocios.filter((n) => n.estado === "bloqueado").length;
+  const vencen30 = negocios.filter(
+    (n) => typeof n.dias_para_vencer === "number" && n.dias_para_vencer >= 0 && n.dias_para_vencer <= 30
+  ).length;
 
   function buildPageHref(pagina: number) {
     const usp = new URLSearchParams();
@@ -51,14 +59,36 @@ export default async function AdminNegociosPage({ searchParams }: PageProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-bold tracking-tight">Negocios</h1>
-        <p className="text-sm text-muted-foreground">
-          {negocios.length} negocios registrados en la plataforma.
-        </p>
-      </div>
+      <AdminPageHeader
+        eyebrow="Gestion comercial"
+        title="Negocios"
+        description="Busca, filtra y entra al detalle de cada negocio sin navegar de mas. La tabla esta preparada para muchos registros con paginacion."
+        metrics={
+          <>
+            <AdminMetricPill label="Registrados" value={formatearNumero(negocios.length)} icon={Building2} />
+            <AdminMetricPill label="Activos" value={formatearNumero(activos)} icon={Sparkles} tone="success" />
+            <AdminMetricPill
+              label="Bloqueados"
+              value={formatearNumero(bloqueados)}
+              icon={Ban}
+              tone={bloqueados > 0 ? "danger" : "default"}
+            />
+            <AdminMetricPill
+              label="Vencen en 30 dias"
+              value={formatearNumero(vencen30)}
+              icon={CalendarClock}
+              tone={vencen30 > 0 ? "warning" : "default"}
+            />
+          </>
+        }
+      />
 
       <NegociosFiltros planes={planes.map((p) => ({ clave: p.clave, nombre: p.nombre }))} />
+
+      <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+        <Filter className="h-4 w-4 text-primary" aria-hidden="true" />
+        Mostrando {formatearNumero(resultado.total)} resultado{resultado.total === 1 ? "" : "s"} con los filtros actuales.
+      </div>
 
       <NegociosTabla
         filas={resultado.filas}
