@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import { AgendaStatusPage, statusActions } from "@/components/status/agenda-status-page";
 
 type PageProps = {
   searchParams?: Promise<{
@@ -6,59 +6,55 @@ type PageProps = {
   }>;
 };
 
-function mensajePorMotivo(motivo?: string) {
+function contenidoPorMotivo(motivo?: string) {
   if (motivo === "plan_required") {
-    return "Tu acceso pertenece a una sucursal, pero el negocio no está actualmente en Plan Empresarial.";
+    return {
+      title: "Este pase todavia no abre esa puerta",
+      description:
+        "La cuenta esta bien, pero esta seccion necesita un plan o permiso que ahora mismo no esta activo.",
+      note: "Pedi al responsable del negocio que revise el plan contratado o tu nivel de acceso.",
+    };
   }
 
   if (motivo === "inactive_branch") {
-    return "La sucursal asignada a tu usuario está inactiva.";
+    return {
+      title: "La sucursal esta tomando una pausa",
+      description:
+        "Tu usuario esta vinculado a una sucursal que figura como inactiva. Por eso frenamos el acceso antes de entrar.",
+      note: "Cuando la sucursal vuelva a estar activa, este acceso deberia funcionar normalmente.",
+    };
   }
 
   if (motivo === "inactive_business") {
-    return "El negocio está inactivo o bloqueado.";
+    return {
+      title: "El negocio esta fuera de agenda",
+      description:
+        "La cuenta del negocio no esta disponible en este momento. Puede estar pausada, bloqueada o pendiente de revision.",
+      note: "Si crees que esto es un error, contacta al responsable de la cuenta para revisar el estado.",
+    };
   }
 
-  return "Tu usuario no tiene un acceso activo al dashboard.";
+  return {
+    title: "Tu llave no encaja en esta agenda",
+    description:
+      "Iniciaste sesion correctamente, pero no encontramos un acceso activo para este panel.",
+    note: "Puede faltar una invitacion, una asignacion al negocio o una configuracion pendiente.",
+  };
 }
 
 export default async function SinAccesoPage({ searchParams }: PageProps) {
   const params = (await searchParams) ?? {};
-  const motivo = params.motivo;
+  const contenido = contenidoPorMotivo(params.motivo);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
-      <section className="w-full max-w-lg rounded-3xl border bg-background p-8 text-center shadow-sm">
-        <p className="text-sm text-muted-foreground">AgendaMe</p>
-
-        <h1 className="mt-2 text-3xl font-bold tracking-tight">
-          Sin acceso al dashboard
-        </h1>
-
-        <p className="mt-3 text-sm text-muted-foreground">
-          {mensajePorMotivo(motivo)}
-        </p>
-
-        <div className="mt-6 grid gap-2 sm:grid-cols-2">
-          <Link
-            href="/login"
-            className="inline-flex h-11 items-center justify-center rounded-xl bg-foreground px-5 text-sm font-semibold text-background transition hover:opacity-90"
-          >
-            Ir al login
-          </Link>
-
-          <Link
-            href="/"
-            className="inline-flex h-11 items-center justify-center rounded-xl border px-5 text-sm font-semibold transition hover:bg-muted"
-          >
-            Volver al inicio
-          </Link>
-        </div>
-
-        <p className="mt-5 text-xs text-muted-foreground">
-          Si recibiste una invitación, asegurate de abrir el link y crear tu contraseña antes de iniciar sesión.
-        </p>
-      </section>
-    </main>
+    <AgendaStatusPage
+      code="403"
+      tone="amber"
+      eyebrow="Acceso no habilitado"
+      title={contenido.title}
+      description={contenido.description}
+      note={contenido.note}
+      actions={[statusActions.retry, statusActions.login, statusActions.home]}
+    />
   );
 }

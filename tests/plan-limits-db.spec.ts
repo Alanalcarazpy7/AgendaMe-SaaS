@@ -306,6 +306,13 @@ for (const planClave of ["gratis", "basico", "profesional", "empresarial"] as Pl
         "La columna limite_clientes no existe o no fue expuesta en planes_saas."
       );
 
+      // test.skip() ya detiene la ejecución en runtime cuando la condición es
+      // verdadera; este `return` es solo para que TypeScript pueda descartar
+      // `undefined` del tipo de `limite` en el resto de la función.
+      if (typeof limite === "undefined") {
+        return;
+      }
+
       if (limite === null) {
         for (let i = 0; i < 50; i++) {
           const result = await intentarCrearCliente(fixture.negocioId, i);

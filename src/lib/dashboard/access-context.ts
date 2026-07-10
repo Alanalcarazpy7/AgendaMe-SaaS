@@ -56,6 +56,7 @@ type AccessFail = {
   ok: false;
   reason:
     | "unauthenticated"
+    | "platform_owner"
     | "no_access"
     | "inactive_business"
     | "inactive_branch"
@@ -183,6 +184,31 @@ async function obtenerPlanActivo(
   };
 }
 
+async function esPlatformOwner(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  userId: string
+) {
+  const ownerId = process.env.ADMIN_OWNER_USER_ID;
+
+  if (!ownerId || ownerId !== userId) return false;
+
+  const { data: perfilPorId } = await supabase
+    .from("perfiles_usuario")
+    .select("rol_global")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (perfilPorId?.rol_global === "super_admin") return true;
+
+  const { data: perfilPorUsuarioId } = await supabase
+    .from("perfiles_usuario")
+    .select("rol_global")
+    .eq("usuario_id", userId)
+    .maybeSingle();
+
+  return perfilPorUsuarioId?.rol_global === "super_admin";
+}
+
 function permisosPorRol({
   rol,
   scope,
@@ -233,6 +259,13 @@ export async function resolveDashboardAccess(): Promise<DashboardAccessResult> {
   const email = normalizarEmail(user.email);
   const supabase = createServiceRoleClient();
   const perfilUsuario = await obtenerPerfilUsuario(supabase, user);
+
+  if (await esPlatformOwner(supabase, user.id)) {
+    return {
+      ok: false,
+      reason: "platform_owner",
+    };
+  }
 
   const { data: membresiaGlobal, error: membresiaError } = await supabase
     .from("negocio_usuarios")
@@ -469,6 +502,10 @@ export async function requireDashboardAccess() {
   if (!access.ok) {
     if (access.reason === "unauthenticated") {
       redirect("/login");
+    }
+
+    if (access.reason === "platform_owner") {
+      redirect("/admin");
     }
 
     redirect(`/sin-acceso?motivo=${access.reason}`);

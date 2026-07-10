@@ -1,0 +1,26 @@
+export type NegocioResumenRow = {
+  negocio_id: string;
+  nombre: string;
+  rubro: string | null;
+  slug: string | null;
+  telefono: string | null;
+  email: string | null;
+  estado: string;
+  created_at: string;
+  plan_nombre: string | null;
+  plan_clave: string | null;
+  precio_gs: number | null;
+  suscripcion_estado: string | null;
+  fecha_inicio: string | null;
+  fecha_vencimiento: string | null;
+  citas_usadas_mes_actual: number | null;
+  limite_citas_mensuales: number | null;
+  clientes_total: number;
+  empleados_total: number;
+  servicios_total: number;
+  citas_total: number;
+  citas_mes_actual: number;
+  ultimo_pago_estado: string | null;
+  ultimo_pago_fecha: string | null;
+  dias_para_vencer: number | null;
+};

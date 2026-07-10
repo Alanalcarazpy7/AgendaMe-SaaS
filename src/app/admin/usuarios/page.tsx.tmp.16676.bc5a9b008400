@@ -1,0 +1,107 @@
+import { requirePlatformOwner } from "@/lib/admin/guard";
+import { obtenerUsuariosPlataforma } from "@/lib/admin/queries/usuarios";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatearFechaCorta } from "@/lib/admin/formatters/date";
+import { UsuariosFiltros } from "@/components/admin/usuarios/usuarios-filtros";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+type PageProps = {
+  searchParams?: Promise<{ q?: string; conNegocio?: string; perfil?: string }>;
+};
+
+export default async function AdminUsuariosPage({ searchParams }: PageProps) {
+  await requirePlatformOwner();
+  const params = (await searchParams) ?? {};
+
+  const usuarios = await obtenerUsuariosPlataforma();
+
+  let filas = usuarios;
+  const q = (params.q ?? "").trim().toLowerCase();
+  if (q) {
+    filas = filas.filter(
+      (u) =>
+        (u.email ?? "").toLowerCase().includes(q) ||
+        (u.nombre ?? "").toLowerCase().includes(q) ||
+        u.negocios.some((n) => n.negocioNombre.toLowerCase().includes(q))
+    );
+  }
+  if (params.conNegocio === "si") filas = filas.filter((u) => u.negocios.length > 0);
+  if (params.conNegocio === "no") filas = filas.filter((u) => u.negocios.length === 0 && u.sucursales.length === 0);
+  if (params.perfil === "incompleto") filas = filas.filter((u) => !u.perfilCompleto);
+
+  filas = [...filas].sort((a, b) => new Date(b.creadoEn ?? 0).getTime() - new Date(a.creadoEn ?? 0).getTime());
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-xl font-bold tracking-tight">Usuarios</h1>
+        <p className="text-sm text-muted-foreground">
+          {usuarios.length} cuentas registradas en auth.users, combinadas con perfiles y accesos.
+        </p>
+      </div>
+
+      <UsuariosFiltros />
+
+      {filas.length === 0 ? (
+        <div className="flex min-h-[160px] items-center justify-center rounded-2xl border border-dashed text-sm text-muted-foreground">
+          No hay usuarios que coincidan con los filtros.
+        </div>
+      ) : (
+        <div className="rounded-2xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Usuario</TableHead>
+                <TableHead>Registro</TableHead>
+                <TableHead>Último acceso</TableHead>
+                <TableHead>Rol global</TableHead>
+                <TableHead>Negocio(s)</TableHead>
+                <TableHead>Sucursal(es)</TableHead>
+                <TableHead>Perfil</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filas.map((u) => (
+                <TableRow key={u.id}>
+                  <TableCell className="max-w-48">
+                    <p className="truncate font-medium">{u.nombre ?? "Sin nombre"}</p>
+                    <p className="truncate text-xs text-muted-foreground">{u.email ?? "—"}</p>
+                  </TableCell>
+                  <TableCell className="text-xs">{formatearFechaCorta(u.creadoEn)}</TableCell>
+                  <TableCell className="text-xs">{formatearFechaCorta(u.ultimoAcceso)}</TableCell>
+                  <TableCell>
+                    {u.rolGlobal === "super_admin" ? (
+                      <Badge variant="default">super_admin</Badge>
+                    ) : (
+                      <Badge variant="outline">{u.rolGlobal ?? "sin rol"}</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="max-w-40 truncate text-xs">
+                    {u.negocios.length > 0
+                      ? u.negocios.map((n) => `${n.negocioNombre} (${n.rol})`).join(", ")
+                      : "—"}
+                  </TableCell>
+                  <TableCell className="max-w-40 truncate text-xs">
+                    {u.sucursales.length > 0
+                      ? u.sucursales.map((s) => `${s.sucursalNombre} (${s.rol})`).join(", ")
+                      : "—"}
+                  </TableCell>
+                  <TableCell>
+                    {u.perfilCompleto ? (
+                      <Badge variant="secondary">Completo</Badge>
+                    ) : (
+                      <Badge variant="outline">Incompleto</Badge>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}

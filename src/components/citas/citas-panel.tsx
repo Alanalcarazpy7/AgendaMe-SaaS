@@ -230,7 +230,23 @@ function colorEstado(estado: CitaItem["estado"]) {
   if (estado === "completada") return "#16a34a";
   if (estado === "cancelada") return "#dc2626";
   if (estado === "no_asistio") return "#f97316";
-  return "#71717a";
+  return "#f59e0b";
+}
+
+function citaEstadoSurfaceClass(estado: CitaItem["estado"]) {
+  if (estado === "confirmada") {
+    return "border-blue-300/80 bg-blue-50 text-blue-950 shadow-sm ring-1 ring-blue-200/80 dark:border-blue-400/50 dark:bg-blue-950/45 dark:text-blue-50 dark:ring-blue-400/20";
+  }
+
+  if (estado === "completada") {
+    return "border-emerald-300/80 bg-emerald-50 text-emerald-950 shadow-sm ring-1 ring-emerald-200/80 dark:border-emerald-400/50 dark:bg-emerald-950/45 dark:text-emerald-50 dark:ring-emerald-400/20";
+  }
+
+  if (estado === "no_asistio") {
+    return "border-orange-300/80 bg-orange-50 text-orange-950 shadow-sm ring-1 ring-orange-200/80 dark:border-orange-400/50 dark:bg-orange-950/45 dark:text-orange-50 dark:ring-orange-400/20";
+  }
+
+  return "border-amber-300/80 bg-amber-50 text-amber-950 shadow-sm ring-1 ring-amber-200/80 dark:border-amber-400/50 dark:bg-amber-950/45 dark:text-amber-50 dark:ring-amber-400/20";
 }
 
 export function CitasPanel({
@@ -314,6 +330,8 @@ export function CitasPanel({
     const fechasSemana = new Set(diasSemana.map(toIsoDate));
 
     return citas.filter((cita) => {
+      if (cita.estado === "cancelada") return false;
+
       const coincideSemana = fechasSemana.has(cita.fecha);
       const coincideEmpleado =
         empleadoFiltro === "todos" || cita.empleado_id === empleadoFiltro;
@@ -597,6 +615,24 @@ export function CitasPanel({
                   Semana del {inicioSemana.getDate()} al {finSemana.getDate()} de{" "}
                   {meses[finSemana.getMonth()].toLowerCase()}
                 </h2>
+                <div className="mt-2 flex flex-wrap justify-center gap-2 text-[11px] font-semibold text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-amber-500" />
+                    Pendiente
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-blue-600" />
+                    Confirmada
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-emerald-600" />
+                    Completada
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full bg-orange-500" />
+                    No asistio
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -683,7 +719,6 @@ export function CitasPanel({
                     {citasDia.map((cita) => {
                       const cliente = clientesMap.get(cita.cliente_id);
                       const servicio = serviciosMap.get(cita.servicio_id);
-                      const empleado = empleadosMap.get(cita.empleado_id);
 
                       const inicio = horaAMinutos(cita.hora_inicio);
                       const fin = horaAMinutos(cita.hora_fin);
@@ -700,6 +735,7 @@ export function CitasPanel({
 
                       const layout = obtenerLayoutSolapado(cita, citasDia);
                       const estaResaltada = highlightCitaId === cita.id;
+                      const estadoSurfaceClass = citaEstadoSurfaceClass(cita.estado);
 
                       return (
                         <button
@@ -713,7 +749,7 @@ export function CitasPanel({
                           className={`absolute cursor-pointer overflow-hidden rounded-lg border text-left transition ${
                             estaResaltada
                               ? "z-40 border-cyan-300 bg-cyan-50 text-slate-950 outline outline-2 outline-offset-2 outline-cyan-300 shadow-[0_0_0_1px_rgb(34_211_238),0_0_24px_rgb(34_211_238/0.55),0_16px_38px_rgb(8_145_178/0.38)] ring-2 ring-cyan-300/80 dark:border-cyan-200 dark:bg-cyan-950/95 dark:text-white dark:outline-cyan-200 dark:shadow-[0_0_0_1px_rgb(103_232_249),0_0_28px_rgb(34_211_238/0.65),0_18px_42px_rgb(34_211_238/0.26)] dark:ring-cyan-200"
-                              : "z-10 border-border bg-card shadow-sm ring-1 ring-foreground/5 hover:z-20 hover:shadow-md hover:ring-foreground/15"
+                              : `z-10 hover:z-20 hover:shadow-md ${estadoSurfaceClass}`
                           }`}
                           style={{
                             top,
@@ -724,9 +760,7 @@ export function CitasPanel({
                             borderLeftColor:
                               estaResaltada
                                 ? "#22d3ee"
-                                : servicio?.color ??
-                                  empleado?.color_calendario ??
-                                  colorEstado(cita.estado),
+                                : colorEstado(cita.estado),
                           }}
                           title={`${hora(cita.hora_inicio)} - ${hora(cita.hora_fin)} · ${cliente?.nombre_completo ?? "Cliente"} · ${servicio?.nombre ?? "Servicio"}`}
                         >
@@ -753,7 +787,7 @@ export function CitasPanel({
                               {cliente?.nombre_completo ?? "Cliente"}
                             </p>
 
-                            <p className={`truncate text-[11px] leading-tight ${estaResaltada ? "text-cyan-800 dark:text-cyan-100" : "text-muted-foreground"}`}>
+                            <p className={`truncate text-[11px] leading-tight ${estaResaltada ? "text-cyan-800 dark:text-cyan-100" : "text-current opacity-75"}`}>
                               {servicio?.nombre ?? "Servicio"}
                             </p>
                           </div>

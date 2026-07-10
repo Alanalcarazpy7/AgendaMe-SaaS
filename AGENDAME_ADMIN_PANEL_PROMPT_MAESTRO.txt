@@ -1,0 +1,1184 @@
+AGENDA ME — PROMPT MAESTRO PARA PANEL PRIVADO DEL PROPIETARIO DEL SAAS
+=====================================================================
+
+OBJETIVO GENERAL
+----------------
+Implementar un panel administrativo privado, profesional y completo para el propietario de AgendaMe, separado del dashboard de los negocios.
+
+Este panel debe permitir administrar toda la plataforma SaaS sin depender de entrar constantemente a Supabase o ejecutar SQL manual.
+
+El objetivo principal es la funcionalidad, seguridad y control del negocio. El diseño debe ser profesional, claro y coherente con AgendaMe, pero no es la prioridad absoluta en esta fase.
+
+IMPORTANTE:
+- No te limites a analizar o recomendar.
+- Inspecciona el proyecto real e implementa directamente.
+- Reutiliza lo que ya existe.
+- No inventes datos.
+- No sustituyas datos reales por mocks permanentes.
+- No afirmes que algo funciona si no fue verificado.
+- No marques migraciones como aplicadas si solo se creó el archivo.
+- No ejecutes cambios remotos en Supabase sin autorización explícita.
+- Mantén npm run build funcionando.
+- Mantén compatibilidad con la lógica actual.
+- No elimines ni rompas funcionalidades existentes.
+- Trabaja por fases y documenta el progreso para que otro agente pueda continuar.
+
+=====================================================================
+CONTEXTO DEL PROYECTO
+=====================================================================
+
+Proyecto:
+- AgendaMe SaaS multi-tenant.
+- Next.js 16 App Router.
+- React 19.
+- TypeScript.
+- Tailwind CSS 4.
+- Supabase Auth, PostgreSQL, Storage y RLS.
+- @supabase/ssr.
+- React Hook Form.
+- Zod.
+- Recharts ya instalado.
+- ExcelJS ya instalado.
+- Lucide React.
+- Shadcn/Base UI.
+- Playwright.
+- Modo claro y oscuro existentes.
+
+La aplicación ya cuenta con:
+- landing pública;
+- autenticación;
+- dashboard por roles;
+- reservas públicas;
+- negocios multi-tenant;
+- sucursales;
+- empleados;
+- clientes;
+- servicios;
+- citas;
+- planes;
+- suscripciones;
+- pagos manuales;
+- invitaciones de sucursal;
+- usuarios por sucursal;
+- permisos;
+- auditoría;
+- límites por plan;
+- pruebas funcionales y de seguridad.
+
+La arquitectura distingue:
+- negocio;
+- sucursales;
+- usuarios con acceso;
+- empleados operativos;
+- clientes;
+- servicios;
+- citas;
+- suscripciones;
+- planes;
+- pagos;
+- solicitudes de cambio de plan;
+- auditoría.
+
+Antes de modificar:
+1. Lee package.json.
+2. Lee docs/brand-agendame.md.
+3. Inspecciona src/app, src/lib, src/components, tests y migraciones SQL.
+4. Busca si ya existe algo en /admin.
+5. Revisa el middleware, proxy o sistema de protección de rutas.
+6. Revisa cómo se crean los clientes Supabase de servidor y cliente.
+7. Revisa las funciones RPC y vistas administrativas existentes.
+8. Revisa las tablas y tipos reales antes de crear algo nuevo.
+9. Reutiliza utilidades y componentes existentes.
+10. No dupliques lógica ni estructuras.
+
+=====================================================================
+REGLA DE CONTINUIDAD ENTRE CLAUDE, CODEX U OTRO AGENTE
+=====================================================================
+
+Este proyecto puede ser trabajado por varios agentes.
+
+Debes crear y mantener este archivo:
+
+docs/admin-owner-panel-progress.md
+
+Ese archivo debe actualizarse al finalizar cada sesión o fase e incluir:
+
+1. Estado actual.
+2. Qué ya funciona.
+3. Qué falta.
+4. Archivos creados.
+5. Archivos modificados.
+6. Migraciones creadas.
+7. Migraciones aplicadas.
+8. Migraciones pendientes.
+9. Variables de entorno requeridas.
+10. Decisiones técnicas tomadas.
+11. Riesgos o problemas conocidos.
+12. Pruebas ejecutadas.
+13. Resultado de lint.
+14. Resultado del build.
+15. Próximo paso recomendado.
+16. Comandos exactos para continuar.
+
+Nunca borres el historial útil de ese archivo. Actualízalo de forma acumulativa y clara.
+
+Al comenzar una nueva sesión:
+- lee este prompt;
+- lee docs/admin-owner-panel-progress.md;
+- inspecciona git diff y git status;
+- continúa desde el último punto confirmado;
+- no repitas trabajo ya realizado.
+
+=====================================================================
+RUTA Y PROPÓSITO DEL PANEL
+=====================================================================
+
+Ruta principal:
+- /admin
+
+Rutas sugeridas:
+- /admin
+- /admin/negocios
+- /admin/negocios/[id]
+- /admin/usuarios
+- /admin/suscripciones
+- /admin/renovaciones
+- /admin/pagos
+- /admin/planes
+- /admin/analitica
+- /admin/invitaciones
+- /admin/auditoria
+- /admin/configuracion
+
+Puedes ajustar estas rutas si la arquitectura real del proyecto lo justifica.
+
+Este panel es para el propietario de AgendaMe, no para:
+- administradores de negocios;
+- gerentes de sucursal;
+- recepcionistas;
+- empleados;
+- clientes.
+
+No debe aparecer en los sidebars normales.
+
+=====================================================================
+SEGURIDAD CRÍTICA Y NO NEGOCIABLE
+=====================================================================
+
+La seguridad no debe depender de ocultar la ruta.
+
+1. Identidad del propietario
+
+Usar una variable de entorno exclusivamente de servidor:
+
+ADMIN_OWNER_USER_ID=<UUID de auth.users del propietario>
+
+Agregarla a:
+- .env.example
+- documentación
+
+Nunca escribir el UUID real ni secretos en Git.
+
+Reglas:
+- Si ADMIN_OWNER_USER_ID no existe, el panel debe fallar cerrado.
+- El usuario debe estar autenticado.
+- El UUID debe coincidir exactamente con ADMIN_OWNER_USER_ID.
+- El perfil debe tener rol_global = 'super_admin'.
+- Debe cumplir ambas condiciones.
+- No usar email como identificador principal.
+
+2. Guard central
+
+Crear una función única y reutilizable, por ejemplo:
+
+requirePlatformOwner()
+
+Debe:
+- ejecutarse solo en servidor;
+- obtener el usuario autenticado real;
+- verificar ADMIN_OWNER_USER_ID;
+- verificar perfiles_usuario.rol_global = super_admin;
+- fallar de forma segura;
+- devolver solo datos mínimos del propietario autorizado.
+
+También puede existir:
+
+getPlatformOwnerOrNull()
+
+3. Protección del layout
+
+Proteger:
+- src/app/admin/layout.tsx
+
+Reglas:
+- no renderizar datos antes de autorizar;
+- visitante no autenticado: redirección segura al login;
+- usuario autenticado no autorizado: notFound() o respuesta segura;
+- no revelar información interna del panel.
+
+4. Protección de acciones y APIs
+
+Cada operación administrativa debe volver a ejecutar requirePlatformOwner():
+- Server Actions;
+- Route Handlers;
+- exportaciones;
+- descargas;
+- mutaciones;
+- consultas privilegiadas;
+- aprobación de pagos;
+- cambios de plan;
+- bloqueos;
+- desbloqueos;
+- modificaciones de usuarios;
+- cambios de precios.
+
+Nunca confiar solamente en que la llamada viene desde /admin.
+
+5. Supabase privilegiado
+
+- Reutiliza el cliente administrativo server-only si ya existe.
+- Nunca importar service role en Client Components.
+- Nunca usar NEXT_PUBLIC para secretos.
+- Nunca devolver secretos en props o respuestas.
+- Mantener módulos privilegiados con server-only.
+- No crear un segundo sistema de autenticación.
+
+6. Base de datos
+
+Las nuevas RPC administrativas deben:
+- validar es_super_admin();
+- usar security definer solo cuando corresponda;
+- usar set search_path seguro;
+- revocar execute de PUBLIC si son sensibles;
+- registrar auditoría;
+- validar parámetros;
+- mantener compatibilidad.
+
+7. Caché
+
+Todo /admin debe ser privado y dinámico:
+- no-store o estrategia equivalente;
+- no cachear públicamente;
+- no generar estáticamente;
+- no usar CDN público para respuestas administrativas.
+
+8. Validación
+
+- Validar entradas con Zod en servidor.
+- Confirmar operaciones sensibles.
+- Evitar doble envío.
+- Deshabilitar botones durante mutaciones.
+- No mostrar stack traces.
+- No culpar al usuario en errores.
+- Mostrar mensajes claros y recuperables.
+
+9. Auditoría
+
+Registrar:
+- cambio de plan;
+- cambio de vencimiento;
+- activación;
+- cancelación;
+- bloqueo;
+- desbloqueo;
+- aprobación de pago;
+- rechazo de pago;
+- edición de plan;
+- cambio de precios;
+- exportaciones sensibles;
+- acciones sobre usuarios;
+- cambios administrativos relevantes.
+
+Guardar:
+- administrador;
+- negocio afectado;
+- acción;
+- tabla;
+- registro;
+- fecha;
+- origen;
+- detalles anteriores y nuevos cuando sea razonable.
+
+No guardar:
+- contraseñas;
+- tokens;
+- claves;
+- secretos.
+
+10. MFA
+
+Si el proyecto ya soporta MFA/AAL2:
+- exigir AAL2 para /admin.
+
+Si no:
+- no inventar un flujo falso;
+- preparar variable opcional:
+
+ADMIN_REQUIRE_AAL2=true|false
+
+- documentar cómo habilitarlo más adelante.
+
+11. Reglas adicionales
+
+- No CORS abierto.
+- No open redirects.
+- No usar localStorage para permisos.
+- No exponer auth.users al navegador.
+- No mostrar tokens de invitación.
+- No registrar secretos en consola.
+- No aceptar IDs sin validar existencia.
+- No confiar en roles enviados por el cliente.
+
+=====================================================================
+DATOS Y FUNCIONES EXISTENTES A REUTILIZAR
+=====================================================================
+
+La base puede contener:
+
+- perfiles_usuario
+- negocios
+- negocio_usuarios
+- sucursales
+- sucursal_usuarios
+- sucursal_invitaciones
+- empleados
+- clientes
+- citas
+- servicios
+- planes_saas
+- suscripciones
+- uso_plan_mensual
+- pagos_manuales
+- solicitudes_cambio_plan
+- auditoria
+- notas_admin_negocio
+- recordatorios_citas
+- vista_admin_negocios_resumen
+- admin_obtener_negocios_resumen()
+- admin_cambiar_plan_negocio()
+- admin_bloquear_negocio()
+- admin_desbloquear_negocio()
+- admin_aprobar_pago_manual()
+- admin_rechazar_pago_manual()
+- marcar_suscripciones_vencidas()
+
+Antes de crear algo:
+- busca la versión efectiva;
+- revisa firmas;
+- revisa permisos;
+- revisa RLS;
+- revisa grants;
+- revisa si ya se usa en el frontend.
+
+No crear consultas directas desde cliente a tablas sensibles.
+No duplicar funciones que ya resuelven la operación.
+
+=====================================================================
+ARQUITECTURA DE CÓDIGO
+=====================================================================
+
+Organización sugerida:
+
+src/app/admin/
+src/components/admin/
+src/lib/admin/
+src/lib/admin/queries/
+src/lib/admin/actions/
+src/lib/admin/schemas/
+src/lib/admin/formatters/
+src/lib/admin/types/
+
+Preferencias:
+- Server Components para datos sensibles.
+- Client Components solo para interacción, filtros, tablas, gráficos y formularios.
+- Server Actions para mutaciones cuando convenga.
+- Route Handlers solo si hay motivo claro.
+- Consultas centralizadas.
+- Tipos estrictos.
+- Componentes reutilizables.
+- Nada de consultas privilegiadas dentro de componentes visuales.
+- Evitar any.
+
+=====================================================================
+MÓDULO 1: VISTA GENERAL
+=====================================================================
+
+Crear un dashboard ejecutivo útil.
+
+KPI reales:
+- negocios totales;
+- negocios activos;
+- negocios bloqueados;
+- nuevos negocios este mes;
+- suscripciones activas;
+- suscripciones vencidas;
+- suscripciones próximas a vencer;
+- negocios gratuitos;
+- negocios pagos;
+- usuarios registrados;
+- citas procesadas;
+- pagos pendientes;
+- ingresos cobrados del mes;
+- ingresos cobrados del año;
+- MRR estimado;
+- ARR estimado cuando sea posible.
+
+No inventar cifras.
+
+Distinguir:
+
+1. Ingreso cobrado
+- suma real de pagos aprobados;
+- usar fecha_pago o aprobado_at según estructura efectiva.
+
+2. Ingreso esperado
+- proyección;
+- debe etiquetarse como estimación.
+
+3. MRR
+- mensualidad normalizada de suscripciones activas;
+- anual dividido 12 si el ciclo está identificado;
+- si faltan datos, mostrar que es estimado o no disponible.
+
+4. ARR
+- MRR x 12 o contratos anuales reales;
+- etiquetar claramente.
+
+Formato:
+- Guaraníes enteros.
+- Intl.NumberFormat con es-PY.
+- America/Asuncion.
+
+Gráficos con Recharts:
+- ingresos por mes;
+- negocios nuevos por mes;
+- distribución por plan;
+- suscripciones activas y vencidas;
+- renovaciones próximas;
+- evolución de citas;
+- conversión de gratis a pago si existe información suficiente.
+
+Agregar:
+- tooltips;
+- leyendas;
+- etiquetas;
+- skeletons;
+- empty states;
+- responsive containers.
+
+=====================================================================
+CICLO MENSUAL Y ANUAL
+=====================================================================
+
+AgendaMe puede cobrar mensual o anual.
+
+Inspeccionar si ya existen campos de periodicidad.
+
+Si no existen, crear migración aditiva y retrocompatible para:
+
+suscripciones.ciclo_facturacion:
+- mensual
+- anual
+- manual
+
+pagos_manuales.ciclo_facturacion:
+- mensual
+- anual
+- manual
+
+Considerar:
+- periodo_inicio;
+- periodo_fin;
+- fecha_vencimiento;
+- monto;
+- método;
+- estado.
+
+No sobrescribir historial.
+No asumir que todos los registros anteriores fueron mensuales.
+Usar un valor conservador.
+Documentar cualquier ambigüedad histórica.
+
+No crear pasarela automática.
+
+=====================================================================
+MÓDULO 2: NEGOCIOS
+=====================================================================
+
+Crear tabla profesional de negocios.
+
+Columnas útiles:
+- negocio;
+- propietario;
+- email;
+- teléfono;
+- fecha de registro;
+- estado;
+- plan;
+- ciclo;
+- vencimiento;
+- días restantes;
+- citas usadas/límite;
+- empleados usados/límite;
+- servicios usados/límite;
+- clientes usados/límite;
+- sucursales usadas/límite;
+- último movimiento;
+- acciones.
+
+Funciones:
+- búsqueda;
+- filtros por plan;
+- filtros por estado;
+- filtros por vencimiento;
+- filtros por ciclo;
+- filtros por fecha;
+- filtros por uso;
+- ordenamiento;
+- paginación en servidor;
+- URL search params;
+- exportación CSV/XLSX;
+- columnas responsivas;
+- skeletons;
+- error states;
+- empty states.
+
+No descargar toda la base al navegador para filtrar.
+
+Página /admin/negocios/[id]:
+
+Mostrar:
+- datos del negocio;
+- propietario y usuarios;
+- sucursales;
+- plan actual;
+- historial de suscripciones;
+- pagos;
+- solicitudes de cambio;
+- consumo de límites;
+- citas por mes;
+- empleados;
+- servicios;
+- clientes;
+- invitaciones;
+- estado operativo;
+- auditoría relacionada;
+- notas internas.
+
+Acciones:
+- cambiar plan;
+- cambiar ciclo;
+- cambiar vencimiento;
+- extender;
+- activar;
+- cancelar;
+- bloquear;
+- desbloquear;
+- registrar pago;
+- aprobar;
+- rechazar;
+- agregar nota;
+- exportar.
+
+Antes de bajar de plan:
+- comparar uso actual con nuevo límite;
+- advertir excesos;
+- pedir confirmación;
+- no eliminar datos.
+
+=====================================================================
+MÓDULO 3: SUSCRIPCIONES Y RENOVACIONES
+=====================================================================
+
+Vistas:
+- activas;
+- vencen en 7 días;
+- vencen en 15 días;
+- vencen en 30 días;
+- vencidas;
+- canceladas;
+- sin vencimiento;
+- mensuales;
+- anuales;
+- manuales.
+
+Mostrar:
+- negocio;
+- plan;
+- ciclo;
+- inicio;
+- vencimiento;
+- días restantes;
+- estado;
+- último pago;
+- monto;
+- siguiente acción.
+
+Acciones:
+- renovar;
+- extender;
+- cambiar plan;
+- cancelar;
+- reactivar;
+- registrar pago;
+- ver historial.
+
+No ejecutar marcar_suscripciones_vencidas() en cada render.
+Usar acción explícita o proceso seguro.
+
+=====================================================================
+MÓDULO 4: PAGOS
+=====================================================================
+
+Tabla:
+- pendientes;
+- aprobados;
+- rechazados;
+- por periodo;
+- por negocio;
+- por plan;
+- por método;
+- por ciclo;
+- por monto.
+
+Acciones:
+- registrar;
+- visualizar comprobante;
+- aprobar;
+- rechazar;
+- agregar nota;
+- asociar plan;
+- asociar periodo;
+- asociar suscripción;
+- corregir antes de aprobar cuando corresponda.
+
+Reutilizar:
+- admin_aprobar_pago_manual()
+- admin_rechazar_pago_manual()
+
+No editar silenciosamente pagos aprobados.
+Toda corrección posterior debe quedar auditada.
+
+Resumen:
+- cobrado hoy;
+- cobrado este mes;
+- cobrado este año;
+- pendientes;
+- ticket promedio;
+- ingresos por plan;
+- ingresos mensuales y anuales;
+- renovaciones.
+
+=====================================================================
+MÓDULO 5: USUARIOS Y REGISTROS
+=====================================================================
+
+Combinar desde servidor:
+- auth.users;
+- perfiles_usuario;
+- negocio_usuarios;
+- sucursal_usuarios;
+- negocios;
+- sucursales.
+
+Mostrar solo DTO seguro:
+- nombre;
+- email;
+- fecha de registro;
+- último acceso si existe;
+- tipo de cuenta;
+- rol global;
+- negocio;
+- sucursal;
+- rol de sucursal;
+- estado;
+- perfil completo/incompleto.
+
+Filtros:
+- fecha;
+- rol;
+- tipo;
+- con negocio/sin negocio;
+- activo/inactivo;
+- sucursal;
+- invitado/registro directo.
+
+No enviar auth.users completo al cliente.
+No mostrar:
+- hashes;
+- tokens;
+- metadatos sensibles;
+- secretos.
+
+No implementar eliminación irreversible en esta fase salvo flujo seguro existente.
+
+=====================================================================
+MÓDULO 6: PLANES
+=====================================================================
+
+Administrar:
+- nombre;
+- clave;
+- descripción;
+- texto destacado;
+- precio mensual;
+- precio anual;
+- límites;
+- visibilidad;
+- destacado;
+- funcionalidades;
+- features;
+- orden.
+
+Acciones:
+- editar;
+- cambiar precios;
+- cambiar límites;
+- cambiar visibilidad;
+- cambiar destacado;
+- reordenar;
+- previsualizar.
+
+Reglas:
+- precios no negativos;
+- límites coherentes;
+- no editar claves si rompe lógica;
+- confirmar cambios que afectan negocios activos;
+- auditoría antes/después;
+- no borrar planes con historial;
+- preferir ocultar.
+
+=====================================================================
+MÓDULO 7: ANALÍTICA
+=====================================================================
+
+Negocio:
+- altas por mes;
+- activaciones;
+- bloqueos;
+- distribución por plan;
+- gratis vs pago;
+- negocios sin actividad;
+- crecimiento mensual.
+
+Ingresos:
+- cobrado por mes;
+- cobrado por plan;
+- mensual vs anual;
+- ticket promedio;
+- MRR;
+- ARR;
+- renovaciones;
+- pendientes.
+
+Uso:
+- citas por mes;
+- negocios cercanos al límite;
+- empleados por negocio;
+- clientes por negocio;
+- servicios por negocio;
+- sucursales usadas.
+
+Retención:
+- renovaciones;
+- vencimientos;
+- cancelaciones;
+- upgrades;
+- downgrades.
+
+Solo calcular churn, conversión o retención si hay historial suficiente.
+Etiquetar estimaciones.
+
+Filtros:
+- rango de fechas;
+- plan;
+- ciclo;
+- estado;
+- negocio.
+
+=====================================================================
+MÓDULO 8: INVITACIONES
+=====================================================================
+
+Mostrar:
+- email;
+- negocio;
+- sucursal;
+- rol;
+- estado;
+- fecha;
+- vencimiento;
+- aceptación.
+
+Filtros:
+- pendiente;
+- aceptada;
+- revocada;
+- expirada;
+- rol;
+- negocio;
+- sucursal.
+
+No mostrar:
+- token_hash;
+- token real;
+- secretos.
+
+Acciones si existe soporte:
+- revocar;
+- reenviar;
+- ver contexto;
+- corregir datos antes de aceptación.
+
+=====================================================================
+MÓDULO 9: AUDITORÍA
+=====================================================================
+
+Tabla:
+- fecha;
+- administrador;
+- negocio;
+- acción;
+- tabla;
+- registro;
+- resumen;
+- origen.
+
+Filtros:
+- fecha;
+- acción;
+- negocio;
+- usuario;
+- tabla.
+
+Agregar detalle en dialog o drawer.
+Ocultar campos sensibles.
+Permitir exportación.
+
+Solo lectura desde el panel.
+
+=====================================================================
+MÓDULO 10: ALERTAS OPERATIVAS
+=====================================================================
+
+Alertas reales:
+- vencimientos próximos;
+- pagos pendientes;
+- solicitudes de plan;
+- negocios bloqueados;
+- negocios sin plan activo;
+- negocios sobre límites;
+- invitaciones vencidas;
+- usuarios sin perfil;
+- negocios sin administrador;
+- inconsistencias detectables.
+
+Cada alerta debe enlazar a la pantalla correspondiente.
+
+No crear alertas ficticias.
+
+=====================================================================
+INTERFAZ
+=====================================================================
+
+Prioridad:
+1. funcionalidad;
+2. seguridad;
+3. claridad;
+4. diseño.
+
+Crear:
+- layout propio;
+- sidebar;
+- topbar;
+- breadcrumbs;
+- búsqueda;
+- filtros;
+- tablas;
+- KPI;
+- gráficos;
+- dialogs;
+- confirmaciones;
+- toasts;
+- skeletons;
+- empty states;
+- error states;
+- responsive desktop/tablet.
+
+Identidad:
+- AgendaMe;
+- navy;
+- cyan;
+- teal;
+- ámbar moderado;
+- neutros;
+- modo claro y oscuro.
+
+No usar:
+- banners enormes;
+- decoración excesiva;
+- gráficas inútiles;
+- cards promocionales;
+- efectos distractores.
+
+Este panel es una herramienta operativa interna.
+
+=====================================================================
+TABLAS Y PAGINACIÓN
+=====================================================================
+
+Todas las tablas grandes:
+- paginación en servidor;
+- búsqueda;
+- filtros;
+- ordenamiento;
+- estado en URL;
+- límite de resultados;
+- evitar N+1;
+- índices adecuados;
+- exportación controlada.
+
+Exportaciones:
+- solo en servidor;
+- requirePlatformOwner();
+- aplicar filtros;
+- limitar o procesar de forma segura;
+- registrar auditoría.
+
+=====================================================================
+ESTADOS DEL SISTEMA
+=====================================================================
+
+Cada región:
+- loading skeleton;
+- empty state;
+- error recuperable;
+- reintentar;
+- toast de éxito;
+- feedback durante mutación.
+
+No usar únicamente spinner a pantalla completa.
+
+=====================================================================
+ACCESIBILIDAD
+=====================================================================
+
+- teclado;
+- foco visible;
+- labels;
+- aria-label;
+- dialogs accesibles;
+- contraste;
+- no depender solo del color;
+- targets adecuados;
+- prefers-reduced-motion.
+
+=====================================================================
+MIGRACIONES Y RPC
+=====================================================================
+
+Antes de crear SQL:
+1. revisar migraciones;
+2. identificar duplicados;
+3. identificar versión efectiva;
+4. crear solo patches incrementales;
+5. comentar;
+6. crear índices;
+7. evitar policies permisivas.
+
+No dar acceso anon a datos administrativos.
+No dar SELECT directo a authenticated sobre vistas privadas si permitiría acceso general.
+Preferir RPC privada que valide super_admin.
+
+No ejecutar db push sin autorización.
+
+=====================================================================
+DOCUMENTACIÓN
+=====================================================================
+
+Crear:
+
+docs/admin-owner-panel.md
+
+Debe explicar:
+- arquitectura;
+- rutas;
+- seguridad;
+- variables de entorno;
+- consultas;
+- RPC;
+- módulos;
+- métricas;
+- fórmulas;
+- migraciones;
+- despliegue;
+- recuperación;
+- checklist.
+
+Mantener actualizado también:
+
+docs/admin-owner-panel-progress.md
+
+=====================================================================
+PRUEBAS
+=====================================================================
+
+Crear pruebas Playwright.
+
+Casos mínimos:
+
+1. No autenticado
+- no entra a /admin;
+- no accede a APIs;
+- no recibe datos.
+
+2. Usuario normal
+- 404/403 seguro;
+- no ve enlace;
+- no ejecuta mutaciones.
+
+3. Admin de negocio
+- no entra al panel;
+- no consulta datos globales;
+- no ejecuta RPC del propietario.
+
+4. Propietario
+- entra;
+- ve dashboard;
+- navega;
+- consulta negocios.
+
+5. Seguridad directa
+- endpoint sin sesión;
+- endpoint con usuario normal;
+- cambiar plan;
+- aprobar pago;
+- bloquear;
+- exportar.
+
+6. Secretos
+- no aparecen claves en bundle;
+- módulos privilegiados no son Client Components.
+
+7. Funcionalidad
+- filtros;
+- búsqueda;
+- paginación;
+- cambio de plan;
+- bloqueo;
+- pago;
+- exportación.
+
+Usar variables de entorno.
+Si faltan credenciales, hacer skip documentado.
+No inventar credenciales.
+
+Agregar scripts:
+- test:admin
+- test:admin:headed
+
+No romper scripts existentes.
+
+=====================================================================
+PROCESO DE IMPLEMENTACIÓN
+=====================================================================
+
+FASE 1
+- auditar código, auth, esquema y admin existente;
+- documentar hallazgos;
+- crear o actualizar progress.md.
+
+FASE 2
+- crear guard del propietario;
+- proteger layout, páginas, acciones y APIs;
+- variables de entorno;
+- pruebas básicas.
+
+FASE 3
+- layout de /admin;
+- navegación;
+- vista general;
+- datos reales.
+
+FASE 4
+- negocios;
+- detalle;
+- suscripciones;
+- renovaciones;
+- pagos.
+
+FASE 5
+- usuarios;
+- planes;
+- invitaciones;
+- auditoría.
+
+FASE 6
+- analítica;
+- gráficos;
+- exportaciones;
+- alertas.
+
+FASE 7
+- documentación;
+- pruebas;
+- lint;
+- build;
+- progress.md final.
+
+No detenerse en un scaffold vacío.
+Implementar funcionalidad real.
+
+=====================================================================
+VERIFICACIÓN FINAL
+=====================================================================
+
+Ejecutar:
+
+npm run lint
+npm run build
+npm run test:admin
+
+Si faltan credenciales:
+- ejecutar lo posible;
+- hacer skip documentado;
+- no inventar resultados.
+
+Corregir:
+- TypeScript;
+- imports;
+- hydration;
+- accesibilidad evidente;
+- warnings;
+- consultas duplicadas;
+- exposición de datos;
+- rutas inseguras.
+
+=====================================================================
+FORMATO DE ENTREGA
+=====================================================================
+
+Al finalizar, informar:
+
+1. Auditoría inicial encontrada.
+2. Archivos creados.
+3. Archivos modificados.
+4. Rutas administrativas.
+5. Medidas de seguridad.
+6. Variables de entorno.
+7. Migraciones creadas.
+8. Migraciones aplicadas.
+9. Migraciones pendientes.
+10. Módulos funcionales.
+11. Métricas y fórmulas.
+12. Pruebas ejecutadas.
+13. Resultado de lint.
+14. Resultado del build.
+15. Riesgos conocidos.
+16. Pasos manuales pendientes.
+17. Próximo paso recomendado.
+18. Estado actualizado en docs/admin-owner-panel-progress.md.
+
+No afirmar que algo está seguro o funcionando si no fue comprobado.
+No usar mocks permanentes.
+No sustituir datos reales por cifras de ejemplo.

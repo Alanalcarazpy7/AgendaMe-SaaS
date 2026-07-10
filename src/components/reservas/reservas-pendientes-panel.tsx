@@ -64,7 +64,8 @@ type Reserva = {
   sucursales?: Relacion<Sucursal>;
 };
 
-type FiltroTiempo = "todas" | "hoy" | "proximas" | "vencidas";
+type TiempoReserva = "hoy" | "proximas" | "vencidas";
+type FiltroVista = "todas" | "pendientes" | "confirmadas" | "vencidas";
 
 type ReservasPendientesPanelProps = {
   reservas?: Reserva[];
@@ -119,10 +120,20 @@ function cardBase(extra = "") {
   return `rounded-[1.5rem] border border-border/80 bg-card/90 shadow-[0_16px_48px_rgb(15_23_42/0.07)] ring-1 ring-white/60 backdrop-blur-xl dark:bg-card/80 dark:shadow-black/20 dark:ring-white/5 ${extra}`;
 }
 
-function estadoTiempo(reserva: Reserva, hoy: string): FiltroTiempo {
+function estadoTiempo(reserva: Reserva, hoy: string): TiempoReserva {
   if (reserva.fecha < hoy) return "vencidas";
   if (reserva.fecha === hoy) return "hoy";
   return "proximas";
+}
+
+function estadoLabel(estado: string) {
+  const labels: Record<string, string> = {
+    pendiente: "Pendiente",
+    confirmada: "Confirmada",
+    cancelada: "Cancelada",
+  };
+
+  return labels[estado] ?? estado;
 }
 
 export function ReservasPendientesPanel({
@@ -135,8 +146,9 @@ export function ReservasPendientesPanel({
   const [items, setItems] = useState<Reserva[]>(reservas ?? initialReservas ?? []);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [mensaje, setMensaje] = useState("");
   const [busqueda, setBusqueda] = useState("");
-  const [filtroTiempo, setFiltroTiempo] = useState<FiltroTiempo>("todas");
+  const [filtroVista, setFiltroVista] = useState<FiltroVista>("pendientes");
   const [pagina, setPagina] = useState(1);
 
   const hoy = hoyLocal();
@@ -170,11 +182,18 @@ export function ReservasPendientesPanel({
   }
 
   const resumen = useMemo(() => {
+    const pendientes = items.filter(
+      (reserva) => reserva.estado === "pendiente" && estadoTiempo(reserva, hoy) !== "vencidas"
+    ).length;
+    const vencidas = items.filter(
+      (reserva) => reserva.estado === "pendiente" && estadoTiempo(reserva, hoy) === "vencidas"
+    ).length;
+
     return {
       total: items.length,
-      hoy: items.filter((reserva) => estadoTiempo(reserva, hoy) === "hoy").length,
-      proximas: items.filter((reserva) => estadoTiempo(reserva, hoy) === "proximas").length,
-      vencidas: items.filter((reserva) => estadoTiempo(reserva, hoy) === "vencidas").length,
+      pendientes,
+      confirmadas: items.filter((reserva) => reserva.estado === "confirmada").length,
+      vencidas,
     };
   }, [items, hoy]);
 
@@ -192,7 +211,12 @@ export function ReservasPendientesPanel({
       const empleado = empleadoDe(reserva);
       const sucursal = sucursalDe(reserva);
       const tiempo = estadoTiempo(reserva, hoy);
-      const coincideTiempo = filtroTiempo === "todas" || tiempo === filtroTiempo;
+      const esVencida = reserva.estado === "pendiente" && tiempo === "vencidas";
+      const coincideVista =
+        filtroVista === "todas" ||
+        (filtroVista === "pendientes" && reserva.estado === "pendiente" && !esVencida) ||
+        (filtroVista === "confirmadas" && reserva.estado === "confirmada") ||
+        (filtroVista === "vencidas" && esVencida);
       const coincideBusqueda =
         !query ||
         cliente?.nombre_completo.toLowerCase().includes(query) ||
@@ -201,7 +225,7 @@ export function ReservasPendientesPanel({
         empleado?.nombre.toLowerCase().includes(query) ||
         sucursal?.nombre.toLowerCase().includes(query);
 
-      return coincideTiempo && coincideBusqueda;
+      return coincideVista && coincideBusqueda;
     });
 
   const totalPaginas = Math.max(1, Math.ceil(reservasFiltradas.length / RESERVAS_PAGE_SIZE));
@@ -214,10 +238,10 @@ export function ReservasPendientesPanel({
     paginaActual * RESERVAS_PAGE_SIZE
   );
 
-  const filtros: { value: FiltroTiempo; label: string; count: number }[] = [
+  const filtros: { value: FiltroVista; label: string; count: number }[] = [
     { value: "todas", label: "Todas", count: resumen.total },
-    { value: "hoy", label: "Hoy", count: resumen.hoy },
-    { value: "proximas", label: "Proximas", count: resumen.proximas },
+    { value: "pendientes", label: "Pendientes", count: resumen.pendientes },
+    { value: "confirmadas", label: "Confirmadas", count: resumen.confirmadas },
     { value: "vencidas", label: "Vencidas", count: resumen.vencidas },
   ];
 
@@ -225,6 +249,7 @@ export function ReservasPendientesPanel({
     try {
       setLoadingId(`${reserva.id}-${estado}`);
       setError("");
+      setMensaje("");
 
       const response = await fetch(`/api/dashboard/citas/${reserva.id}`, {
         method: "PATCH",
@@ -241,7 +266,16 @@ export function ReservasPendientesPanel({
         return;
       }
 
-      setItems((prev) => prev.filter((item) => item.id !== reserva.id));
+      setItems((prev) =>
+        prev.map((item) => (item.id === reserva.id ? { ...item, estado } : item))
+      );
+      setFiltroVista(estado === "confirmada" ? "confirmadas" : "todas");
+      setPagina(1);
+      setMensaje(
+        estado === "confirmada"
+          ? "Reserva confirmada. Ahora esta en la bandeja Confirmadas y se distingue en el calendario."
+          : "Reserva cancelada. La dejamos visible por ahora para que veas el cambio de estado."
+      );
     } catch {
       setError("No se pudo actualizar la reserva.");
     } finally {
@@ -262,11 +296,11 @@ export function ReservasPendientesPanel({
             </p>
 
             <h1 className="mt-4 text-3xl font-bold tracking-tight text-balance">
-              Reservas pendientes
+              Reservas
             </h1>
 
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Tabla operativa para confirmar, cancelar o abrir una reserva sin revisar cards una por una.
+              Bandeja operativa para revisar pendientes, confirmar solicitudes y separar vencidas sin perder contexto.
             </p>
 
             <div className="mt-5">
@@ -284,19 +318,19 @@ export function ReservasPendientesPanel({
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-2xl border border-white/15 bg-white/10 p-3">
                 <p className="text-xs text-cyan-50/80">Pendientes</p>
-                <p className="mt-1 text-3xl font-bold">{resumen.total}</p>
+                <p className="mt-1 text-3xl font-bold">{resumen.pendientes}</p>
               </div>
               <div className="rounded-2xl border border-white/15 bg-white/10 p-3">
-                <p className="text-xs text-cyan-50/80">Para hoy</p>
-                <p className="mt-1 text-3xl font-bold">{resumen.hoy}</p>
-              </div>
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-3">
-                <p className="text-xs text-cyan-50/80">Proximas</p>
-                <p className="mt-1 text-2xl font-bold">{resumen.proximas}</p>
+                <p className="text-xs text-cyan-50/80">Confirmadas</p>
+                <p className="mt-1 text-3xl font-bold">{resumen.confirmadas}</p>
               </div>
               <div className="rounded-2xl border border-white/15 bg-white/10 p-3">
                 <p className="text-xs text-cyan-50/80">Vencidas</p>
                 <p className="mt-1 text-2xl font-bold">{resumen.vencidas}</p>
+              </div>
+              <div className="rounded-2xl border border-white/15 bg-white/10 p-3">
+                <p className="text-xs text-cyan-50/80">Total visible</p>
+                <p className="mt-1 text-2xl font-bold">{resumen.total}</p>
               </div>
             </div>
           </aside>
@@ -320,14 +354,14 @@ export function ReservasPendientesPanel({
 
           <div className="flex flex-wrap gap-2">
             {filtros.map((filtro) => {
-              const activo = filtroTiempo === filtro.value;
+              const activo = filtroVista === filtro.value;
 
               return (
                 <button
                   key={filtro.value}
                   type="button"
                   onClick={() => {
-                    setFiltroTiempo(filtro.value);
+                    setFiltroVista(filtro.value);
                     setPagina(1);
                   }}
                   className={`inline-flex h-10 items-center gap-2 rounded-2xl border px-3 text-sm font-semibold transition-[background-color,color,border-color,box-shadow,transform] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 ${
@@ -343,12 +377,12 @@ export function ReservasPendientesPanel({
                 </button>
               );
             })}
-            {(busqueda || filtroTiempo !== "todas") && (
+            {(busqueda || filtroVista !== "pendientes") && (
               <button
                 type="button"
                 onClick={() => {
                   setBusqueda("");
-                  setFiltroTiempo("todas");
+                  setFiltroVista("pendientes");
                   setPagina(1);
                 }}
                 className="inline-flex h-10 items-center rounded-2xl border border-border/80 bg-background/70 px-3 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-accent-foreground"
@@ -366,14 +400,20 @@ export function ReservasPendientesPanel({
         </p>
       )}
 
+      {mensaje && (
+        <p className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+          {mensaje}
+        </p>
+      )}
+
       {items.length === 0 ? (
         <section className={cardBase("p-8 text-center")}>
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-primary/10 text-primary">
             <CheckCircle2 className="h-7 w-7" />
           </div>
-          <h2 className="mt-4 text-xl font-bold tracking-tight">Sin reservas pendientes</h2>
+          <h2 className="mt-4 text-xl font-bold tracking-tight">Sin reservas visibles</h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-            Cuando entren nuevas solicitudes desde el link publico, apareceran aca para confirmar o cancelar.
+            Cuando entren nuevas solicitudes desde el link publico, apareceran aca para confirmar, separar o cancelar.
           </p>
         </section>
       ) : reservasFiltradas.length === 0 ? (
@@ -441,12 +481,27 @@ export function ReservasPendientesPanel({
                   const empleado = empleadoDe(reserva);
                   const sucursal = sucursalDe(reserva);
                   const tiempo = estadoTiempo(reserva, hoy);
+                  const esVencida = reserva.estado === "pendiente" && tiempo === "vencidas";
+                  const estaPendiente = reserva.estado === "pendiente";
+                  const estaConfirmada = reserva.estado === "confirmada";
+                  const estaCancelada = reserva.estado === "cancelada";
                   const calendarioHref = `/dashboard/citas?fecha=${reserva.fecha}&hora=${horaCorta(reserva.hora_inicio)}&cita=${reserva.id}`;
                   const cargandoConfirmar = loadingId === `${reserva.id}-confirmada`;
                   const cargandoCancelar = loadingId === `${reserva.id}-cancelada`;
 
                   return (
-                    <tr key={reserva.id} className="bg-card/40 transition-colors hover:bg-muted/35">
+                    <tr
+                      key={reserva.id}
+                      className={`transition-colors hover:bg-muted/35 ${
+                        estaConfirmada
+                          ? "bg-blue-500/5"
+                          : esVencida
+                            ? "bg-destructive/5"
+                            : estaCancelada
+                              ? "bg-muted/50 opacity-80"
+                              : "bg-card/40"
+                      }`}
+                    >
                       <td className="px-4 py-3">
                         <p className="max-w-[14rem] truncate font-semibold">
                           {cliente?.nombre_completo ?? "Sin cliente"}
@@ -479,17 +534,30 @@ export function ReservasPendientesPanel({
                         {fechaRecibidaDisplay(reserva.created_at)}
                       </td>
                       <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex rounded-xl px-2.5 py-1 text-xs font-bold ${
-                            tiempo === "vencidas"
-                              ? "bg-destructive/10 text-destructive"
-                              : tiempo === "hoy"
-                                ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-300"
-                                : "bg-primary/10 text-primary"
-                          }`}
-                        >
-                          {tiempo === "vencidas" ? "Vencida" : tiempo === "hoy" ? "Hoy" : "Proxima"}
-                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          <span
+                            className={`inline-flex rounded-xl px-2.5 py-1 text-xs font-bold ${
+                              estaConfirmada
+                                ? "bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                                : estaCancelada
+                                  ? "bg-destructive/10 text-destructive"
+                                  : "bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                            }`}
+                          >
+                            {estadoLabel(reserva.estado)}
+                          </span>
+                          <span
+                            className={`inline-flex rounded-xl px-2.5 py-1 text-xs font-bold ${
+                              esVencida
+                                ? "bg-destructive/10 text-destructive"
+                                : tiempo === "hoy"
+                                  ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-300"
+                                  : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {esVencida ? "Vencida" : tiempo === "hoy" ? "Hoy" : "Proxima"}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
@@ -499,30 +567,41 @@ export function ReservasPendientesPanel({
                           >
                             <Eye className="h-4 w-4" />
                           </Link>
-                          <button
-                            type="button"
-                            onClick={() => cambiarEstado(reserva, "confirmada")}
-                            disabled={Boolean(loadingId)}
-                            className="inline-flex h-9 items-center justify-center rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
-                          >
-                            {cargandoConfirmar ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <CheckCircle2 className="h-4 w-4" />
-                            )}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => cambiarEstado(reserva, "cancelada")}
-                            disabled={Boolean(loadingId)}
-                            className="inline-flex h-9 items-center justify-center rounded-xl bg-destructive px-3 text-sm font-semibold text-white transition hover:bg-destructive/90 disabled:opacity-60"
-                          >
-                            {cargandoCancelar ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <XCircle className="h-4 w-4" />
-                            )}
-                          </button>
+                          {estaPendiente && !esVencida && (
+                            <button
+                              type="button"
+                              onClick={() => cambiarEstado(reserva, "confirmada")}
+                              disabled={Boolean(loadingId)}
+                              className="inline-flex h-9 items-center justify-center rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+                              title="Confirmar reserva"
+                            >
+                              {cargandoConfirmar ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="h-4 w-4" />
+                              )}
+                            </button>
+                          )}
+                          {estaPendiente && (
+                            <button
+                              type="button"
+                              onClick={() => cambiarEstado(reserva, "cancelada")}
+                              disabled={Boolean(loadingId)}
+                              className="inline-flex h-9 items-center justify-center rounded-xl bg-destructive px-3 text-sm font-semibold text-white transition hover:bg-destructive/90 disabled:opacity-60"
+                              title={esVencida ? "Cancelar reserva vencida" : "Cancelar reserva"}
+                            >
+                              {cargandoCancelar ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <XCircle className="h-4 w-4" />
+                              )}
+                            </button>
+                          )}
+                          {!estaPendiente && (
+                            <span className="inline-flex h-9 items-center rounded-xl border bg-muted/40 px-3 text-xs font-bold text-muted-foreground">
+                              Gestionada
+                            </span>
+                          )}
                         </div>
                       </td>
                     </tr>

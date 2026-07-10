@@ -5,6 +5,18 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 type Relacion<T> = T | T[] | null;
 
+type ClienteReserva = {
+  id: string;
+  nombre_completo: string;
+  telefono: string | null;
+  email: string | null;
+  estado?: string | null;
+};
+
+type ClienteSucursalReserva = {
+  clientes: Relacion<ClienteReserva>;
+};
+
 function obtenerObjeto<T>(valor: Relacion<T>): T | null {
   if (!valor) return null;
   return Array.isArray(valor) ? valor[0] ?? null : valor;
@@ -14,7 +26,7 @@ export default async function ReservasPage() {
   const access = await requireDashboardAccess();
   requirePermission(access, "puedeGestionarCitas");
 
-const supabase = createServiceRoleClient();
+  const supabase = createServiceRoleClient();
 
   let reservasQuery = supabase
     .from("citas")
@@ -59,7 +71,7 @@ const supabase = createServiceRoleClient();
     `
     )
     .eq("negocio_id", access.negocio.id)
-    .eq("estado", "pendiente")
+    .in("estado", ["pendiente", "confirmada"])
     .order("fecha", { ascending: true })
     .order("hora_inicio", { ascending: true });
 
@@ -74,7 +86,7 @@ const supabase = createServiceRoleClient();
 
   empleadosQuery = applySucursalScope(empleadosQuery, access);
 
-  let clientes: any[] = [];
+  let clientes: ClienteReserva[] = [];
 
   if (access.scope === "sucursal" && access.sucursalId) {
     const { data: clientesSucursal, error: clientesSucursalError } = await supabase
@@ -97,10 +109,10 @@ const supabase = createServiceRoleClient();
       throw new Error(clientesSucursalError.message);
     }
 
-    clientes = (clientesSucursal ?? [])
-      .map((row: any) => obtenerObjeto(row.clientes))
-      .filter(Boolean)
-      .filter((cliente: any) => cliente.estado === "activo");
+    clientes = ((clientesSucursal ?? []) as ClienteSucursalReserva[])
+      .map((row) => obtenerObjeto(row.clientes))
+      .filter((cliente): cliente is ClienteReserva => cliente !== null)
+      .filter((cliente) => cliente.estado === "activo");
   } else {
     const { data: clientesData, error: clientesError } = await supabase
       .from("clientes")
