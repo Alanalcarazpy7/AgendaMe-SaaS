@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Clock, Save } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -140,14 +141,20 @@ export function HorariosNegocioForm({
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudieron guardar los horarios.");
+        const message = data.error ?? "No se pudieron guardar los horarios.";
+        setError(message);
+        toast.error("No se pudieron guardar los horarios", {
+          description: message,
+        });
         return;
       }
 
       setOk("Horarios guardados correctamente.");
+      toast.success("Horarios guardados correctamente");
       router.refresh();
     } catch {
       setError("Ocurrió un error inesperado.");
+      toast.error("No se pudieron guardar los horarios");
     } finally {
       setLoading(false);
     }

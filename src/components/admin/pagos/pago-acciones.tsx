@@ -41,7 +41,6 @@ export function AprobarPagoDialog({ pago }: { pago: PagoRef }) {
         toast.success("Pago aprobado correctamente", {
           description: "La suscripcion se actualizo con el nuevo vencimiento.",
         });
-        if (result.auditWarning) toast.warning("Auditoria incompleta", { description: result.auditWarning });
         setOpen(false);
       } else {
         toast.error("No se pudo aprobar el pago", { description: result.error });
@@ -105,7 +104,6 @@ export function RechazarPagoDialog({ pago }: { pago: PagoRef }) {
         toast.success("Pago rechazado", {
           description: "El registro queda marcado como rechazado y se conserva el historial.",
         });
-        if (result.auditWarning) toast.warning("Auditoria incompleta", { description: result.auditWarning });
         setOpen(false);
       } else {
         toast.error("No se pudo rechazar el pago", { description: result.error });

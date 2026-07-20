@@ -1,7 +1,8 @@
 ﻿import { requireAdminGlobalApi } from "@/lib/dashboard/api-guards";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { validarCapacidadPlan } from "@/lib/planes/plan-limits";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 const servicioUpdateSchema = z.object({
   nombre: z.string().min(2, "Ingresá el nombre del servicio.").optional(),
@@ -56,20 +57,10 @@ export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ servicioId: string }> }
 ) {
+  const guard = await requireAdminGlobalApi();
+  if (!guard.ok) return guard.response;
+
   const { servicioId } = await context.params;
-
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json(
-      { error: "No tenés sesión activa." },
-      { status: 401 }
-    );
-  }
 
   const body = await request.json();
   const parsed = servicioUpdateSchema.safeParse(body);
@@ -81,30 +72,41 @@ export async function PATCH(
     );
   }
 
-  const { data: membresias, error: membresiaError } = await supabase
-    .from("negocio_usuarios")
-    .select("negocio_id")
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1);
-
-  if (membresiaError) {
-    return NextResponse.json(
-      { error: membresiaError.message || "No se pudo validar tu negocio." },
-      { status: 500 }
-    );
-  }
-
-  const membresia = membresias?.[0];
-
-  if (!membresia) {
-    return NextResponse.json(
-      { error: "No tenés un negocio activo." },
-      { status: 403 }
-    );
-  }
-
   const datos = parsed.data;
+  const admin = createServiceRoleClient();
+  const negocioId = guard.access.negocio.id;
+
+  if (datos.estado === "activo") {
+    const { data: servicioActual, error: servicioActualError } = await admin
+      .from("servicios")
+      .select("estado")
+      .eq("id", servicioId)
+      .eq("negocio_id", negocioId)
+      .maybeSingle();
+
+    if (servicioActualError) {
+      return NextResponse.json(
+        { error: servicioActualError.message },
+        { status: 500 }
+      );
+    }
+
+    if (servicioActual?.estado !== "activo") {
+      const capacidad = await validarCapacidadPlan({
+        supabase: admin,
+        negocioId,
+        recurso: "servicios",
+      });
+
+      if (!capacidad.ok) {
+        return NextResponse.json(
+          { error: capacidad.message },
+          { status: 403 }
+        );
+      }
+    }
+  }
+
   const updateData: Record<string, string | number | null> = {};
 
   if (tieneCampo(datos, "nombre")) {
@@ -131,11 +133,11 @@ export async function PATCH(
     updateData.estado = datos.estado ?? null;
   }
 
-  const { data: servicio, error } = await supabase
+  const { data: servicio, error } = await admin
     .from("servicios")
     .update(updateData)
     .eq("id", servicioId)
-    .eq("negocio_id", membresia.negocio_id)
+    .eq("negocio_id", negocioId)
     .select("id, nombre, estado")
     .single();
 

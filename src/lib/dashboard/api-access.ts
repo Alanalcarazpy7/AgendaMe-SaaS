@@ -1,5 +1,20 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { resolveDashboardAccess } from "@/lib/dashboard/access-context";
+
+function mensajeAccesoDenegado(reason: string) {
+  const mensajes: Record<string, string> = {
+    platform_owner: "El super admin debe usar el panel /admin.",
+    no_access: "No encontramos un acceso activo para este dashboard.",
+    inactive_business:
+      "El negocio no está habilitado. Contactá al responsable de la cuenta o a soporte.",
+    inactive_branch:
+      "La sucursal asignada no está activa. Pedí al responsable del negocio que revise tu acceso.",
+    plan_required:
+      "Esta acción requiere una función que no está incluida en el plan actual.",
+  };
+
+  return mensajes[reason] ?? "No tenés acceso a este recurso.";
+}
 
 export async function requireApiDashboardAccess() {
   const access = await resolveDashboardAccess();
@@ -18,7 +33,7 @@ export async function requireApiDashboardAccess() {
     return {
       ok: false as const,
       response: NextResponse.json(
-        { error: "No tenés acceso a este recurso." },
+        { error: mensajeAccesoDenegado(access.reason) },
         { status: 403 }
       ),
     };

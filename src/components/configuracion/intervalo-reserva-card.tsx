@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle2, Clock3, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 const OPCIONES_INTERVALO = Array.from({ length: 24 }, (_, index) => {
@@ -71,18 +72,22 @@ export function IntervaloReservaCard() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo guardar el intervalo.");
+        const message = data.error ?? "No se pudo guardar el intervalo.";
+        setError(message);
+        toast.error("No se pudo guardar el intervalo", { description: message });
         return;
       }
 
       setIntervalo(String(data.intervaloReservaMinutos));
       setSuccess("Intervalo actualizado correctamente.");
+      toast.success("Intervalo actualizado correctamente");
 
       window.setTimeout(() => {
         setSuccess("");
       }, 2500);
     } catch {
       setError("No se pudo guardar el intervalo.");
+      toast.error("No se pudo guardar el intervalo");
     } finally {
       setSaving(false);
     }

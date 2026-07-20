@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   CheckCircle2,
   ImagePlus,
@@ -88,7 +89,9 @@ export function ServiciosImagenesPanel() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo subir la imagen.");
+        const message = data.error ?? "No se pudo subir la imagen.";
+        setError(message);
+        toast.error("No se pudo subir la imagen", { description: message });
         return;
       }
 
@@ -102,8 +105,10 @@ export function ServiciosImagenesPanel() {
             : servicio
         )
       );
+      toast.success("Imagen del servicio actualizada");
     } catch {
       setError("No se pudo subir la imagen.");
+      toast.error("No se pudo subir la imagen");
     } finally {
       setUploadingId(null);
 
@@ -130,7 +135,9 @@ export function ServiciosImagenesPanel() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo eliminar la imagen.");
+        const message = data.error ?? "No se pudo eliminar la imagen.";
+        setError(message);
+        toast.error("No se pudo eliminar la imagen", { description: message });
         return;
       }
 
@@ -144,8 +151,10 @@ export function ServiciosImagenesPanel() {
             : servicio
         )
       );
+      toast.success("Imagen del servicio eliminada");
     } catch {
       setError("No se pudo eliminar la imagen.");
+      toast.error("No se pudo eliminar la imagen");
     } finally {
       setDeletingId(null);
     }

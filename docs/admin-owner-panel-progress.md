@@ -4,6 +4,89 @@
 
 ---
 
+## Sesión 2026-07-20 — Auditoría de solo lectura + corrección de auditoría duplicada
+
+> Sesión iniciada con auditoría completa de solo lectura (código, `schema.sql` de respaldo del 2026-07-09, introspección OpenAPI en vivo contra producción, API de Storage). Autorización explícita del propietario para leer `src/lib/supabase/**`, `src/app/api/admin/**`, `supabase/**`, `.env.local` (solo detección de variables, sin imprimir secretos) — alcance ampliado sobre la restricción "solo UI/UX" de `CLAUDE.md`, únicamente para esta auditoría. Ver `docs/supabase-schema-map.md` (nuevo, esta sesión) para el mapa completo de tablas/RPC/RLS/storage.
+
+> **Continuación (mismo día)**: el propietario amplió la autorización para tocar código del panel admin sin pedir permiso archivo por archivo, dentro de un alcance ya delimitado (`src/app/admin/**`, `src/components/admin/**`, `src/lib/admin/**`, `src/app/api/admin/**`, `tests/admin*`, docs del panel, `supabase/patches/**`). Se corrigió un hallazgo adicional detectado en esta continuación y se actualizó `docs/admin-owner-panel.md` (§3.5 auditoría, §5 tabla de RPC, §8 migraciones, §10/11/12 nuevos) para que dejara de describir un estado ya superado.
+
+### Hallazgo 7 — `negocio-notas-panel.tsx` leía un campo muerto (CORREGIDO)
+
+`agregarNotaAction` ya había sido migrada (en una sesión anterior a esta auditoría) a la RPC transaccional `admin_agregar_nota_negocio` y desde entonces nunca devuelve `auditWarning` — pero `src/components/admin/negocios/negocio-notas-panel.tsx` seguía con `if (result.auditWarning) toast.warning(...)`, código muerto que no se había detectado en la corrección anterior (el pedido original solo listaba 4 componentes puntuales; este es un quinto que se encontró grepeando `auditWarning` en todo `src/`). Se quitó ese chequeo. Se revisó también `src/components/admin/usuarios/sincronizar-perfil-button.tsx` y `src/components/admin/negocios/solicitud-plan-acciones.tsx`: ambos siguen leyendo `auditWarning` de acciones que **sí** siguen auditando en dos pasos (`sincronizarPerfilUsuarioAction`, `aprobarSolicitudCambioPlanAction`, `rechazarSolicitudCambioPlanAction` — ninguna llama a una RPC que audite internamente), así que no son código muerto y no se tocaron.
+
+### Verificación adicional de guard y estructura
+
+Se confirmó (grep sobre los 3 conjuntos de archivos) que **todas** las páginas bajo `src/app/admin/**`, **todos** los Route Handlers bajo `src/app/api/admin/**` y **todas** las Server Actions bajo `src/lib/admin/actions/**` llaman a `requirePlatformOwner()` / `requirePlatformOwnerApi()` / `getPlatformOwnerOrNull()` — ninguna depende solo del layout. Se releyó `src/lib/admin/guard.ts` y `src/lib/admin/api-guard.ts` completos: sin cambios necesarios, el diseño ya es correcto (falla cerrado, distingue 401 de "no autenticado" vs. 403/404 de "autenticado sin permiso", nunca revela el motivo exacto a quien no es el propietario).
+
+### Documentación actualizada: `docs/admin-owner-panel.md`
+
+Estaba desactualizado en varios puntos que ya no reflejaban la realidad (algunos desde sesiones anteriores a esta, no solo por los cambios de hoy):
+- §3.5 (Auditoría) decía que *toda* Server Action que muta usa el patrón de dos pasos con `registrarAuditoria()` — falso desde que se crearon las 4 RPC transaccionales, y más falso todavía después de la corrección de esta sesión. Reescrito para distinguir los dos mecanismos reales (auditoría transaccional en la RPC vs. dos pasos con `auditWarning`).
+- §5 (tabla de RPC reutilizadas) no listaba las 4 RPC nuevas, y su nota de cierre decía que el cuerpo de las RPC mutantes nunca se había inspeccionado — ya no es cierto, se inspeccionó en esta auditoría vía `schema.sql`.
+- §8 (Migraciones) decía "creada, no aplicada" para `ciclo_facturacion` — ya está aplicada y reconfirmada. Se agregaron las entradas de las 4 RPC transaccionales, el patch de revoke nuevo, y la migración de sucursales pendiente.
+- §11/§12 (antes solo §11): el checklist decía que `ADMIN_OWNER_USER_ID` y `rol_global='super_admin'` seguían sin configurarse — ya están (confirmado en una sesión anterior). Se agregó una sección nueva (§11) documentando el riesgo y plan de `payment-proofs`, tal como pidió el propietario.
+
+### Pruebas ejecutadas esta continuación
+
+`npx playwright test tests/admin-owner-access.spec.ts tests/admin-api-security.spec.ts --reporter=list` contra el servidor `next dev` que ya estaba corriendo en el entorno (proceso preexistente, no iniciado por esta sesión — se detectó por el warning "Another next dev server is already running" al intentar levantar uno propio, y no se lo tocó). Resultado: **17 passed, 2 skipped, 0 failed** — mismo resultado que antes de los cambios de esta sesión, confirmando que la corrección de auditoría duplicada no rompió el flujo de autenticación/autorización.
+
+### Build y lint (verificación final de esta continuación)
+
+- `npm run build`: **exitoso**.
+- `npx eslint src/app/admin src/components/admin src/lib/admin src/app/api/admin tests/admin-owner-access.spec.ts tests/admin-api-security.spec.ts`: **exit code 0**.
+
+### Hallazgo 1 — Auditoría duplicada en 5 acciones administrativas (CORREGIDO esta sesión)
+
+Leyendo el cuerpo real de las 5 RPC administrativas originales en `schema.sql` (algo que sesiones anteriores no pudieron hacer por no tener acceso a ese backup), se confirmó que `admin_cambiar_plan_negocio`, `admin_bloquear_negocio`, `admin_desbloquear_negocio`, `admin_aprobar_pago_manual` y `admin_rechazar_pago_manual` **ya insertan su propia fila en `auditoria`** dentro de la misma transacción que la mutación (ej. `admin_bloquear_negocio` inserta `accion='negocio_bloqueado'`). Pero `src/lib/admin/actions/negocios.ts` llamaba además a `registrarAuditoria()` después de cada una de esas 5 RPC (ej. con `accion='bloquear_negocio'` para la misma acción) — usando `createServiceRoleClient()`, que bypasea RLS, así que ese segundo insert se ejecutaba con éxito. Resultado real (antes de esta corrección): **cada bloqueo/desbloqueo/cambio de plan/aprobación/rechazo de pago generaba 2 filas en `auditoria`**, no 1.
+
+**Corrección aplicada** (autorizada explícitamente, alcance limitado a estas 5 funciones): se quitó la llamada a `registrarAuditoria()` de `cambiarPlanNegocioAction`, `bloquearNegocioAction`, `desbloquearNegocioAction`, `aprobarPagoAction` y `rechazarPagoAction` en `src/lib/admin/actions/negocios.ts` — ya no hace falta, la RPC audita atómicamente. Las 5 funciones ahora devuelven siempre `{ ok: true }` en éxito (nunca más `auditWarning`, porque ya no puede fallar esa segunda escritura si no existe). Se actualizó el comentario de cabecera del archivo para reflejar esto. Se quitaron los `if (result.auditWarning) toast.warning(...)` ahora muertos en `negocio-bloqueo-boton.tsx`, `negocio-cambiar-plan-dialog.tsx` y `pago-acciones.tsx` (`AprobarPagoDialog` y `RechazarPagoDialog`). `negocio-pagos-panel.tsx` no necesitó cambios: no lee `auditWarning` (usa `registrarPagoAction`, que ya usaba la RPC transaccional nueva desde una sesión anterior).
+
+**No se tocó**: `aprobarSolicitudCambioPlanAction` y `rechazarSolicitudCambioPlanAction` siguen llamando a `registrarAuditoria()` — no llaman a ninguna de las 5 RPC de auditoría interna con el mismo `registro_id`/`tabla_afectada` (la solicitud es una entidad distinta de la suscripción), así que no tienen el mismo problema. `agregarNotaAction` y `registrarPagoAction` ya estaban corregidas desde antes (usan las 4 RPC transaccionales nuevas).
+
+### Hallazgo 2 — GRANT a `anon`/`authenticated`/`service_role` en las 5 RPC originales (documentado, patch creado, NO aplicado)
+
+Confirmado en `schema.sql` (backup 2026-07-09): las 5 RPC tienen `GRANT ALL ... TO anon, authenticated, service_role`. Como las 5 validan `es_super_admin()` como primera línea, un llamado no autorizado es rechazado igual — pero es una sola capa de defensa (la lógica interna), no dos, contradiciendo la recomendación explícita del prompt maestro de revocar `EXECUTE` de `PUBLIC` en RPC sensibles. Se creó `supabase/patches/2026-07-admin-revoke-public-execute-original-rpcs.sql` con el `REVOKE`/`GRANT` correctivo (marcado `APLICADO: NO` en su cabecera) — **no se ejecutó contra producción**. Requiere autorización explícita para aplicarse, y se recomienda antes verificar `pg_proc.proacl` en vivo (consulta incluida en el propio patch).
+
+### Hallazgo 3 — Bucket `payment-proofs` es público (documentado, NO corregido)
+
+Confirmado contra producción real (API de Storage, solo lectura): el bucket `payment-proofs` existe y tiene `public=true`. El endpoint `src/app/api/admin/pagos/[pagoId]/comprobante/route.ts` sube con una ruta que incluye un UUID aleatorio (no enumerable por fuerza bruta razonable) y guarda la URL pública resultante en `pagos_manuales.comprobante_url`. Cualquiera con esa URL exacta puede ver el comprobante sin sesión ni verificación de `super_admin` — es seguridad por oscuridad, no control de acceso real. **No se modificó el bucket ni el código** (fuera del alcance autorizado esta sesión). Plan de migración a URLs firmadas propuesto en `docs/supabase-schema-map.md` §10, pendiente de autorización para ejecutarse (incluye un `UPDATE storage.buckets` que requeriría permiso explícito aparte).
+
+### Hallazgo 4 — `schema.sql` de respaldo desactualizado (resuelto, no era una discrepancia real)
+
+El backup `schema.sql` (2026-07-09 19:12) no contenía `ciclo_facturacion` en `suscripciones`/`pagos_manuales` ni las 4 RPC nuevas (`admin_agregar_nota_negocio`, `admin_editar_plan`, `admin_registrar_pago_manual`, `admin_revocar_invitacion`). Se confirmó por introspección OpenAPI en vivo contra producción (esta sesión) que **las dos columnas y las 4 RPC SÍ existen hoy en producción** — coincide con lo que ya afirmaba una sesión anterior del progress.md. La explicación es simple: ambos patches se aplicaron el 2026-07-10 (un día después de la fecha del backup), según sus propios encabezados. El backup no es una fuente de verdad vigente para esas dos migraciones puntuales, pero sí lo sigue siendo para el resto del schema (tablas base, las 5 RPC originales, RLS) salvo que se demuestre lo contrario.
+
+### Hallazgo 5 — Archivo temporal huérfano (ELIMINADO esta sesión)
+
+`src/app/admin/usuarios/page.tsx.tmp.16676.bc5a9b008400` — comparado con el `page.tsx` real: era una versión vieja y ya superada de esa página (sin paginación, sin `AdminPageHeader`/`AdminTableShell`, sin `SincronizarPerfilButton`), claramente basura de editor (guardado atómico interrumpido). Confirmado que no tenía contenido útil no presente ya en el archivo real. **Borrado** con autorización explícita.
+
+### Hallazgo 6 — Migración `2026-07-empleado-id-sucursal-usuarios.sql` sigue pendiente
+
+No relacionada al panel admin. Su propio encabezado dice explícitamente "todavía NO fue aplicado". Solo se documenta acá para que quede registrado; no se tocó ni se aplicó.
+
+### Verificación de esta sesión
+
+- `git status` / `git diff`: ejecutados antes y después de los cambios (ver resultado en el cierre de esta sesión, más abajo de este archivo si se agregó, o en la respuesta final entregada al propietario).
+- `npm run build`: ejecutado tras los cambios de código (ver resultado entregado al propietario).
+- Lint específico del panel admin (`npx eslint src/app/admin src/components/admin src/lib/admin src/app/api/admin tests/admin-owner-access.spec.ts tests/admin-api-security.spec.ts`): ejecutado tras los cambios (ver resultado entregado al propietario).
+- No se ejecutó ningún `UPDATE`/`INSERT`/`DELETE`/`ALTER`/`CREATE`/`DROP` contra Supabase producción. No se aplicó el patch de revoke de grants ni la migración `empleado-id-sucursal-usuarios`. No se cambió el bucket `payment-proofs`.
+
+### Pendiente real (no verificado por esta sesión)
+
+- Login real: propietario entra, usuario normal no entra, admin de negocio no entra — sigue sin probarse en navegador.
+- Mutación real end-to-end con negocio de prueba (cambiar plan, bloquear, aprobar pago) — sigue sin probarse.
+- Aplicar (con autorización) el patch de revoke de grants, tras verificar `pg_proc.proacl` en vivo.
+- Decidir y ejecutar (con autorización) el plan de migración de `payment-proofs` a URLs firmadas.
+- Aplicar (con autorización) `2026-07-empleado-id-sucursal-usuarios.sql` si se necesita esa funcionalidad.
+- Resolver la inconsistencia `perfiles_usuario.id` vs `usuario_id` (conocida desde Fase 1, sigue sin decisión).
+
+### Próximo paso recomendado
+
+1. Probar en navegador, con sesión real del propietario: entrar a `/admin`, cambiar el plan de un negocio de prueba, bloquear/desbloquear, aprobar/rechazar un pago — confirmar que sigue quedando **una sola** fila en `auditoria` por acción (verificar el fix de esta sesión contra datos reales).
+2. Con otra cuenta (usuario normal o admin de negocio), confirmar que `/admin` sigue devolviendo 404.
+3. Revisar y decidir sobre el patch de revoke de grants y el plan de `payment-proofs`.
+
+---
+
 ## Sesión 2026-07-09 (continuación) — Panel activado, migraciones aplicadas, `/admin/configuracion`
 
 ### Estado: **panel activado por el propietario**

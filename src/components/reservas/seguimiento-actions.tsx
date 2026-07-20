@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Check, Copy, MessageCircle } from "lucide-react";
+import { toast } from "sonner";
 
 type SeguimientoActionsProps = {
   token: string | null;
@@ -58,12 +59,13 @@ export function SeguimientoActions({
     try {
       await navigator.clipboard.writeText(seguimientoUrl);
       setCopied(true);
+      toast.success("Link copiado");
 
       window.setTimeout(() => {
         setCopied(false);
       }, 1800);
     } catch {
-      alert("No se pudo copiar el link.");
+      toast.error("No se pudo copiar el link");
     }
   }
 

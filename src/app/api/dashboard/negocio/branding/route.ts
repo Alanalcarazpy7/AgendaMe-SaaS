@@ -1,6 +1,5 @@
 ﻿import { requireAdminGlobalApi } from "@/lib/dashboard/api-guards";
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 export const runtime = "nodejs";
@@ -37,49 +36,13 @@ function obtenerPathDesdePublicUrl(url: string | null) {
   return decodeURIComponent(url.slice(index + marker.length));
 }
 
-async function obtenerNegocioDelUsuario() {
-  const authSupabase = await createClient();
-
-  const {
-    data: { user },
-  } = await authSupabase.auth.getUser();
-
-  if (!user) {
-    return {
-      error: "No autenticado.",
-      status: 401,
-      negocioId: null,
-      negocio: null,
-    };
-  }
-
+async function obtenerNegocioDelUsuario(negocioId: string) {
   const supabase = createServiceRoleClient();
-
-  const { data: membresia, error: membresiaError } = await supabase
-    .from("negocio_usuarios")
-    .select("negocio_id")
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1)
-    .maybeSingle();
-
-  if (membresiaError) {
-    throw new Error(membresiaError.message);
-  }
-
-  if (!membresia) {
-    return {
-      error: "No tenés un negocio activo.",
-      status: 404,
-      negocioId: null,
-      negocio: null,
-    };
-  }
 
   const { data: negocio, error: negocioError } = await supabase
     .from("negocios")
     .select("id, nombre, logo_url, banner_url, color_primario, color_acento")
-    .eq("id", membresia.negocio_id)
+    .eq("id", negocioId)
     .maybeSingle();
 
   if (negocioError) {
@@ -90,7 +53,7 @@ async function obtenerNegocioDelUsuario() {
     return {
       error: "Negocio no encontrado.",
       status: 404,
-      negocioId: membresia.negocio_id as string,
+      negocioId,
       negocio: null,
     };
   }
@@ -98,7 +61,7 @@ async function obtenerNegocioDelUsuario() {
   return {
     error: null,
     status: 200,
-    negocioId: membresia.negocio_id as string,
+    negocioId,
     negocio: negocio as {
       id: string;
       nombre: string;
@@ -116,7 +79,7 @@ export async function GET() {
 
 
   try {
-    const contexto = await obtenerNegocioDelUsuario();
+    const contexto = await obtenerNegocioDelUsuario(guard.access.negocio.id);
 
     if (contexto.error || !contexto.negocio) {
       return NextResponse.json(
@@ -146,7 +109,7 @@ export async function POST(request: Request) {
 
 
   try {
-    const contexto = await obtenerNegocioDelUsuario();
+    const contexto = await obtenerNegocioDelUsuario(guard.access.negocio.id);
 
     if (contexto.error || !contexto.negocioId || !contexto.negocio) {
       return NextResponse.json(
@@ -257,7 +220,7 @@ export async function DELETE(request: Request) {
 
 
   try {
-    const contexto = await obtenerNegocioDelUsuario();
+    const contexto = await obtenerNegocioDelUsuario(guard.access.negocio.id);
 
     if (contexto.error || !contexto.negocioId || !contexto.negocio) {
       return NextResponse.json(

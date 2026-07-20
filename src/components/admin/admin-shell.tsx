@@ -13,7 +13,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Toaster } from "@/components/ui/sonner";
 
 type AdminShellProps = {
   children: React.ReactNode;
@@ -66,7 +65,6 @@ export function AdminShell({
   return (
     <div className="min-h-dvh bg-[radial-gradient(circle_at_12%_0%,color-mix(in_srgb,var(--primary)_10%,transparent),transparent_28%),linear-gradient(180deg,color-mix(in_srgb,var(--muted)_72%,var(--background)),var(--background))] text-foreground">
       <DashboardPreferencesApplier tema={tema} colorAcento={colorAcento} />
-      <Toaster richColors closeButton position="top-right" />
 
       <div className="flex min-h-dvh">
         <aside className="hidden w-[16.5rem] shrink-0 p-4 md:block">

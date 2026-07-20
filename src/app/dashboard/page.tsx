@@ -12,8 +12,10 @@ import {
   Store,
   Users,
 } from "lucide-react";
+import { DashboardPlanUsageOverview } from "@/components/dashboard/dashboard-plan-usage-overview";
 import { requireDashboardAccess } from "@/lib/dashboard/access-context";
 import { applySucursalScope } from "@/lib/dashboard/scope-helpers";
+import { obtenerUsoPlanNegocio } from "@/lib/planes/plan-limits";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 type Relacion<T> = T | T[] | null | undefined;
@@ -239,6 +241,12 @@ export default async function DashboardPage() {
   const maxDia = Math.max(...dias.map((dia) => dia.total), 1);
   const totalSemana = proximasCitas.length;
   const esPlanEmpresarial = access.planClave === "empresarial";
+  const planUsage = access.puedeVerTodo
+    ? await obtenerUsoPlanNegocio({
+        supabase,
+        negocioId: access.negocio.id,
+      })
+    : null;
 
   return (
     <div className="mx-auto max-w-7xl space-y-5">
@@ -301,6 +309,14 @@ export default async function DashboardPage() {
           icon={Store}
         />
       </section>
+
+      {planUsage ? (
+        <DashboardPlanUsageOverview
+          snapshot={planUsage}
+          puedeGestionarPlanes={access.puedeGestionarPlanes}
+          compact
+        />
+      ) : null}
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.85fr)]">
         <div className="rounded-[1.75rem] border border-border/80 bg-card/90 p-5 shadow-[0_18px_55px_rgb(15_23_42/0.07)] ring-1 ring-white/60 dark:bg-card/80 dark:shadow-black/25 dark:ring-white/5">

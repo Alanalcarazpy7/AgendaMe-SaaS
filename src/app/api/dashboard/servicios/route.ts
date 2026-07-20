@@ -1,7 +1,8 @@
 ﻿import { requireAdminGlobalApi } from "@/lib/dashboard/api-guards";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { validarCapacidadPlan } from "@/lib/planes/plan-limits";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 const servicioSchema = z.object({
   nombre: z.string().min(2, "Ingresá el nombre del servicio."),
@@ -50,20 +51,6 @@ export async function POST(request: NextRequest) {
   const guard = await requireAdminGlobalApi();
   if (!guard.ok) return guard.response;
 
-
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json(
-      { error: "No tenés sesión activa." },
-      { status: 401 }
-    );
-  }
-
   const body = await request.json();
   const parsed = servicioSchema.safeParse(body);
 
@@ -74,35 +61,27 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { data: membresias, error: membresiaError } = await supabase
-    .from("negocio_usuarios")
-    .select("negocio_id")
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1);
+  const admin = createServiceRoleClient();
+  const negocioId = guard.access.negocio.id;
+  const capacidad = await validarCapacidadPlan({
+    supabase: admin,
+    negocioId,
+    recurso: "servicios",
+  });
 
-  if (membresiaError) {
+  if (!capacidad.ok) {
     return NextResponse.json(
-      { error: membresiaError.message || "No se pudo validar tu negocio." },
-      { status: 500 }
-    );
-  }
-
-  const membresia = membresias?.[0];
-
-  if (!membresia) {
-    return NextResponse.json(
-      { error: "No tenés un negocio activo." },
+      { error: capacidad.message },
       { status: 403 }
     );
   }
 
   const datos = parsed.data;
 
-  const { data: servicio, error } = await supabase
+  const { data: servicio, error } = await admin
     .from("servicios")
     .insert({
-      negocio_id: membresia.negocio_id,
+      negocio_id: negocioId,
       nombre: datos.nombre.trim(),
       descripcion: limpiarTexto(datos.descripcion),
       duracion_minutos: datos.duracionMinutos,

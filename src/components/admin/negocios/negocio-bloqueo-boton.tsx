@@ -32,7 +32,6 @@ export function NegocioBloqueoBoton({ negocioId, bloqueado }: Props) {
         const result = await desbloquearNegocioAction({ negocioId });
         if (result.ok) {
           toast.success("Negocio desbloqueado.");
-          if (result.auditWarning) toast.warning(result.auditWarning);
           setOpen(false);
         } else {
           toast.error(result.error);
@@ -45,7 +44,6 @@ export function NegocioBloqueoBoton({ negocioId, bloqueado }: Props) {
       const result = await bloquearNegocioAction({ negocioId, motivo });
       if (result.ok) {
         toast.success("Negocio bloqueado.");
-        if (result.auditWarning) toast.warning(result.auditWarning);
         setOpen(false);
         setMotivo("");
       } else {

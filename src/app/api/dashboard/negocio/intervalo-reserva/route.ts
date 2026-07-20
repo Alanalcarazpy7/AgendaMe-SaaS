@@ -1,7 +1,6 @@
-﻿import { requireAdminGlobalApi } from "@/lib/dashboard/api-guards";
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdminGlobalApi } from "@/lib/dashboard/api-guards";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { NextResponse } from "next/server";
 
 function validarIntervalo(valor: unknown) {
   const numero = Number(valor);
@@ -18,75 +17,17 @@ function validarIntervalo(valor: unknown) {
   return numero;
 }
 
-async function obtenerNegocioDelUsuario() {
-  const authSupabase = await createClient();
-
-  const {
-    data: { user },
-  } = await authSupabase.auth.getUser();
-
-  if (!user) {
-    return {
-      error: "No autenticado.",
-      status: 401,
-      negocioId: null,
-    };
-  }
-
-  const supabase = createServiceRoleClient();
-
-  const { data: membresia, error } = await supabase
-    .from("negocio_usuarios")
-    .select("negocio_id")
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  if (!membresia) {
-    return {
-      error: "No tenés un negocio activo.",
-      status: 404,
-      negocioId: null,
-    };
-  }
-
-  return {
-    error: null,
-    status: 200,
-    negocioId: membresia.negocio_id as string,
-  };
-}
-
 export async function GET() {
   const guard = await requireAdminGlobalApi();
   if (!guard.ok) return guard.response;
 
-
   try {
-    const resultado = await obtenerNegocioDelUsuario();
-
-    if (resultado.error || !resultado.negocioId) {
-      return NextResponse.json(
-        {
-          error: resultado.error,
-        },
-        {
-          status: resultado.status,
-        }
-      );
-    }
-
     const supabase = createServiceRoleClient();
 
     const { data: negocio, error } = await supabase
       .from("negocios")
       .select("intervalo_reserva_minutos")
-      .eq("id", resultado.negocioId)
+      .eq("id", guard.access.negocio.id)
       .maybeSingle();
 
     if (error) {
@@ -112,7 +53,6 @@ export async function PATCH(request: Request) {
   const guard = await requireAdminGlobalApi();
   if (!guard.ok) return guard.response;
 
-
   try {
     const body = await request.json();
     const intervalo = validarIntervalo(body.intervaloReservaMinutos);
@@ -129,19 +69,6 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const resultado = await obtenerNegocioDelUsuario();
-
-    if (resultado.error || !resultado.negocioId) {
-      return NextResponse.json(
-        {
-          error: resultado.error,
-        },
-        {
-          status: resultado.status,
-        }
-      );
-    }
-
     const supabase = createServiceRoleClient();
 
     const { error } = await supabase
@@ -149,7 +76,7 @@ export async function PATCH(request: Request) {
       .update({
         intervalo_reserva_minutos: intervalo,
       })
-      .eq("id", resultado.negocioId);
+      .eq("id", guard.access.negocio.id);
 
     if (error) {
       throw new Error(error.message);

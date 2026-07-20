@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   AlertCircle,
   CalendarDays,
@@ -247,7 +248,7 @@ export function RecordatoriosPanel({
     const mensaje = encodeURIComponent(crearMensaje(cita, tipo));
 
     if (!telefono) {
-      alert("Este cliente no tiene teléfono cargado.");
+      toast.error("Este cliente no tiene teléfono cargado.");
       return;
     }
 
@@ -257,10 +258,15 @@ export function RecordatoriosPanel({
   async function copiarMensaje(cita: CitaRecordatorio, tipo: "recordatorio" | "confirmacion" | "reprogramar") {
     const mensaje = crearMensaje(cita, tipo);
 
-    await copiar(mensaje);
-    setCopiado(`${cita.id}-${tipo}`);
+    try {
+      await copiar(mensaje);
+      setCopiado(`${cita.id}-${tipo}`);
+      toast.success("Mensaje copiado");
 
-    setTimeout(() => setCopiado(""), 1800);
+      setTimeout(() => setCopiado(""), 1800);
+    } catch {
+      toast.error("No se pudo copiar el mensaje");
+    }
   }
 
   async function marcarConfirmada(cita: CitaRecordatorio) {
@@ -280,13 +286,16 @@ export function RecordatoriosPanel({
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.error ?? "No se pudo confirmar la cita.");
+        toast.error("No se pudo confirmar la cita", {
+          description: data.error ?? "Intentá de nuevo en unos segundos.",
+        });
         return;
       }
 
+      toast.success("Cita confirmada correctamente");
       window.location.reload();
     } catch {
-      alert("No se pudo confirmar la cita.");
+      toast.error("No se pudo confirmar la cita");
     } finally {
       setAccionandoId("");
     }

@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { requireApiDashboardAccess } from "@/lib/dashboard/api-access";
+import { validarCapacidadPlan } from "@/lib/planes/plan-limits";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 type RouteContext = {
@@ -170,7 +171,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const { data: empleadoActual, error: empleadoActualError } = await supabase
       .from("empleados")
-      .select("id, negocio_id, sucursal_id")
+      .select("id, negocio_id, sucursal_id, estado")
       .eq("id", empleadoId)
       .eq("negocio_id", access.negocio.id)
       .maybeSingle();
@@ -211,6 +212,21 @@ export async function PATCH(request: Request, context: RouteContext) {
         { error: "Estado inválido." },
         { status: 400 }
       );
+    }
+
+    if (estado === "activo" && empleadoActual.estado !== "activo") {
+      const capacidad = await validarCapacidadPlan({
+        supabase,
+        negocioId: access.negocio.id,
+        recurso: "empleados",
+      });
+
+      if (!capacidad.ok) {
+        return NextResponse.json(
+          { error: capacidad.message },
+          { status: 403 }
+        );
+      }
     }
 
     let sucursalId = limpiar(body.sucursal_id ?? body.sucursalId);

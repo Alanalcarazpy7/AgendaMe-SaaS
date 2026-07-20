@@ -20,6 +20,8 @@ import {
   getAhorroAnualMontoLabel,
   type PlanPublico,
 } from "@/lib/planes/planes-shared";
+import { DashboardPlanUsageOverview } from "@/components/dashboard/dashboard-plan-usage-overview";
+import { obtenerUsoPlanNegocio } from "@/lib/planes/plan-limits";
 
 type SuscripcionRaw = {
   id: string;
@@ -102,16 +104,6 @@ function PremiumCard({
   );
 }
 
-function parteFechaAsuncion(tipo: Intl.DateTimeFormatPartTypes) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Asuncion",
-    year: "numeric",
-    month: "2-digit",
-  }).formatToParts(new Date());
-
-  return parts.find((part) => part.type === tipo)?.value ?? "";
-}
-
 export default async function DashboardPlanesPage() {
   const access = await requireDashboardAccess();
   if (!access.puedeGestionarPlanes) {
@@ -142,18 +134,12 @@ export default async function DashboardPlanesPage() {
     redirect("/sin-acceso?motivo=no_access");
   }
 
-  const anio = Number(parteFechaAsuncion("year"));
-  const mes = Number(parteFechaAsuncion("month"));
-
   const [
     { data: negocio },
     { data: suscripcionData },
     { data: planes },
-    { data: usoMensual },
     { data: pagosRecientes },
-    { count: clientesCount },
-    { count: empleadosCount },
-    { count: serviciosCount },
+    planUsage,
   ] = await Promise.all([
     supabase.from("negocios").select("id, nombre").eq("id", membresia.negocio_id).maybeSingle(),
 
@@ -169,37 +155,16 @@ export default async function DashboardPlanesPage() {
     supabase.from("vista_planes_publicos").select("*").order("orden", { ascending: true }),
 
     supabase
-      .from("uso_plan_mensual")
-      .select("citas_creadas")
-      .eq("negocio_id", membresia.negocio_id)
-      .eq("anio", anio)
-      .eq("mes", mes)
-      .maybeSingle(),
-
-    supabase
       .from("pagos_manuales")
       .select("id, plan_id, monto_gs, metodo, estado, comprobante_url, notas_cliente, notas_admin, created_at")
       .eq("negocio_id", membresia.negocio_id)
       .order("created_at", { ascending: false })
       .limit(8),
 
-    supabase
-      .from("clientes")
-      .select("id", { count: "exact", head: true })
-      .eq("negocio_id", membresia.negocio_id)
-      .eq("estado", "activo"),
-
-    supabase
-      .from("empleados")
-      .select("id", { count: "exact", head: true })
-      .eq("negocio_id", membresia.negocio_id)
-      .eq("estado", "activo"),
-
-    supabase
-      .from("servicios")
-      .select("id", { count: "exact", head: true })
-      .eq("negocio_id", membresia.negocio_id)
-      .eq("estado", "activo"),
+    obtenerUsoPlanNegocio({
+      supabase,
+      negocioId: membresia.negocio_id,
+    }),
   ]);
 
   if (!negocio) {
@@ -247,27 +212,7 @@ export default async function DashboardPlanesPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-3xl border bg-card p-4 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
-          <p className="text-sm text-muted-foreground">Citas del mes</p>
-          <p className="mt-2 text-3xl font-bold">{Number(usoMensual?.citas_creadas ?? 0)}</p>
-        </div>
-
-        <div className="rounded-3xl border bg-card p-4 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
-          <p className="text-sm text-muted-foreground">Clientes activos</p>
-          <p className="mt-2 text-3xl font-bold">{clientesCount ?? 0}</p>
-        </div>
-
-        <div className="rounded-3xl border bg-card p-4 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
-          <p className="text-sm text-muted-foreground">Empleados activos</p>
-          <p className="mt-2 text-3xl font-bold">{empleadosCount ?? 0}</p>
-        </div>
-
-        <div className="rounded-3xl border bg-card p-4 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
-          <p className="text-sm text-muted-foreground">Servicios activos</p>
-          <p className="mt-2 text-3xl font-bold">{serviciosCount ?? 0}</p>
-        </div>
-      </section>
+      <DashboardPlanUsageOverview snapshot={planUsage} puedeGestionarPlanes />
 
       <ComprobantePagoForm
         planes={listaPlanes}

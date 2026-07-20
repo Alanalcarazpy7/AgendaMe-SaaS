@@ -93,7 +93,6 @@ export function NegocioCambiarPlanDialog({ negocioId, planActualClave, planes, u
       });
       if (result.ok) {
         toast.success("Plan actualizado.");
-        if (result.auditWarning) toast.warning(result.auditWarning);
         setOpen(false);
         setConfirmadoExceso(false);
       } else {

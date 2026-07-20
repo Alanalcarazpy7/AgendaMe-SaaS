@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { requireApiDashboardAccess } from "@/lib/dashboard/api-access";
+import { validarCapacidadPlan } from "@/lib/planes/plan-limits";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 type RouteContext = {
@@ -66,6 +67,10 @@ function fechaHoraPasada(fecha: string, hora: string) {
   return citaComparable < ahoraComparable;
 }
 
+function mesDe(fecha: string) {
+  return String(fecha).slice(0, 7);
+}
+
 export async function PATCH(request: Request, context: RouteContext) {
   try {
     const accessGuard = await requireApiDashboardAccess();
@@ -111,6 +116,23 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
+    if (access.rol === "empleado_sucursal" && !access.empleadoId) {
+      return NextResponse.json(
+        { error: "Tu cuenta no está vinculada a un empleado." },
+        { status: 403 }
+      );
+    }
+
+    if (
+      access.rol === "empleado_sucursal" &&
+      citaActual.empleado_id !== access.empleadoId
+    ) {
+      return NextResponse.json(
+        { error: "No podés modificar citas de otro empleado." },
+        { status: 403 }
+      );
+    }
+
     const clienteId = limpiar(body.clienteId ?? body.cliente_id) || citaActual.cliente_id;
     const servicioId = limpiar(body.servicioId ?? body.servicio_id) || citaActual.servicio_id;
     const empleadoId = limpiar(body.empleadoId ?? body.empleado_id) || citaActual.empleado_id;
@@ -125,6 +147,33 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json(
         { error: "Estado inválido." },
         { status: 400 }
+      );
+    }
+
+    const citaActualCuenta =
+      citaActual.estado !== "cancelada" && mesDe(citaActual.fecha) === mesDe(fecha);
+    const citaNuevaCuenta = estado !== "cancelada";
+
+    if (citaNuevaCuenta && !citaActualCuenta) {
+      const capacidad = await validarCapacidadPlan({
+        supabase,
+        negocioId: access.negocio.id,
+        recurso: "citas",
+        fechaCitas: fecha,
+      });
+
+      if (!capacidad.ok) {
+        return NextResponse.json(
+          { error: capacidad.message },
+          { status: 403 }
+        );
+      }
+    }
+
+    if (access.rol === "empleado_sucursal" && empleadoId !== access.empleadoId) {
+      return NextResponse.json(
+        { error: "No podés asignar la cita a otro empleado." },
+        { status: 403 }
       );
     }
 

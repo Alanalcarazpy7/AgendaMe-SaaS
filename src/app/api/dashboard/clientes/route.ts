@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { requireApiDashboardAccess } from "@/lib/dashboard/api-access";
+import { validarCapacidadPlan } from "@/lib/planes/plan-limits";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 type Payload = {
@@ -41,6 +42,18 @@ export async function POST(request: Request) {
     }
 
     const supabase = createServiceRoleClient();
+    const capacidad = await validarCapacidadPlan({
+      supabase,
+      negocioId: access.negocio.id,
+      recurso: "clientes",
+    });
+
+    if (!capacidad.ok) {
+      return NextResponse.json(
+        { error: capacidad.message },
+        { status: 403 }
+      );
+    }
 
     const { data: cliente, error } = await supabase
       .from("clientes")
@@ -122,6 +135,32 @@ export async function PATCH(request: Request) {
     }
 
     const supabase = createServiceRoleClient();
+
+    if (estado === "activo") {
+      const { data: clienteActual, error: clienteActualError } = await supabase
+        .from("clientes")
+        .select("estado")
+        .eq("id", id)
+        .eq("negocio_id", access.negocio.id)
+        .maybeSingle();
+
+      if (clienteActualError) throw new Error(clienteActualError.message);
+
+      if (clienteActual?.estado !== "activo") {
+        const capacidad = await validarCapacidadPlan({
+          supabase,
+          negocioId: access.negocio.id,
+          recurso: "clientes",
+        });
+
+        if (!capacidad.ok) {
+          return NextResponse.json(
+            { error: capacidad.message },
+            { status: 403 }
+          );
+        }
+      }
+    }
 
     if (access.scope === "sucursal" && access.sucursalId) {
       const { data: permitido, error: permisoError } = await supabase

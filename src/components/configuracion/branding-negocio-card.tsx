@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ImagePlus, Loader2, Trash2, UploadCloud } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 type BrandingNegocio = {
@@ -68,7 +69,9 @@ export function BrandingNegocioCard() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo subir la imagen.");
+        const message = data.error ?? "No se pudo subir la imagen.";
+        setError(message);
+        toast.error("No se pudo subir la imagen", { description: message });
         return;
       }
 
@@ -80,8 +83,10 @@ export function BrandingNegocioCard() {
           [tipo === "logo" ? "logo_url" : "banner_url"]: data.url,
         };
       });
+      toast.success(tipo === "logo" ? "Logo actualizado" : "Banner actualizado");
     } catch {
       setError("No se pudo subir la imagen.");
+      toast.error("No se pudo subir la imagen");
     } finally {
       setUploading(null);
 
@@ -111,7 +116,9 @@ export function BrandingNegocioCard() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo eliminar la imagen.");
+        const message = data.error ?? "No se pudo eliminar la imagen.";
+        setError(message);
+        toast.error("No se pudo eliminar la imagen", { description: message });
         return;
       }
 
@@ -123,8 +130,10 @@ export function BrandingNegocioCard() {
           [tipo === "logo" ? "logo_url" : "banner_url"]: null,
         };
       });
+      toast.success(tipo === "logo" ? "Logo eliminado" : "Banner eliminado");
     } catch {
       setError("No se pudo eliminar la imagen.");
+      toast.error("No se pudo eliminar la imagen");
     } finally {
       setDeleting(null);
     }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarPlus } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -157,7 +158,9 @@ export function CitaDialog({
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo crear la cita.");
+        const message = data.error ?? "No se pudo crear la cita.";
+        setError(message);
+        toast.error("No se pudo crear la cita", { description: message });
         return;
       }
 
@@ -165,9 +168,11 @@ export function CitaDialog({
       setServicioId("");
       setEmpleadoId("");
       onOpenChange(false);
+      toast.success("Cita creada correctamente");
       onSaved();
     } catch {
       setError("Ocurrió un error inesperado.");
+      toast.error("No se pudo crear la cita");
     } finally {
       setLoading(false);
     }

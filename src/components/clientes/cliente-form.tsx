@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserPlus } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,7 +54,9 @@ export function ClienteForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo crear el cliente.");
+        const message = data.error ?? "No se pudo crear el cliente.";
+        setError(message);
+        toast.error("No se pudo crear el cliente", { description: message });
         return;
       }
 
@@ -63,10 +66,12 @@ export function ClienteForm() {
       setDocumento("");
       setNotasInternas("");
       setOk("Cliente creado correctamente.");
+      toast.success("Cliente creado correctamente");
 
       router.refresh();
     } catch {
       setError("Ocurrió un error inesperado.");
+      toast.error("No se pudo crear el cliente");
     } finally {
       setLoading(false);
     }

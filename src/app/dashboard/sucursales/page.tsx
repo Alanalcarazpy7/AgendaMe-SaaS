@@ -79,6 +79,7 @@ export default async function SucursalesPage() {
         id,
         negocio_id,
         sucursal_id,
+        empleado_id,
         email,
         rol,
         estado,

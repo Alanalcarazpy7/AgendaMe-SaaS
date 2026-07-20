@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Clock, Pencil, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -220,14 +221,18 @@ export function EmpleadoDialog({
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo guardar el empleado.");
+        const message = data.error ?? "No se pudo guardar el empleado.";
+        setError(message);
+        toast.error("No se pudo guardar el empleado", { description: message });
         return;
       }
 
       setOpen(false);
+      toast.success(esEditar ? "Empleado actualizado" : "Empleado creado");
       router.refresh();
     } catch {
       setError("Ocurrió un error inesperado.");
+      toast.error("No se pudo guardar el empleado");
     } finally {
       setLoading(false);
     }

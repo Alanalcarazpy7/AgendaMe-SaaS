@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -88,14 +89,18 @@ export function ClienteDialog({ cliente, variant }: ClienteDialogProps) {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo guardar el cliente.");
+        const message = data.error ?? "No se pudo guardar el cliente.";
+        setError(message);
+        toast.error("No se pudo guardar el cliente", { description: message });
         return;
       }
 
       setOpen(false);
+      toast.success(esEditar ? "Cliente actualizado" : "Cliente creado");
       router.refresh();
     } catch {
       setError("Ocurrió un error inesperado.");
+      toast.error("No se pudo guardar el cliente");
     } finally {
       setLoading(false);
     }

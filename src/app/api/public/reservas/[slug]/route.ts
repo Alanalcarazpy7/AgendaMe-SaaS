@@ -3,6 +3,8 @@ import {
   calcularDisponibilidadReserva,
   sumarMinutosHora,
 } from "@/lib/reservas/disponibilidad";
+import { validarCapacidadPlan } from "@/lib/planes/plan-limits";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 type RouteContext = {
@@ -26,6 +28,25 @@ function limpiar(valor: unknown) {
   return String(valor ?? "").trim();
 }
 
+function soloDigitos(valor: string) {
+  return valor.replace(/\D/g, "");
+}
+
+function rateLimitResponse(retryAfterSeconds: number) {
+  return NextResponse.json(
+    {
+      error:
+        "Recibimos muchas solicitudes seguidas. Espera unos minutos antes de intentar de nuevo.",
+    },
+    {
+      status: 429,
+      headers: {
+        "Retry-After": String(retryAfterSeconds),
+      },
+    }
+  );
+}
+
 export async function POST(request: Request, context: RouteContext) {
   try {
     const { slug } = await context.params;
@@ -45,6 +66,31 @@ export async function POST(request: Request, context: RouteContext) {
         { error: "Completá todos los datos obligatorios." },
         { status: 400 }
       );
+    }
+
+    const ip = getClientIp(request);
+    const ipLimit = checkRateLimit({
+      key: `public-reserva:ip:${slug}:${ip}`,
+      limit: 8,
+      windowMs: 10 * 60 * 1000,
+    });
+
+    if (!ipLimit.ok) {
+      return rateLimitResponse(ipLimit.retryAfterSeconds);
+    }
+
+    const telefonoKey = soloDigitos(clienteTelefono);
+
+    if (telefonoKey) {
+      const telefonoLimit = checkRateLimit({
+        key: `public-reserva:phone:${slug}:${telefonoKey}`,
+        limit: 3,
+        windowMs: 30 * 60 * 1000,
+      });
+
+      if (!telefonoLimit.ok) {
+        return rateLimitResponse(telefonoLimit.retryAfterSeconds);
+      }
     }
 
     const supabase = createServiceRoleClient();
@@ -83,6 +129,23 @@ export async function POST(request: Request, context: RouteContext) {
     const negocioId = disponibilidad.negocio.id;
     const sucursalFinalId = disponibilidad.sucursalId;
     const servicio = disponibilidad.servicio;
+    const capacidadCitas = await validarCapacidadPlan({
+      supabase,
+      negocioId,
+      recurso: "citas",
+      fechaCitas: fecha,
+    });
+
+    if (!capacidadCitas.ok) {
+      return NextResponse.json(
+        {
+          error:
+            "El negocio llego al limite de reservas del plan actual. Contacta al negocio para coordinar otro canal.",
+        },
+        { status: 403 }
+      );
+    }
+
     const horaFin = sumarMinutosHora(
       horaInicio,
       Number(servicio.duracion_minutos ?? 30)
@@ -114,6 +177,22 @@ export async function POST(request: Request, context: RouteContext) {
         .eq("id", clienteId)
         .eq("negocio_id", negocioId);
     } else {
+      const capacidadClientes = await validarCapacidadPlan({
+        supabase,
+        negocioId,
+        recurso: "clientes",
+      });
+
+      if (!capacidadClientes.ok) {
+        return NextResponse.json(
+          {
+            error:
+              "El negocio llego al limite de clientes del plan actual. Contacta al negocio para coordinar la reserva.",
+          },
+          { status: 403 }
+        );
+      }
+
       const { data: clienteNuevo, error: clienteError } = await supabase
         .from("clientes")
         .insert({

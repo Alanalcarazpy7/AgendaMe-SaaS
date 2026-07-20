@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { requireApiDashboardAccess } from "@/lib/dashboard/api-access";
+import { validarCapacidadPlan } from "@/lib/planes/plan-limits";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 function limpiar(valor: unknown) {
@@ -173,6 +174,21 @@ export async function POST(request: Request) {
         { error: "Estado inválido." },
         { status: 400 }
       );
+    }
+
+    if (estado === "activo") {
+      const capacidad = await validarCapacidadPlan({
+        supabase,
+        negocioId: access.negocio.id,
+        recurso: "empleados",
+      });
+
+      if (!capacidad.ok) {
+        return NextResponse.json(
+          { error: capacidad.message },
+          { status: 403 }
+        );
+      }
     }
 
     let sucursalId = limpiar(body.sucursal_id ?? body.sucursalId);

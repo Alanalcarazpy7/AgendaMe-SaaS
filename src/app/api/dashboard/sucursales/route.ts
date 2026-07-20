@@ -1,7 +1,7 @@
 ﻿import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdminGlobalApi } from "@/lib/dashboard/api-guards";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { nivelPlan } from "@/lib/planes/plan-access";
+import { validarCapacidadPlan } from "@/lib/planes/plan-limits";
 
 type Payload = {
   id?: string;
@@ -16,58 +16,19 @@ function limpiar(valor: unknown) {
 }
 
 async function getContext() {
-  const authSupabase = await createClient();
+  const guard = await requireAdminGlobalApi();
 
-  const {
-    data: { user },
-  } = await authSupabase.auth.getUser();
-
-  if (!user) {
-    return { error: "No autenticado.", status: 401 as const };
+  if (!guard.ok) {
+    return {
+      error:
+        guard.response.status === 401
+          ? "No autenticado."
+          : "No tenés permiso para gestionar sucursales.",
+      status: guard.response.status as 401 | 403,
+    };
   }
 
-  const supabase = createServiceRoleClient();
-
-  const { data: membresia, error: membresiaError } = await supabase
-    .from("negocio_usuarios")
-    .select("negocio_id")
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1)
-    .maybeSingle();
-
-  if (membresiaError) throw new Error(membresiaError.message);
-
-  if (!membresia) {
-    return { error: "No tenés un negocio activo.", status: 404 as const };
-  }
-
-  const { data: suscripcion, error: suscripcionError } = await supabase
-    .from("suscripciones")
-    .select("plan_id")
-    .eq("negocio_id", membresia.negocio_id)
-    .eq("estado", "activa")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (suscripcionError) throw new Error(suscripcionError.message);
-
-  let planClave = "gratis";
-
-  if (suscripcion?.plan_id) {
-    const { data: plan, error: planError } = await supabase
-      .from("planes_saas")
-      .select("clave")
-      .eq("id", suscripcion.plan_id)
-      .maybeSingle();
-
-    if (planError) throw new Error(planError.message);
-
-    planClave = plan?.clave ?? "gratis";
-  }
-
-  if (nivelPlan(planClave) < 3) {
+  if (!guard.access.puedeGestionarSucursales) {
     return {
       error: "La gestión de sucursales está disponible desde el Plan Empresarial.",
       status: 403 as const,
@@ -75,8 +36,8 @@ async function getContext() {
   }
 
   return {
-    supabase,
-    negocioId: membresia.negocio_id as string,
+    supabase: createServiceRoleClient(),
+    negocioId: guard.access.negocio.id,
   };
 }
 
@@ -141,6 +102,19 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "El nombre de la sucursal es obligatorio." },
         { status: 400 }
+      );
+    }
+
+    const capacidad = await validarCapacidadPlan({
+      supabase,
+      negocioId,
+      recurso: "sucursales",
+    });
+
+    if (!capacidad.ok) {
+      return NextResponse.json(
+        { error: capacidad.message },
+        { status: 403 }
       );
     }
 
@@ -211,7 +185,7 @@ export async function PATCH(request: Request) {
 
     const { data: sucursalActual, error: sucursalError } = await supabase
       .from("sucursales")
-      .select("id, es_principal")
+      .select("id, es_principal, estado")
       .eq("id", id)
       .eq("negocio_id", negocioId)
       .maybeSingle();
@@ -230,6 +204,21 @@ export async function PATCH(request: Request) {
         { error: "La sucursal principal no se puede desactivar." },
         { status: 400 }
       );
+    }
+
+    if (estado === "activo" && sucursalActual.estado !== "activo") {
+      const capacidad = await validarCapacidadPlan({
+        supabase,
+        negocioId,
+        recurso: "sucursales",
+      });
+
+      if (!capacidad.ok) {
+        return NextResponse.json(
+          { error: capacidad.message },
+          { status: 403 }
+        );
+      }
     }
 
     const { error } = await supabase

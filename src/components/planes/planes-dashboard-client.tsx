@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   BarChart3,
   CheckCircle2,
@@ -157,17 +158,23 @@ export function PlanesDashboardClient({
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo solicitar el plan.");
+        const message = data.error ?? "No se pudo solicitar el plan.";
+        setError(message);
+        toast.error("No se pudo solicitar el plan", { description: message });
         return;
       }
 
       setMessage("Solicitud registrada. También podés continuar por WhatsApp.");
+      toast.success("Solicitud registrada", {
+        description: `${plan.nombre} quedó pendiente de revisión.`,
+      });
 
       if (data.whatsappUrl) {
         window.open(data.whatsappUrl, "_blank", "noopener,noreferrer");
       }
     } catch {
       setError("No se pudo solicitar el plan.");
+      toast.error("No se pudo solicitar el plan");
     } finally {
       setLoadingPlan(null);
     }

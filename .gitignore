@@ -54,3 +54,10 @@ tests/.auth/
 # Archivos de backup temporales
 *.bak
 *.bak-*
+/backup/
+/backups/
+*.backup
+*.backup.gz
+*.dump
+*.dump.gz
+*.sql.gz

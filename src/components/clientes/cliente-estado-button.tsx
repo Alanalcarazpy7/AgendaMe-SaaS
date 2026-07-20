@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 type ClienteEstadoButtonProps = {
@@ -23,7 +24,7 @@ export function ClienteEstadoButton({
     setLoading(true);
 
     try {
-      await fetch(`/api/dashboard/clientes/${clienteId}`, {
+      const response = await fetch(`/api/dashboard/clientes/${clienteId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -33,7 +34,21 @@ export function ClienteEstadoButton({
         }),
       });
 
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error("No se pudo actualizar el cliente", {
+          description: data.error ?? "Intentá de nuevo en unos segundos.",
+        });
+        return;
+      }
+
+      toast.success(
+        nuevoEstado === "activo" ? "Cliente activado" : "Cliente ocultado"
+      );
       router.refresh();
+    } catch {
+      toast.error("No se pudo actualizar el cliente");
     } finally {
       setLoading(false);
     }

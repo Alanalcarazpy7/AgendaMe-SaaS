@@ -22,7 +22,6 @@ export function NegocioNotasPanel({ negocioId, notas }: Props) {
       const result = await agregarNotaAction({ negocioId, nota });
       if (result.ok) {
         toast.success("Nota agregada.");
-        if (result.auditWarning) toast.warning(result.auditWarning);
         setNota("");
       } else {
         toast.error(result.error);

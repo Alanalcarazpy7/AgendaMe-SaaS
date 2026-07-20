@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 type ServicioEstadoButtonProps = {
@@ -23,7 +24,7 @@ export function ServicioEstadoButton({
     setLoading(true);
 
     try {
-      await fetch(`/api/dashboard/servicios/${servicioId}`, {
+      const response = await fetch(`/api/dashboard/servicios/${servicioId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -33,7 +34,21 @@ export function ServicioEstadoButton({
         }),
       });
 
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error("No se pudo actualizar el servicio", {
+          description: data.error ?? "Intentá de nuevo en unos segundos.",
+        });
+        return;
+      }
+
+      toast.success(
+        nuevoEstado === "activo" ? "Servicio activado" : "Servicio ocultado"
+      );
       router.refresh();
+    } catch {
+      toast.error("No se pudo actualizar el servicio");
     } finally {
       setLoading(false);
     }

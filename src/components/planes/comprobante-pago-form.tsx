@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AlertCircle, CheckCircle2, Clock3, ExternalLink, FileUp, ReceiptText, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,7 @@ function fechaCorta(fecha: string) {
 }
 
 export function ComprobantePagoForm({ planes, planActualId, pagos }: Props) {
+  const router = useRouter();
   const opcionesPlan = useMemo(() => {
     const planesPagables = planes.filter(
       (plan) => Number(plan.precio_mensual_gs ?? 0) > 0 || Number(plan.precio_anual_gs ?? 0) > 0
@@ -120,6 +122,7 @@ export function ComprobantePagoForm({ planes, planActualId, pagos }: Props) {
       setNotas("");
       setFileName("");
       if (inputRef.current) inputRef.current.value = "";
+      router.refresh();
     });
   }
 
@@ -291,7 +294,7 @@ export function ComprobantePagoForm({ planes, planActualId, pagos }: Props) {
 
                     {pago.comprobante_url ? (
                       <a
-                        href={pago.comprobante_url}
+                        href={`/api/dashboard/pagos/comprobante?pagoId=${encodeURIComponent(pago.id)}`}
                         target="_blank"
                         rel="noreferrer"
                         className="mt-3 inline-flex items-center text-xs font-black text-primary hover:underline"

@@ -40,6 +40,57 @@ async function buscarAuthUserPorEmail(supabase: any, email: string) {
   return null;
 }
 
+async function validarEmpleadoDisponible({
+  supabase,
+  negocioId,
+  empleadoId,
+  excludeEmail,
+  excludeInviteId,
+}: {
+  supabase: any;
+  negocioId: string;
+  empleadoId: string;
+  excludeEmail: string;
+  excludeInviteId: string;
+}) {
+  const { data: accesoOcupado, error: accesoError } = await supabase
+    .from("sucursal_usuarios")
+    .select("id")
+    .eq("negocio_id", negocioId)
+    .eq("empleado_id", empleadoId)
+    .eq("rol", "empleado_sucursal")
+    .eq("activo", true)
+    .neq("email", excludeEmail)
+    .limit(1)
+    .maybeSingle();
+
+  if (accesoError) throw new Error(accesoError.message);
+
+  if (accesoOcupado) {
+    return "Ese empleado ya está vinculado a otro usuario activo.";
+  }
+
+  const { data: invitacionOcupada, error: invitacionError } = await supabase
+    .from("sucursal_invitaciones")
+    .select("id")
+    .eq("negocio_id", negocioId)
+    .eq("empleado_id", empleadoId)
+    .eq("rol", "empleado_sucursal")
+    .eq("estado", "pendiente")
+    .neq("id", excludeInviteId)
+    .neq("email", excludeEmail)
+    .limit(1)
+    .maybeSingle();
+
+  if (invitacionError) throw new Error(invitacionError.message);
+
+  if (invitacionOcupada) {
+    return "Ese empleado ya tiene una invitación pendiente para otro usuario.";
+  }
+
+  return null;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -109,6 +160,20 @@ export async function POST(request: Request) {
 
     const email = normalizarEmail(invitacion.email);
     const nombreFinal = nombre || email.split("@")[0];
+
+    if (invitacion.rol === "empleado_sucursal" && invitacion.empleado_id) {
+      const conflicto = await validarEmpleadoDisponible({
+        supabase,
+        negocioId: invitacion.negocio_id,
+        empleadoId: invitacion.empleado_id,
+        excludeEmail: email,
+        excludeInviteId: invitacion.id,
+      });
+
+      if (conflicto) {
+        return NextResponse.json({ error: conflicto }, { status: 409 });
+      }
+    }
 
     const usuarioExistente = await buscarAuthUserPorEmail(supabase, email);
 

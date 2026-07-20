@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { CalendarPlus, ChevronLeft, ChevronRight, Plus, Save } from "lucide-react";
+import { toast } from "sonner";
 import {
   CitaDialog,
   type ClienteCitaItem,
@@ -378,13 +379,43 @@ export function CitasPanel({
 
   function abrirNuevaCita(fecha: string, horaInicio: string) {
     if (esFechaHoraPasada(fecha, horaInicio)) {
-      alert("No podés crear una cita en una fecha u hora que ya pasó.");
+      toast.error("No podés crear una cita en una fecha u hora que ya pasó.");
       return;
     }
 
     setFechaSeleccionada(fecha);
     setHoraSeleccionada(horaInicio);
     setModalOpen(true);
+  }
+
+  function obtenerInicioDisponibleParaNuevaCita() {
+    const ahora = new Date();
+    const fechaHoy = toIsoDate(ahora);
+    const inicioDia = START_HOUR * 60;
+    const finDia = END_HOUR * 60;
+    const minutosActuales = ahora.getHours() * 60 + ahora.getMinutes();
+    const siguienteBloque = Math.ceil((minutosActuales + 1) / 10) * 10;
+
+    if (siguienteBloque >= finDia) {
+      const manana = addDays(fechaLocalDesdeIso(fechaHoy), 1);
+
+      return {
+        fecha: toIsoDate(manana),
+        horaInicio: minutosAHora(inicioDia),
+      };
+    }
+
+    return {
+      fecha: fechaHoy,
+      horaInicio: minutosAHora(Math.max(inicioDia, siguienteBloque)),
+    };
+  }
+
+  function abrirNuevaCitaDesdeBoton() {
+    const { fecha, horaInicio } = obtenerInicioDisponibleParaNuevaCita();
+
+    setFechaBase(fechaLocalDesdeIso(fecha));
+    abrirNuevaCita(fecha, horaInicio);
   }
 
   function abrirDetalle(cita: CitaItem) {
@@ -441,11 +472,16 @@ export function CitasPanel({
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.error ?? "No se pudo actualizar la cita.");
+        toast.error("No se pudo actualizar la cita", {
+          description: data.error ?? "Intentá de nuevo en unos segundos.",
+        });
         return;
       }
 
+      toast.success("Cita actualizada correctamente");
       window.location.reload();
+    } catch {
+      toast.error("No se pudo actualizar la cita");
     } finally {
       setGuardandoCambio(false);
     }
@@ -455,17 +491,17 @@ export function CitasPanel({
     if (!citaSeleccionada) return;
 
     if (!detalleClienteId) {
-      alert("Seleccioná un cliente.");
+      toast.error("Seleccioná un cliente.");
       return;
     }
 
     if (!detalleServicioId) {
-      alert("Seleccioná un servicio.");
+      toast.error("Seleccioná un servicio.");
       return;
     }
 
     if (!detalleEmpleadoId) {
-      alert("Seleccioná un empleado para la cita.");
+      toast.error("Seleccioná un empleado para la cita.");
       return;
     }
 
@@ -525,7 +561,7 @@ export function CitasPanel({
           <Button
             type="button"
             className="cursor-pointer"
-            onClick={() => abrirNuevaCita(toIsoDate(hoy), "09:00")}
+            onClick={abrirNuevaCitaDesdeBoton}
           >
             <CalendarPlus className="mr-2 h-4 w-4" />
             Nueva cita

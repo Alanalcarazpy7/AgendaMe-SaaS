@@ -1,12 +1,16 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { requireAdminGlobalApi } from "@/lib/dashboard/api-guards";
+import {
+  obtenerUrlSeguraComprobantePago,
+  PAYMENT_PROOFS_BUCKET,
+} from "@/lib/payment-proofs";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-const BUCKET = "payment-proofs";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 function extensionDesdeMime(mime: string) {
@@ -19,6 +23,47 @@ function extensionDesdeMime(mime: string) {
 
 function limpiar(valor: FormDataEntryValue | null) {
   return String(valor ?? "").trim();
+}
+
+export async function GET(request: Request) {
+  const guard = await requireAdminGlobalApi();
+  if (!guard.ok) return guard.response;
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const pagoId = String(searchParams.get("pagoId") ?? "").trim();
+
+    if (!pagoId) {
+      return NextResponse.json({ error: "Falta el pago." }, { status: 400 });
+    }
+
+    const supabase = createServiceRoleClient();
+    const { data: pago, error } = await supabase
+      .from("pagos_manuales")
+      .select("id, comprobante_url")
+      .eq("id", pagoId)
+      .eq("negocio_id", guard.access.negocio.id)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!pago?.comprobante_url) {
+      return NextResponse.json({ error: "Este pago no tiene comprobante." }, { status: 404 });
+    }
+
+    const url = await obtenerUrlSeguraComprobantePago(pago.comprobante_url);
+
+    if (!url) {
+      return NextResponse.json({ error: "No se pudo resolver el comprobante." }, { status: 404 });
+    }
+
+    const response = NextResponse.redirect(url);
+    response.headers.set("Cache-Control", "no-store");
+    return response;
+  } catch (error) {
+    console.error("Error abriendo comprobante desde dashboard:", error);
+    const mensaje = error instanceof Error && error.message ? error.message : "No se pudo abrir el comprobante.";
+    return NextResponse.json({ error: mensaje }, { status: 400 });
+  }
 }
 
 export async function POST(request: Request) {
@@ -118,7 +163,7 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const path = `${membresia.negocio_id}/${pago.id}/${Date.now()}-${crypto.randomUUID()}.${extension}`;
 
-    const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, buffer, {
+    const { error: uploadError } = await supabase.storage.from(PAYMENT_PROOFS_BUCKET).upload(path, buffer, {
       contentType: file.type,
       upsert: false,
     });
@@ -128,17 +173,13 @@ export async function POST(request: Request) {
       throw new Error(uploadError.message);
     }
 
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from(BUCKET).getPublicUrl(path);
-
     const { error: updateError } = await supabase
       .from("pagos_manuales")
-      .update({ comprobante_url: publicUrl })
+      .update({ comprobante_url: path })
       .eq("id", pago.id);
 
     if (updateError) {
-      await supabase.storage.from(BUCKET).remove([path]);
+      await supabase.storage.from(PAYMENT_PROOFS_BUCKET).remove([path]);
       await supabase.from("pagos_manuales").delete().eq("id", pago.id);
       throw new Error(updateError.message);
     }

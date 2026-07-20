@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   Building2,
   CheckCircle2,
@@ -77,7 +78,9 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo crear la sucursal.");
+        const message = data.error ?? "No se pudo crear la sucursal.";
+        setError(message);
+        toast.error("No se pudo crear la sucursal", { description: message });
         return;
       }
 
@@ -85,9 +88,11 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
       setDireccion("");
       setTelefono("");
 
+      toast.success("Sucursal creada correctamente");
       await refrescar();
     } catch {
       setError("No se pudo crear la sucursal.");
+      toast.error("No se pudo crear la sucursal");
     } finally {
       setLoading("");
     }
@@ -130,14 +135,20 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo actualizar la sucursal.");
+        const message = data.error ?? "No se pudo actualizar la sucursal.";
+        setError(message);
+        toast.error("No se pudo actualizar la sucursal", {
+          description: message,
+        });
         return;
       }
 
       cancelarEdicion();
+      toast.success("Sucursal actualizada correctamente");
       await refrescar();
     } catch {
       setError("No se pudo actualizar la sucursal.");
+      toast.error("No se pudo actualizar la sucursal");
     } finally {
       setLoading("");
     }
@@ -146,6 +157,7 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
   async function cambiarEstado(sucursal: Sucursal) {
     if (sucursal.es_principal) {
       setError("La sucursal principal no se puede desactivar.");
+      toast.error("La sucursal principal no se puede desactivar");
       return;
     }
 
@@ -172,13 +184,19 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo cambiar el estado.");
+        const message = data.error ?? "No se pudo cambiar el estado.";
+        setError(message);
+        toast.error("No se pudo cambiar el estado", { description: message });
         return;
       }
 
+      toast.success(
+        nuevoEstado === "activo" ? "Sucursal activada" : "Sucursal desactivada"
+      );
       await refrescar();
     } catch {
       setError("No se pudo cambiar el estado.");
+      toast.error("No se pudo cambiar el estado");
     } finally {
       setLoading("");
     }

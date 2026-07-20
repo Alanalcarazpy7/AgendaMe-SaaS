@@ -1,6 +1,8 @@
 ﻿import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { requireApiDashboardAccess } from "@/lib/dashboard/api-access";
+import { validarCapacidadPlan } from "@/lib/planes/plan-limits";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 const clienteUpdateSchema = z.object({
   nombreCompleto: z.string().min(2, "Ingresá el nombre del cliente.").optional(),
@@ -59,16 +61,13 @@ export async function PATCH(
 ) {
   const { clienteId } = await context.params;
 
-  const supabase = await createClient();
+  const guard = await requireApiDashboardAccess();
+  if (!guard.ok) return guard.response;
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!guard.access.puedeGestionarClientes) {
     return NextResponse.json(
-      { error: "No tenés sesión activa." },
-      { status: 401 }
+      { error: "No tenés permiso para modificar clientes." },
+      { status: 403 }
     );
   }
 
@@ -82,30 +81,65 @@ export async function PATCH(
     );
   }
 
-  const { data: membresias, error: membresiaError } = await supabase
-    .from("negocio_usuarios")
-    .select("negocio_id")
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1);
-
-  if (membresiaError) {
-    return NextResponse.json(
-      { error: membresiaError.message || "No se pudo validar tu negocio." },
-      { status: 500 }
-    );
-  }
-
-  const membresia = membresias?.[0];
-
-  if (!membresia) {
-    return NextResponse.json(
-      { error: "No tenés un negocio activo." },
-      { status: 403 }
-    );
-  }
-
+  const supabase = createServiceRoleClient();
+  const negocioId = guard.access.negocio.id;
   const datos = parsed.data;
+
+  if (guard.access.scope === "sucursal" && guard.access.sucursalId) {
+    const { data: permitido, error: permisoError } = await supabase
+      .from("cliente_sucursales")
+      .select("id")
+      .eq("negocio_id", negocioId)
+      .eq("cliente_id", clienteId)
+      .eq("sucursal_id", guard.access.sucursalId)
+      .maybeSingle();
+
+    if (permisoError) {
+      return NextResponse.json(
+        { error: permisoError.message },
+        { status: 500 }
+      );
+    }
+
+    if (!permitido) {
+      return NextResponse.json(
+        { error: "No podés editar clientes de otra sucursal." },
+        { status: 403 }
+      );
+    }
+  }
+
+  if (datos.estado === "activo") {
+    const { data: clienteActual, error: clienteActualError } = await supabase
+      .from("clientes")
+      .select("estado")
+      .eq("id", clienteId)
+      .eq("negocio_id", negocioId)
+      .maybeSingle();
+
+    if (clienteActualError) {
+      return NextResponse.json(
+        { error: clienteActualError.message },
+        { status: 500 }
+      );
+    }
+
+    if (clienteActual?.estado !== "activo") {
+      const capacidad = await validarCapacidadPlan({
+        supabase,
+        negocioId,
+        recurso: "clientes",
+      });
+
+      if (!capacidad.ok) {
+        return NextResponse.json(
+          { error: capacidad.message },
+          { status: 403 }
+        );
+      }
+    }
+  }
+
   const updateData: Record<string, string | null> = {};
 
   if (tieneCampo(datos, "nombreCompleto")) {
@@ -136,7 +170,7 @@ export async function PATCH(
     .from("clientes")
     .update(updateData)
     .eq("id", clienteId)
-    .eq("negocio_id", membresia.negocio_id)
+    .eq("negocio_id", negocioId)
     .select("id, nombre_completo, estado")
     .single();
 

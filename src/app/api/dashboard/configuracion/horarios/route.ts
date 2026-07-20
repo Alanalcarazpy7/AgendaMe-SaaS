@@ -1,6 +1,7 @@
 ﻿import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdminGlobalApi } from "@/lib/dashboard/api-guards";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 const horarioSchema = z.object({
   dia_semana: z.number().int().min(0).max(6),
@@ -19,18 +20,8 @@ function normalizarHora(valor: string | null) {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json(
-      { error: "No tenés sesión activa." },
-      { status: 401 }
-    );
-  }
+  const guard = await requireAdminGlobalApi();
+  if (!guard.ok) return guard.response;
 
   const body = await request.json();
   const parsed = bodySchema.safeParse(body);
@@ -42,36 +33,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { data: membresias, error: membresiaError } = await supabase
-    .from("negocio_usuarios")
-    .select("negocio_id, rol")
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1);
-
-  if (membresiaError) {
+  if (!guard.access.puedeGestionarConfiguracion) {
     return NextResponse.json(
-      { error: membresiaError.message || "No se pudo validar tu negocio." },
-      { status: 500 }
-    );
-  }
-
-  const membresia = membresias?.[0];
-
-  if (!membresia) {
-    return NextResponse.json(
-      { error: "No tenés un negocio activo." },
+      { error: "No tenés permiso para modificar la configuración del negocio." },
       { status: 403 }
     );
   }
 
-  if (membresia.rol !== "admin") {
-    return NextResponse.json(
-      { error: "Solo un administrador puede modificar horarios." },
-      { status: 403 }
-    );
-  }
-
+  const supabase = createServiceRoleClient();
+  const negocioId = guard.access.negocio.id;
   const horarios = parsed.data.horarios;
 
   for (const horario of horarios) {
@@ -100,7 +70,7 @@ export async function POST(request: NextRequest) {
     const { data: existente, error: buscarError } = await supabase
       .from("horarios_negocio")
       .select("id")
-      .eq("negocio_id", membresia.negocio_id)
+      .eq("negocio_id", negocioId)
       .eq("dia_semana", horario.dia_semana)
       .maybeSingle();
 
@@ -120,7 +90,7 @@ export async function POST(request: NextRequest) {
           hora_cierre: horaCierre,
         })
         .eq("id", existente.id)
-        .eq("negocio_id", membresia.negocio_id);
+        .eq("negocio_id", negocioId);
 
       if (updateError) {
         return NextResponse.json(
@@ -132,7 +102,7 @@ export async function POST(request: NextRequest) {
       const { error: insertError } = await supabase
         .from("horarios_negocio")
         .insert({
-          negocio_id: membresia.negocio_id,
+          negocio_id: negocioId,
           dia_semana: horario.dia_semana,
           activo: horario.activo,
           hora_apertura: horaApertura,

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 type SolicitarPlanButtonProps = {
@@ -39,17 +40,23 @@ export function SolicitarPlanButton({
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo solicitar el cambio.");
+        const message = data.error ?? "No se pudo solicitar el cambio.";
+        setError(message);
+        toast.error("No se pudo solicitar el cambio", { description: message });
         return;
       }
 
       setMensaje(`Solicitud enviada: ${planNombre}. Te contactaremos para coordinar el pago y activacion.`);
+      toast.success("Solicitud enviada", {
+        description: `${planNombre} quedó pendiente de revisión.`,
+      });
 
       if (data.whatsappUrl) {
         window.open(data.whatsappUrl, "_blank", "noopener,noreferrer");
       }
     } catch {
       setError("No se pudo solicitar el cambio.");
+      toast.error("No se pudo solicitar el cambio");
     } finally {
       setLoading(false);
     }

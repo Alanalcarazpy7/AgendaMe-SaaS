@@ -108,7 +108,12 @@ Comportamiento al fallar:
 
 ### 3.5 Auditoría
 
-`src/lib/admin/audit.ts` → `registrarAuditoria()` inserta en la tabla `auditoria` (ya existente en producción, confirmada en Fase 1) desde toda Server Action que muta datos: cambiar plan, bloquear/desbloquear, aprobar/rechazar pago, registrar pago, agregar nota, editar plan, revocar invitación, exportar negocios/pagos. Nunca guarda contraseñas, tokens ni secretos. Un fallo al auditar no revierte la acción ya aplicada (se loguea en consola del servidor).
+Dos mecanismos distintos, según la acción (actualizado tras la auditoría de solo lectura del 2026-07-20, ver `docs/admin-owner-panel-progress.md` y `docs/supabase-schema-map.md`):
+
+1. **Auditoría transaccional en la propia RPC** (la mayoría de las mutaciones): `admin_cambiar_plan_negocio`, `admin_bloquear_negocio`, `admin_desbloquear_negocio`, `admin_aprobar_pago_manual`, `admin_rechazar_pago_manual`, `admin_agregar_nota_negocio`, `admin_editar_plan`, `admin_registrar_pago_manual` y `admin_revocar_invitacion` insertan su propia fila en `auditoria` dentro de la misma transacción de Postgres que la mutación (confirmado leyendo el cuerpo real de las 5 originales en el schema de producción). El código de `src/lib/admin/actions/{negocios,planes,invitaciones}.ts` **no** vuelve a llamar `registrarAuditoria()` para estas acciones — hacerlo generaría una fila duplicada por acción (bug real detectado y corregido el 2026-07-20: antes de esa fecha, cambiar plan/bloquear/desbloquear/aprobar pago/rechazar pago sí duplicaban su registro de auditoría).
+2. **Auditoría en dos pasos vía `src/lib/admin/audit.ts` → `registrarAuditoria()`** (acciones sin RPC dedicada, ej. `sincronizarPerfilUsuarioAction`, `aprobarSolicitudCambioPlanAction`, `rechazarSolicitudCambioPlanAction`, y las exportaciones de negocios/pagos): la mutación real y el insert en `auditoria` son dos llamadas de red separadas. Si `registrarAuditoria()` falla después de que la mutación ya se aplicó, no se revierte (sería peor) — la acción devuelve `{ ok: true, auditWarning }` para que la UI avise explícitamente en vez de fallar en silencio.
+
+Nunca se guardan contraseñas, tokens ni secretos en `auditoria`.
 
 ### 3.6 MFA / AAL2
 
@@ -135,12 +140,16 @@ Todas confirmadas existentes en producción por introspección de solo lectura e
 | `admin_desbloquear_negocio(p_negocio_id)` | Acción "Desbloquear negocio" |
 | `admin_aprobar_pago_manual(p_pago_id, p_fecha_vencimiento, p_notas?)` | Acción "Aprobar pago" |
 | `admin_rechazar_pago_manual(p_pago_id, p_notas?)` | Acción "Rechazar pago" |
+| `admin_agregar_nota_negocio(p_negocio_id, p_nota)` | Acción "Agregar nota" (transaccional, aplicada 2026-07-10) |
+| `admin_editar_plan(...)` | Acción "Editar plan" (transaccional, aplicada 2026-07-10) |
+| `admin_registrar_pago_manual(...)` | Acción "Registrar pago" (transaccional, aplicada 2026-07-10) |
+| `admin_revocar_invitacion(p_invitacion_id)` | Acción "Revocar invitación" (transaccional, aplicada 2026-07-10) |
 | `es_super_admin()` | Usada internamente por las RPC de arriba; el panel no la llama directamente |
 | `vista_admin_negocios_resumen` | Vista base de `admin_obtener_negocios_resumen()`; el panel no la consulta directo (sin grant a `anon`, y por diseño se prefiere pasar por la RPC) |
 | Tablas leídas directo (service role): `negocios`, `suscripciones`, `pagos_manuales`, `planes_saas`, `notas_admin_negocio`, `solicitudes_cambio_plan`, `auditoria`, `sucursal_invitaciones`, `perfiles_usuario`, `negocio_usuarios`, `sucursal_usuarios` | Detalle de negocio, planes, invitaciones, auditoría, usuarios — sin RPC equivalente para estos casos de uso puntuales |
 | `auth.admin.listUsers()` (GoTrue admin API) | `/admin/usuarios`, nunca expone hashes de contraseña |
 
-RPC/tablas **no verificadas end-to-end** por esta sesión (ver riesgos en progress.md): el cuerpo interno de las RPC mutantes no se inspeccionó directamente (por prudencia, para no ejecutar mutaciones reales sin autorización); se confía en `requirePlatformOwner()` como garantía independiente.
+**Actualizado 2026-07-20**: el cuerpo real de las 5 primeras RPC de la tabla (las originales) **sí se inspeccionó** en esta sesión, leyendo el `schema.sql` de respaldo — confirmado que las 5 son `SECURITY DEFINER`, tienen `search_path` fijo, validan `es_super_admin()` como primera línea, y auditan internamente en la misma transacción. Ver el detalle completo, incluyendo grants y el hallazgo de auditoría duplicada (ya corregido), en `docs/supabase-schema-map.md` §6.1 y `docs/admin-owner-panel-progress.md`. El cuerpo exacto de las 4 RPC nuevas (`admin_agregar_nota_negocio` y las otras 3) no está en ese backup (son posteriores) y no se verificó línea por línea contra producción — se confía en `requirePlatformOwner()` como garantía independiente, igual que antes.
 
 ## 6. Módulos funcionales
 
@@ -168,7 +177,10 @@ Ver el detalle fase por fase en `docs/admin-owner-panel-progress.md`. Resumen:
 
 ## 8. Migraciones
 
-- `supabase/patches/2026-07-admin-ciclo-facturacion.sql` — agrega `ciclo_facturacion` (`mensual|anual|manual`) a `suscripciones` y `pagos_manuales`. **Creada, no aplicada.** Requiere autorización explícita del propietario antes de ejecutarse contra producción (ver checklist).
+- `supabase/patches/2026-07-admin-ciclo-facturacion.sql` — agrega `ciclo_facturacion` (`mensual|anual|manual`) a `suscripciones` y `pagos_manuales`. **APLICADA** (2026-07-10, por el propietario en Supabase Studio; reconfirmado por introspección OpenAPI en vivo el 2026-07-20 — ambas columnas existen hoy en producción).
+- `supabase/patches/2026-07-admin-rpc-transaccionales.sql` — crea `admin_agregar_nota_negocio`, `admin_editar_plan`, `admin_registrar_pago_manual`, `admin_revocar_invitacion`. **APLICADA** (2026-07-10, reconfirmado 2026-07-20: las 4 RPC existen y están expuestas).
+- `supabase/patches/2026-07-admin-revoke-public-execute-original-rpcs.sql` — revoca `EXECUTE` de `PUBLIC`/`anon` en las 5 RPC administrativas originales (`admin_cambiar_plan_negocio`, `admin_bloquear_negocio`, `admin_desbloquear_negocio`, `admin_aprobar_pago_manual`, `admin_rechazar_pago_manual`), dejándolo solo para `authenticated`. **Creada 2026-07-20, NO aplicada.** Requiere autorización explícita; ver verificación previa sugerida en su propio encabezado.
+- `supabase/patches/2026-07-empleado-id-sucursal-usuarios.sql` — no relacionada al panel admin (vínculo `sucursal_usuarios` ↔ `empleados`). **NO aplicada**, según su propio encabezado.
 
 No existe `supabase/migrations/` formal en este proyecto; las migraciones viven en `supabase/patches/*.sql` con cabecera indicando si fueron aplicadas.
 
@@ -186,11 +198,25 @@ No existe `supabase/migrations/` formal en este proyecto; las migraciones viven 
 - Si una exportación falla: revisar logs del servidor (Route Handlers devuelven `NextResponse.json({error})` con el mensaje real de Supabase, no genérico).
 - Si una Server Action falla silenciosamente: todas devuelven `{ok:false, error}` y la UI lo muestra vía `toast.error()` — revisar la consola del navegador/servidor si no aparece el toast.
 
-## 11. Checklist antes de dar por operativo el panel
+## 11. Storage — bucket `payment-proofs`
 
-- [ ] `ADMIN_OWNER_USER_ID` configurada en producción con el UUID real.
-- [ ] `perfiles_usuario.rol_global='super_admin'` aplicado a la fila correcta (autorizado explícitamente, no hecho por esta sesión).
-- [ ] Probar manualmente, con la sesión real del propietario: entrar a `/admin`, cambiar un plan, bloquear/desbloquear un negocio de prueba, aprobar/rechazar un pago, exportar negocios y pagos.
-- [ ] Confirmar que un usuario normal (o un `admin_global` de un negocio) recibe 404 al entrar a `/admin`.
-- [ ] Aplicar `supabase/patches/2026-07-admin-ciclo-facturacion.sql` si se decide usar `ciclo_facturacion` (autorización explícita requerida).
-- [ ] Generar `tests/.auth/superadmin.json` y `tests/.auth/admin.json` para poder correr `npm run test:admin` completo (hoy corre parcialmente, con 2 de 4 casos ejecutables sin credenciales).
+Usado por `src/app/api/admin/pagos/[pagoId]/comprobante/route.ts` para subir el comprobante de un pago manual. Confirmado por introspección de solo lectura contra producción (2026-07-20): el bucket **existe y es público** (`public=true`).
+
+1. **Uso actual**: el Route Handler (protegido con `getPlatformOwnerOrNull()`) sube el archivo a `${negocio_id}/${pago_id}/${timestamp}-${crypto.randomUUID()}.${ext}`, genera una URL pública con `getPublicUrl()` y la guarda en `pagos_manuales.comprobante_url`. `PagoComprobanteDialog` (`src/components/admin/pagos/pago-comprobante-dialog.tsx`) la muestra dentro del panel.
+2. **Riesgo de ser público**: la ruta incluye un UUID aleatorio (no enumerable por fuerza bruta razonable), pero cualquiera que obtenga esa URL exacta —por ejemplo, si queda en un log, en `auditoria.detalles` en texto plano, o se comparte por error— puede ver el comprobante (un documento financiero) sin sesión ni verificación de `super_admin`. Es seguridad por oscuridad, no control de acceso real.
+3. **Qué cambiar para usar URLs firmadas**: reemplazar `getPublicUrl(path)` por `createSignedUrl(path, expiresInSeconds)` (ej. 5 minutos), generada bajo demanda en el momento de mostrar el comprobante, no una sola vez al subir.
+4. **Archivos a modificar** (cuando se autorice): `src/app/api/admin/pagos/[pagoId]/comprobante/route.ts` (dejar de guardar una URL pública permanente; guardar solo el `path` interno), `src/components/admin/pagos/pago-comprobante-dialog.tsx` (resolver la URL firmada bajo demanda, probablemente vía un nuevo Route Handler o Server Action gateado por `requirePlatformOwner()`), y un patch SQL que cambie el bucket a `public: false` (`UPDATE storage.buckets` — mutación real, requiere autorización explícita aparte).
+5. **Pasos para más adelante**: (a) implementar la generación de URLs firmadas en el código, (b) probar que el diálogo siga funcionando con URLs de vida corta, (c) migrar o aceptar que los `comprobante_url` públicos ya existentes quedan expuestos hasta que se rote/borre ese contenido, (d) solo entonces pasar el bucket a privado.
+
+No se cambió el bucket ni el código de subida en esta sesión — solo se documentó. Ver también `docs/supabase-schema-map.md` §10.
+
+## 12. Checklist antes de dar por operativo el panel
+
+- [x] `ADMIN_OWNER_USER_ID` configurada — confirmado en `.env.local` (entorno local). **Pendiente confirmar en el entorno de producción/hosting** (Vercel u otro) por separado.
+- [x] `perfiles_usuario.rol_global='super_admin'` aplicado a la cuenta del propietario — confirmado en una sesión anterior (no por esta).
+- [ ] Probar manualmente, con la sesión real del propietario: entrar a `/admin`, cambiar un plan, bloquear/desbloquear un negocio de prueba, aprobar/rechazar un pago, exportar negocios y pagos. **Sigue sin probarse.**
+- [ ] Confirmar que un usuario normal (o un `admin_global` de un negocio) recibe 404 al entrar a `/admin`. **Sigue sin probarse con sesión real** (sí está cubierto por Playwright para el caso sin sesión).
+- [x] `ciclo_facturacion` — aplicada y confirmada en producción (2026-07-10 / reconfirmado 2026-07-20).
+- [ ] Aplicar `supabase/patches/2026-07-admin-revoke-public-execute-original-rpcs.sql` (creada 2026-07-20, requiere autorización).
+- [ ] Decidir y ejecutar el plan de `payment-proofs` a URLs firmadas (ver §11).
+- [ ] Generar `tests/.auth/superadmin.json` y `tests/.auth/admin.json` para poder correr `npm run test:admin` completo (hoy 17/19 casos ejecutables sin credenciales, 2 documentados como skip).

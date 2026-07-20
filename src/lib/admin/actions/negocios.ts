@@ -40,18 +40,18 @@ function revalidarNegocio(negocioId: string) {
  * requirePlatformOwner() se vuelve a ejecutar acá aunque el layout ya lo haga:
  * nunca se confía en que la llamada viene desde /admin.
  *
- * IMPORTANTE (auditoría de producción, ver progress.md): la mutación (RPC o
- * update directo) y el registro en `auditoria` son DOS llamadas de red
- * separadas, no una transacción atómica. Si `registrarAuditoria()` falla
- * después de que la mutación ya se aplicó, la acción NO se revierte (sería
- * peor: dejar el dato real a medio aplicar) — en cambio, se devuelve
- * `ok: true` con `auditWarning` para que la UI avise explícitamente en vez
- * de fallar en silencio. La solución real (transacción única en DB) requiere
- * una RPC nueva — ver propuesta en supabase/patches/ (no aplicada).
+ * Auditoría (confirmado leyendo el cuerpo real de las 5 RPC en el schema.sql
+ * de producción): cada una ya inserta su propia fila en `auditoria` dentro de
+ * la misma transacción que la mutación (antes de esta corrección, el código
+ * de acá abajo llamaba además a `registrarAuditoria()` por separado, dejando
+ * DOS filas de auditoría por cada acción — ver docs/admin-owner-panel-progress.md,
+ * hallazgo de auditoría duplicada). Por eso estas 5 funciones ya no llaman a
+ * `registrarAuditoria()`: sería redundante y nunca puede quedar sin auditar,
+ * porque forma parte de la misma transacción de Postgres que la RPC ejecuta.
  */
 
 export async function cambiarPlanNegocioAction(input: unknown): Promise<ActionResult> {
-  const owner = await requirePlatformOwner();
+  await requirePlatformOwner();
   const parsed = cambiarPlanSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Datos inválidos." };
   const { negocioId, planClave, fechaVencimiento, notas } = parsed.data;
@@ -66,20 +66,12 @@ export async function cambiarPlanNegocioAction(input: unknown): Promise<ActionRe
 
   if (error) return { ok: false, error: error.message };
 
-  const auditado = await registrarAuditoria({
-    usuarioId: owner.id,
-    negocioId,
-    accion: "cambiar_plan",
-    tablaAfectada: "suscripciones",
-    detalles: { planClave, fechaVencimiento: fechaVencimiento ?? null, notas: notas ?? null },
-  });
-
   revalidarNegocio(negocioId);
-  return auditado ? { ok: true } : { ok: true, auditWarning: AUDIT_WARNING };
+  return { ok: true };
 }
 
 export async function bloquearNegocioAction(input: unknown): Promise<ActionResult> {
-  const owner = await requirePlatformOwner();
+  await requirePlatformOwner();
   const parsed = bloquearNegocioSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Indicá un motivo (mínimo 3 caracteres)." };
   const { negocioId, motivo } = parsed.data;
@@ -92,21 +84,12 @@ export async function bloquearNegocioAction(input: unknown): Promise<ActionResul
 
   if (error) return { ok: false, error: error.message };
 
-  const auditado = await registrarAuditoria({
-    usuarioId: owner.id,
-    negocioId,
-    accion: "bloquear_negocio",
-    tablaAfectada: "negocios",
-    registroId: negocioId,
-    detalles: { motivo },
-  });
-
   revalidarNegocio(negocioId);
-  return auditado ? { ok: true } : { ok: true, auditWarning: AUDIT_WARNING };
+  return { ok: true };
 }
 
 export async function desbloquearNegocioAction(input: unknown): Promise<ActionResult> {
-  const owner = await requirePlatformOwner();
+  await requirePlatformOwner();
   const parsed = desbloquearNegocioSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Datos inválidos." };
   const { negocioId } = parsed.data;
@@ -118,20 +101,12 @@ export async function desbloquearNegocioAction(input: unknown): Promise<ActionRe
 
   if (error) return { ok: false, error: error.message };
 
-  const auditado = await registrarAuditoria({
-    usuarioId: owner.id,
-    negocioId,
-    accion: "desbloquear_negocio",
-    tablaAfectada: "negocios",
-    registroId: negocioId,
-  });
-
   revalidarNegocio(negocioId);
-  return auditado ? { ok: true } : { ok: true, auditWarning: AUDIT_WARNING };
+  return { ok: true };
 }
 
 export async function aprobarPagoAction(input: unknown): Promise<ActionResult> {
-  const owner = await requirePlatformOwner();
+  await requirePlatformOwner();
   const parsed = aprobarPagoSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Datos inválidos." };
   const { pagoId, negocioId, fechaVencimiento, notas } = parsed.data;
@@ -145,21 +120,12 @@ export async function aprobarPagoAction(input: unknown): Promise<ActionResult> {
 
   if (error) return { ok: false, error: error.message };
 
-  const auditado = await registrarAuditoria({
-    usuarioId: owner.id,
-    negocioId,
-    accion: "aprobar_pago",
-    tablaAfectada: "pagos_manuales",
-    registroId: pagoId,
-    detalles: { fechaVencimiento, notas: notas ?? null },
-  });
-
   revalidarNegocio(negocioId);
-  return auditado ? { ok: true } : { ok: true, auditWarning: AUDIT_WARNING };
+  return { ok: true };
 }
 
 export async function rechazarPagoAction(input: unknown): Promise<ActionResult> {
-  const owner = await requirePlatformOwner();
+  await requirePlatformOwner();
   const parsed = rechazarPagoSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Datos inválidos." };
   const { pagoId, negocioId, notas } = parsed.data;
@@ -172,17 +138,8 @@ export async function rechazarPagoAction(input: unknown): Promise<ActionResult> 
 
   if (error) return { ok: false, error: error.message };
 
-  const auditado = await registrarAuditoria({
-    usuarioId: owner.id,
-    negocioId,
-    accion: "rechazar_pago",
-    tablaAfectada: "pagos_manuales",
-    registroId: pagoId,
-    detalles: { notas: notas ?? null },
-  });
-
   revalidarNegocio(negocioId);
-  return auditado ? { ok: true } : { ok: true, auditWarning: AUDIT_WARNING };
+  return { ok: true };
 }
 
 export async function aprobarSolicitudCambioPlanAction(input: unknown): Promise<ActionResult> {

@@ -1,6 +1,5 @@
 ﻿import { requireAdminGlobalApi } from "@/lib/dashboard/api-guards";
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 export const runtime = "nodejs";
@@ -32,50 +31,14 @@ function obtenerPathDesdePublicUrl(url: string | null) {
   return decodeURIComponent(url.slice(index + marker.length));
 }
 
-async function obtenerContexto(servicioId: string) {
-  const authSupabase = await createClient();
-
-  const {
-    data: { user },
-  } = await authSupabase.auth.getUser();
-
-  if (!user) {
-    return {
-      error: "No autenticado.",
-      status: 401,
-      negocioId: null,
-      servicio: null,
-    };
-  }
-
+async function obtenerContexto(servicioId: string, negocioId: string) {
   const supabase = createServiceRoleClient();
-
-  const { data: membresia, error: membresiaError } = await supabase
-    .from("negocio_usuarios")
-    .select("negocio_id")
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1)
-    .maybeSingle();
-
-  if (membresiaError) {
-    throw new Error(membresiaError.message);
-  }
-
-  if (!membresia) {
-    return {
-      error: "No tenés un negocio activo.",
-      status: 404,
-      negocioId: null,
-      servicio: null,
-    };
-  }
 
   const { data: servicio, error: servicioError } = await supabase
     .from("servicios")
     .select("id, negocio_id, nombre, imagen_url")
     .eq("id", servicioId)
-    .eq("negocio_id", membresia.negocio_id)
+    .eq("negocio_id", negocioId)
     .maybeSingle();
 
   if (servicioError) {
@@ -86,7 +49,7 @@ async function obtenerContexto(servicioId: string) {
     return {
       error: "Servicio no encontrado.",
       status: 404,
-      negocioId: membresia.negocio_id as string,
+      negocioId,
       servicio: null,
     };
   }
@@ -94,7 +57,7 @@ async function obtenerContexto(servicioId: string) {
   return {
     error: null,
     status: 200,
-    negocioId: membresia.negocio_id as string,
+    negocioId,
     servicio: servicio as {
       id: string;
       negocio_id: string;
@@ -108,9 +71,12 @@ export async function POST(
   request: Request,
   { params }: ServicioImagenRouteProps
 ) {
+  const guard = await requireAdminGlobalApi();
+  if (!guard.ok) return guard.response;
+
   try {
     const { servicioId } = await params;
-    const contexto = await obtenerContexto(servicioId);
+    const contexto = await obtenerContexto(servicioId, guard.access.negocio.id);
 
     if (contexto.error || !contexto.negocioId || !contexto.servicio) {
       return NextResponse.json(
@@ -219,9 +185,12 @@ export async function DELETE(
   _request: Request,
   { params }: ServicioImagenRouteProps
 ) {
+  const guard = await requireAdminGlobalApi();
+  if (!guard.ok) return guard.response;
+
   try {
     const { servicioId } = await params;
-    const contexto = await obtenerContexto(servicioId);
+    const contexto = await obtenerContexto(servicioId, guard.access.negocio.id);
 
     if (contexto.error || !contexto.negocioId || !contexto.servicio) {
       return NextResponse.json(

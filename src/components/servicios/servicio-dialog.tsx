@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   AlignLeft,
   Check,
@@ -129,11 +130,14 @@ export function ServicioDialog({ servicio, variant }: ServicioDialogProps) {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo guardar el servicio.");
+        const message = data.error ?? "No se pudo guardar el servicio.";
+        setError(message);
+        toast.error("No se pudo guardar el servicio", { description: message });
         return;
       }
 
       setOpen(false);
+      toast.success(esEditar ? "Servicio actualizado" : "Servicio creado");
       router.refresh();
     } catch {
       setError("Ocurrió un error inesperado.");

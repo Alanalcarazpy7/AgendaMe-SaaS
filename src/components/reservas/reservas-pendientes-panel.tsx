@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   CalendarDays,
   CheckCircle2,
@@ -272,7 +273,11 @@ export function ReservasPendientesPanel({
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo actualizar la reserva.");
+        const message = data.error ?? "No se pudo actualizar la reserva.";
+        setError(message);
+        toast.error("No se pudo actualizar la reserva", {
+          description: message,
+        });
         return;
       }
 
@@ -286,8 +291,12 @@ export function ReservasPendientesPanel({
           ? "Reserva confirmada. Ahora esta en la bandeja Confirmadas y se distingue en el calendario."
           : "Reserva cancelada. La dejamos visible por ahora para que veas el cambio de estado."
       );
+      toast.success(
+        estado === "confirmada" ? "Reserva confirmada" : "Reserva cancelada"
+      );
     } catch {
       setError("No se pudo actualizar la reserva.");
+      toast.error("No se pudo actualizar la reserva");
     } finally {
       setLoadingId(null);
     }

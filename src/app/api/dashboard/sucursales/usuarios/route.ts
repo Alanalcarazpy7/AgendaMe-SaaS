@@ -123,6 +123,64 @@ async function validarEmpleado({
   return data;
 }
 
+async function validarEmpleadoDisponible({
+  supabase,
+  negocioId,
+  empleadoId,
+  excludeAccesoId,
+  excludeInviteId,
+  excludeEmail,
+}: {
+  supabase: any;
+  negocioId: string;
+  empleadoId: string;
+  excludeAccesoId?: string;
+  excludeInviteId?: string;
+  excludeEmail?: string;
+}) {
+  let accesosQuery = supabase
+    .from("sucursal_usuarios")
+    .select("id, email")
+    .eq("negocio_id", negocioId)
+    .eq("empleado_id", empleadoId)
+    .eq("rol", "empleado_sucursal")
+    .eq("activo", true)
+    .limit(1);
+
+  if (excludeAccesoId) accesosQuery = accesosQuery.neq("id", excludeAccesoId);
+  if (excludeEmail) accesosQuery = accesosQuery.neq("email", excludeEmail);
+
+  const { data: accesoOcupado, error: accesoError } = await accesosQuery.maybeSingle();
+
+  if (accesoError) throw new Error(accesoError.message);
+
+  if (accesoOcupado) {
+    return "Ese empleado ya está vinculado a otro usuario activo.";
+  }
+
+  let invitacionesQuery = supabase
+    .from("sucursal_invitaciones")
+    .select("id, email")
+    .eq("negocio_id", negocioId)
+    .eq("empleado_id", empleadoId)
+    .eq("rol", "empleado_sucursal")
+    .eq("estado", "pendiente")
+    .limit(1);
+
+  if (excludeInviteId) invitacionesQuery = invitacionesQuery.neq("id", excludeInviteId);
+  if (excludeEmail) invitacionesQuery = invitacionesQuery.neq("email", excludeEmail);
+
+  const { data: invitacionOcupada, error: invitacionError } = await invitacionesQuery.maybeSingle();
+
+  if (invitacionError) throw new Error(invitacionError.message);
+
+  if (invitacionOcupada) {
+    return "Ese empleado ya tiene una invitación pendiente para otro usuario.";
+  }
+
+  return null;
+}
+
 export async function GET() {
   try {
     const guard = await requireGestionSucursalesApi();
@@ -165,6 +223,7 @@ export async function GET() {
           id,
           negocio_id,
           sucursal_id,
+          empleado_id,
           email,
           rol,
           estado,
@@ -272,6 +331,17 @@ export async function POST(request: Request) {
       }
 
       empleadoId = empleado.id;
+
+      const conflicto = await validarEmpleadoDisponible({
+        supabase,
+        negocioId: guard.access.negocio.id,
+        empleadoId,
+        excludeEmail: email,
+      });
+
+      if (conflicto) {
+        return NextResponse.json({ error: conflicto }, { status: 409 });
+      }
     }
 
     // Si ya tenía acceso activo, lo pasamos a inactivo mientras acepta la nueva invitación.
@@ -318,6 +388,7 @@ export async function POST(request: Request) {
         id,
         negocio_id,
         sucursal_id,
+        empleado_id,
         email,
         rol,
         estado,
@@ -457,7 +528,7 @@ export async function PATCH(request: Request) {
       } else {
         const { data: accesoActual, error: accesoActualError } = await supabase
           .from("sucursal_usuarios")
-          .select("sucursal_id")
+          .select("sucursal_id, email, rol")
           .eq("id", id)
           .eq("negocio_id", guard.access.negocio.id)
           .maybeSingle();
@@ -472,6 +543,14 @@ export async function PATCH(request: Request) {
         }
 
         const sucursalParaValidar = sucursalId || accesoActual.sucursal_id;
+        const rolFinal = rol || accesoActual.rol;
+
+        if (rolFinal !== "empleado_sucursal") {
+          return NextResponse.json(
+            { error: "Solo el rol Personal de sucursal puede vincularse a un empleado." },
+            { status: 400 }
+          );
+        }
 
         const empleado = await validarEmpleado({
           supabase,
@@ -487,8 +566,24 @@ export async function PATCH(request: Request) {
           );
         }
 
+        const conflicto = await validarEmpleadoDisponible({
+          supabase,
+          negocioId: guard.access.negocio.id,
+          empleadoId: empleado.id,
+          excludeAccesoId: id,
+          excludeEmail: accesoActual.email,
+        });
+
+        if (conflicto) {
+          return NextResponse.json({ error: conflicto }, { status: 409 });
+        }
+
         updateData.empleado_id = empleado.id;
       }
+    }
+
+    if (rol && rol !== "empleado_sucursal") {
+      updateData.empleado_id = null;
     }
 
     const { data, error } = await supabase

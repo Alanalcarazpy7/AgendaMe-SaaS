@@ -243,7 +243,12 @@ export default async function CitasPage({ searchParams }: PageProps) {
     };
   });
 
-  const empleadoServicios = empleadosNormalizados.flatMap((empleado) => {
+  const empleadosVisibles =
+    access.rol === "empleado_sucursal" && access.empleadoId
+      ? empleadosNormalizados.filter((empleado) => empleado.id === access.empleadoId)
+      : empleadosNormalizados;
+
+  const empleadoServicios = empleadosVisibles.flatMap((empleado) => {
     return (empleado.empleado_servicios ?? [])
       .map((relacion) => ({
         empleado_id: empleado.id,
@@ -261,7 +266,7 @@ export default async function CitasPage({ searchParams }: PageProps) {
       citas={citas ?? []}
       clientes={clientes}
       servicios={servicios ?? []}
-      empleados={empleadosNormalizados}
+      empleados={empleadosVisibles}
       empleadoServicios={empleadoServicios}
       initialFecha={params.fecha}
       initialHora={params.hora}

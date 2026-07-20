@@ -6,9 +6,11 @@ import {
   KeyRound,
   Loader2,
   MailPlus,
+  MessageCircle,
   ShieldCheck,
   Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 type Relacion<T> = T | T[] | null | undefined;
 
@@ -46,6 +48,7 @@ type Invitacion = {
   id: string;
   negocio_id?: string;
   sucursal_id: string;
+  empleado_id?: string | null;
   email: string;
   rol: string;
   estado: string;
@@ -132,12 +135,37 @@ export function SucursalUsuariosPanel({
     [sucursalesSafe]
   );
 
+  const empleadosOcupados = useMemo(() => {
+    const ocupados = new Set<string>();
+
+    items.forEach((acceso) => {
+      if (acceso.activo && acceso.rol === "empleado_sucursal" && acceso.empleado_id) {
+        ocupados.add(acceso.empleado_id);
+      }
+    });
+
+    pending.forEach((invitacion) => {
+      if (
+        invitacion.estado === "pendiente" &&
+        invitacion.rol === "empleado_sucursal" &&
+        invitacion.empleado_id
+      ) {
+        ocupados.add(invitacion.empleado_id);
+      }
+    });
+
+    return ocupados;
+  }, [items, pending]);
+
   const empleadosDeSucursal = useMemo(
     () =>
       empleados.filter(
-        (empleado) => empleado.sucursal_id === sucursalId && empleado.estado !== "inactivo"
+        (empleado) =>
+          empleado.sucursal_id === sucursalId &&
+          empleado.estado !== "inactivo" &&
+          !empleadosOcupados.has(empleado.id)
       ),
-    [empleados, sucursalId]
+    [empleados, empleadosOcupados, sucursalId]
   );
 
   const esRolPersonal = rol === "empleado_sucursal";
@@ -149,8 +177,15 @@ export function SucursalUsuariosPanel({
 
   function empleadosDe(sucursalIdAcceso: string) {
     return empleados.filter(
-      (empleado) => empleado.sucursal_id === sucursalIdAcceso && empleado.estado !== "inactivo"
+      (empleado) =>
+        empleado.sucursal_id === sucursalIdAcceso &&
+        empleado.estado !== "inactivo" &&
+        empleadoDisponible(empleado.id)
     );
+  }
+
+  function empleadoDisponible(empleadoId: string, empleadoActualId?: string | null) {
+    return empleadoId === empleadoActualId || !empleadosOcupados.has(empleadoId);
   }
 
   function nombreSucursal(acceso: Acceso | Invitacion) {
@@ -173,9 +208,24 @@ export function SucursalUsuariosPanel({
     }
   }
 
+  function mensajeInvitacion(url: string, emailDestino: string) {
+    return `Hola, te invitaron a AgendaMe.\n\nEntrá desde este link para crear tu contraseña y acceder al dashboard:\n${url}\n\nCorreo: ${emailDestino}`;
+  }
+
   async function copiarMensaje(url: string, emailDestino: string) {
-    await navigator.clipboard.writeText(
-      `Hola, te invitaron a AgendaMe.\n\nEntrá desde este link para crear tu contraseña y acceder al dashboard:\n${url}\n\nCorreo: ${emailDestino}`
+    try {
+      await navigator.clipboard.writeText(mensajeInvitacion(url, emailDestino));
+      toast.success("Mensaje de invitación copiado");
+    } catch {
+      toast.error("No se pudo copiar el mensaje");
+    }
+  }
+
+  function abrirWhatsapp(url: string, emailDestino: string) {
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(mensajeInvitacion(url, emailDestino))}`,
+      "_blank",
+      "noopener,noreferrer"
     );
   }
 
@@ -195,6 +245,7 @@ export function SucursalUsuariosPanel({
 
       if (rolFinal === "empleado_sucursal" && !empleadoIdFinal) {
         setError("Elegí a qué empleado de la plantilla corresponde este acceso.");
+        toast.error("Elegí el empleado para este acceso");
         return;
       }
 
@@ -226,7 +277,9 @@ export function SucursalUsuariosPanel({
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo crear la invitación.");
+        const message = data.error ?? "No se pudo crear la invitación.";
+        setError(message);
+        toast.error("No se pudo crear la invitación", { description: message });
         return;
       }
 
@@ -240,9 +293,13 @@ export function SucursalUsuariosPanel({
         setEmpleadoId("");
       }
 
+      toast.success("Invitación creada", {
+        description: "Copiá el link o compartilo por WhatsApp.",
+      });
       await refrescar();
     } catch {
       setError("No se pudo crear la invitación.");
+      toast.error("No se pudo crear la invitación");
     } finally {
       setLoading("");
     }
@@ -268,7 +325,9 @@ export function SucursalUsuariosPanel({
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo generar el link.");
+        const message = data.error ?? "No se pudo generar el link.";
+        setError(message);
+        toast.error("No se pudo generar el link", { description: message });
         return;
       }
 
@@ -278,9 +337,11 @@ export function SucursalUsuariosPanel({
       });
 
       await copiarMensaje(data.invitationUrl, invitacion.email);
+      toast.success("Nuevo link generado");
       await refrescar();
     } catch {
       setError("No se pudo generar el link.");
+      toast.error("No se pudo generar el link");
     } finally {
       setLoading("");
     }
@@ -308,13 +369,17 @@ export function SucursalUsuariosPanel({
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo actualizar el acceso.");
+        const message = data.error ?? "No se pudo actualizar el acceso.";
+        setError(message);
+        toast.error("No se pudo actualizar el acceso", { description: message });
         return;
       }
 
+      toast.success("Acceso actualizado");
       await refrescar();
     } catch {
       setError("No se pudo actualizar el acceso.");
+      toast.error("No se pudo actualizar el acceso");
     } finally {
       setLoading("");
     }
@@ -341,13 +406,17 @@ export function SucursalUsuariosPanel({
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo eliminar el acceso.");
+        const message = data.error ?? "No se pudo eliminar el acceso.";
+        setError(message);
+        toast.error("No se pudo eliminar el acceso", { description: message });
         return;
       }
 
       setItems((prev) => prev.filter((item) => item.id !== acceso.id));
+      toast.success("Acceso eliminado");
     } catch {
       setError("No se pudo eliminar el acceso.");
+      toast.error("No se pudo eliminar el acceso");
     } finally {
       setLoading("");
     }
@@ -376,13 +445,17 @@ export function SucursalUsuariosPanel({
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo revocar la invitación.");
+        const message = data.error ?? "No se pudo revocar la invitación.";
+        setError(message);
+        toast.error("No se pudo revocar la invitación", { description: message });
         return;
       }
 
       setPending((prev) => prev.filter((item) => item.id !== invitacion.id));
+      toast.success("Invitación revocada");
     } catch {
       setError("No se pudo revocar la invitación.");
+      toast.error("No se pudo revocar la invitación");
     } finally {
       setLoading("");
     }
@@ -429,6 +502,14 @@ export function SucursalUsuariosPanel({
           >
             <Copy className="mr-2 h-4 w-4" />
             Copiar mensaje
+          </button>
+          <button
+            type="button"
+            onClick={() => abrirWhatsapp(inviteLink.url, inviteLink.email)}
+            className="ml-2 mt-3 inline-flex h-10 items-center justify-center rounded-xl border border-green-300 bg-white/70 px-4 text-sm font-semibold text-green-800 transition hover:bg-white"
+          >
+            <MessageCircle className="mr-2 h-4 w-4" />
+            WhatsApp
           </button>
         </div>
       )}
@@ -494,8 +575,8 @@ export function SucursalUsuariosPanel({
             </select>
             {empleadosDeSucursal.length === 0 && (
               <p className="mt-1.5 text-xs text-muted-foreground">
-                Esta sucursal todavía no tiene empleados activos en la plantilla.
-                Creá uno primero en la sección Empleados.
+                Esta sucursal no tiene empleados activos disponibles. Creá uno
+                nuevo o liberá un vínculo existente.
               </p>
             )}
           </div>

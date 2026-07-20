@@ -25,6 +25,7 @@ export function PagoComprobanteDialog({ pagoId, comprobanteUrl }: Props) {
   const [pending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const router = useRouter();
+  const comprobanteHref = `/api/admin/pagos/${pagoId}/comprobante`;
 
   function subir() {
     const file = inputRef.current?.files?.[0];
@@ -62,21 +63,22 @@ export function PagoComprobanteDialog({ pagoId, comprobanteUrl }: Props) {
     <>
       <Button type="button" size="sm" variant="outline" className="h-8 rounded-xl" onClick={() => setOpen(true)}>
         <ReceiptText className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-        {comprobanteUrl ? "Ver/subir" : "Subir"}
+        {comprobanteUrl ? "Ver/adjuntar" : "Adjuntar"}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="rounded-[1.6rem]">
           <DialogHeader>
             <DialogTitle>Comprobante del pago</DialogTitle>
             <DialogDescription>
-              Adjunta una captura o PDF de la transferencia. Formatos: JPG, PNG, WEBP o PDF hasta 5 MB.
+              Adjunta o reemplaza el archivo si recibiste el comprobante por fuera del dashboard, por ejemplo por WhatsApp, email o banco.
+              Formatos: JPG, PNG, WEBP o PDF hasta 5 MB.
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-3">
             {comprobanteUrl ? (
               <a
-                href={comprobanteUrl}
+                href={comprobanteHref}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex h-11 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 px-4 text-sm font-bold text-primary transition hover:bg-primary hover:text-primary-foreground"
@@ -86,7 +88,7 @@ export function PagoComprobanteDialog({ pagoId, comprobanteUrl }: Props) {
               </a>
             ) : (
               <div className="rounded-2xl border border-dashed border-border/80 bg-muted/35 p-4 text-sm text-muted-foreground">
-                Este pago todavia no tiene comprobante asociado.
+                Este pago todavia no tiene comprobante asociado. Podes adjuntarlo manualmente si lo recibiste por otro canal.
               </div>
             )}
 
