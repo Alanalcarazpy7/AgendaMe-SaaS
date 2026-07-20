@@ -1,5 +1,6 @@
 ﻿import crypto from "node:crypto";
 import { NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveDashboardAccess } from "@/lib/dashboard/access-context";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { nivelPlan } from "@/lib/planes/plan-access";
@@ -80,7 +81,7 @@ async function validarSucursal({
   negocioId,
   sucursalId,
 }: {
-  supabase: any;
+  supabase: SupabaseClient;
   negocioId: string;
   sucursalId: string;
 }) {
@@ -103,7 +104,7 @@ async function validarEmpleado({
   sucursalId,
   empleadoId,
 }: {
-  supabase: any;
+  supabase: SupabaseClient;
   negocioId: string;
   sucursalId: string;
   empleadoId: string;
@@ -131,7 +132,7 @@ async function validarEmpleadoDisponible({
   excludeInviteId,
   excludeEmail,
 }: {
-  supabase: any;
+  supabase: SupabaseClient;
   negocioId: string;
   empleadoId: string;
   excludeAccesoId?: string;
@@ -291,7 +292,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = createServiceRoleClient() as any;
+    const supabase = createServiceRoleClient();
 
     const sucursal = await validarSucursal({
       supabase,
@@ -330,12 +331,21 @@ export async function POST(request: Request) {
         );
       }
 
-      empleadoId = empleado.id;
+      const empleadoIdValidado = limpiar(empleado.id);
+
+      if (!empleadoIdValidado) {
+        return NextResponse.json(
+          { error: "El empleado elegido no tiene un identificador válido." },
+          { status: 400 }
+        );
+      }
+
+      empleadoId = empleadoIdValidado;
 
       const conflicto = await validarEmpleadoDisponible({
         supabase,
         negocioId: guard.access.negocio.id,
-        empleadoId,
+        empleadoId: empleadoIdValidado,
         excludeEmail: email,
       });
 
@@ -438,7 +448,7 @@ export async function PATCH(request: Request) {
     const activo =
       typeof body.activo === "boolean" ? body.activo : undefined;
 
-    const supabase = createServiceRoleClient() as any;
+    const supabase = createServiceRoleClient();
 
     // Regenerar link de una invitación pendiente.
     if (inviteId && regenerateLink) {

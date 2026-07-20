@@ -49,6 +49,7 @@ const START_HOUR = 7;
 const END_HOUR = 20;
 const PX_PER_MINUTE = 1.85;
 const MIN_EVENT_HEIGHT = 34;
+type VistaCalendario = "detallada" | "panorama";
 
 const horas = Array.from(
   { length: END_HOUR - START_HOUR + 1 },
@@ -268,6 +269,8 @@ export function CitasPanel({
 
   const calendarioScrollRef = useRef<HTMLDivElement | null>(null);
   const [empleadoFiltro, setEmpleadoFiltro] = useState("todos");
+  const [vistaCalendario, setVistaCalendario] =
+    useState<VistaCalendario>("detallada");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [fechaSeleccionada, setFechaSeleccionada] = useState(toIsoDate(hoy));
@@ -416,6 +419,18 @@ export function CitasPanel({
 
     setFechaBase(fechaLocalDesdeIso(fecha));
     abrirNuevaCita(fecha, horaInicio);
+  }
+
+  function obtenerHoraSugeridaParaDia(fecha: string) {
+    if (fecha === todayIso()) {
+      return obtenerInicioDisponibleParaNuevaCita().horaInicio;
+    }
+
+    return "09:00";
+  }
+
+  function abrirNuevaCitaEnDia(fecha: string) {
+    abrirNuevaCita(fecha, obtenerHoraSugeridaParaDia(fecha));
   }
 
   function abrirDetalle(cita: CitaItem) {
@@ -639,6 +654,31 @@ export function CitasPanel({
                     </option>
                   ))}
                 </select>
+
+                <div className="inline-flex h-9 rounded-md border bg-muted/30 p-0.5 text-xs font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => setVistaCalendario("detallada")}
+                    className={`rounded px-3 transition ${
+                      vistaCalendario === "detallada"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Detalle
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVistaCalendario("panorama")}
+                    className={`rounded px-3 transition ${
+                      vistaCalendario === "panorama"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Panorama
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -674,6 +714,7 @@ export function CitasPanel({
           </div>
         </div>
 
+        {vistaCalendario === "detallada" ? (
         <div ref={calendarioScrollRef} className="max-w-full overflow-x-auto">
           <div className="min-w-[900px] xl:w-full xl:min-w-0">
             <div className="sticky top-0 z-20 grid grid-cols-[64px_repeat(7,minmax(108px,1fr))] border-b bg-background xl:grid-cols-[64px_repeat(7,minmax(0,1fr))]">
@@ -689,7 +730,7 @@ export function CitasPanel({
                   <button
                     key={iso}
                     type="button"
-                    onClick={() => abrirNuevaCita(iso, "09:00")}
+                    onClick={() => abrirNuevaCitaEnDia(iso)}
                     className={`cursor-pointer border-r px-2 py-2 text-center transition hover:bg-blue-50 ${
                       esHoy ? "bg-blue-50" : ""
                     }`}
@@ -836,6 +877,104 @@ export function CitasPanel({
             </div>
           </div>
         </div>
+        ) : (
+          <div className="grid gap-3 p-3 lg:grid-cols-7">
+            {diasSemana.map((dia, index) => {
+              const fechaIso = toIsoDate(dia);
+              const citasDia = obtenerCitasDia(fechaIso);
+              const esHoy = fechaIso === toIsoDate(hoy);
+
+              return (
+                <section
+                  key={fechaIso}
+                  className={`min-w-0 rounded-2xl border bg-muted/15 p-2.5 ${
+                    esHoy ? "border-cyan-400/60 bg-cyan-500/10" : ""
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => abrirNuevaCitaEnDia(fechaIso)}
+                    className="flex w-full cursor-pointer items-start justify-between gap-2 rounded-xl px-2 py-1.5 text-left transition hover:bg-background/70"
+                  >
+                    <span>
+                      <span className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                        {diasCortos[index]}
+                      </span>
+                      <span className="block text-lg font-bold leading-none">
+                        {dia.getDate()}
+                      </span>
+                    </span>
+                    <span className="rounded-full border bg-background px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                      {citasDia.length}
+                    </span>
+                  </button>
+
+                  <div className="mt-2 space-y-1.5">
+                    {citasDia.length === 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => abrirNuevaCitaEnDia(fechaIso)}
+                        className="flex min-h-24 w-full cursor-pointer items-center justify-center rounded-xl border border-dashed bg-background/35 px-3 text-center text-xs font-medium text-muted-foreground transition hover:border-cyan-400/60 hover:text-foreground"
+                      >
+                        Sin citas
+                      </button>
+                    ) : (
+                      citasDia.map((cita) => {
+                        const cliente = clientesMap.get(cita.cliente_id);
+                        const servicio = serviciosMap.get(cita.servicio_id);
+                        const empleado = empleadosMap.get(cita.empleado_id);
+                        const estaResaltada = highlightCitaId === cita.id;
+
+                        return (
+                          <button
+                            key={cita.id}
+                            id={`cita-panorama-${cita.id}`}
+                            type="button"
+                            onClick={() => abrirDetalle(cita)}
+                            className={`w-full cursor-pointer rounded-xl border bg-background/80 p-2 text-left transition hover:-translate-y-0.5 hover:shadow-md ${
+                              estaResaltada
+                                ? "border-cyan-300 ring-2 ring-cyan-300/70"
+                                : "border-border/80"
+                            }`}
+                            style={{
+                              borderLeftWidth: 5,
+                              borderLeftColor: colorEstado(cita.estado),
+                            }}
+                            title={`${hora(cita.hora_inicio)} - ${hora(cita.hora_fin)} · ${cliente?.nombre_completo ?? "Cliente"} · ${servicio?.nombre ?? "Servicio"}`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[12px] font-black tabular-nums">
+                                {hora(cita.hora_inicio)}
+                              </span>
+                              <span
+                                className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${estadoClass(
+                                  cita.estado
+                                )}`}
+                              >
+                                {estadoLabel(cita.estado)}
+                              </span>
+                            </div>
+
+                            <p className="mt-1 truncate text-[12px] font-semibold leading-tight">
+                              {cliente?.nombre_completo ?? "Cliente"}
+                            </p>
+                            <p className="mt-0.5 truncate text-[11px] leading-tight text-muted-foreground">
+                              {servicio?.nombre ?? "Servicio"}
+                            </p>
+                            <p className="mt-1 truncate text-[10px] font-medium text-muted-foreground">
+                              {hora(cita.hora_inicio)} - {hora(cita.hora_fin)}
+                              {empleado?.nombre ? ` · ${empleado.nombre}` : ""}
+                            </p>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <CitaDialog
