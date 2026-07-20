@@ -200,15 +200,17 @@ No existe `supabase/migrations/` formal en este proyecto; las migraciones viven 
 
 ## 11. Storage — bucket `payment-proofs`
 
-Usado por `src/app/api/admin/pagos/[pagoId]/comprobante/route.ts` para subir el comprobante de un pago manual. Confirmado por introspección de solo lectura contra producción (2026-07-20): el bucket **existe y es público** (`public=true`).
+> **Actualizado 2026-07-20 (segunda revisión, tras trabajo paralelo)**: lo que sigue en esta sección describía un riesgo pendiente. Ese riesgo **ya fue corregido**: el bucket es privado en producción y el código ya usa URLs firmadas. Ver el estado real y verificado más abajo; se deja el historial para que quede constancia de cómo estaba antes.
 
-1. **Uso actual**: el Route Handler (protegido con `getPlatformOwnerOrNull()`) sube el archivo a `${negocio_id}/${pago_id}/${timestamp}-${crypto.randomUUID()}.${ext}`, genera una URL pública con `getPublicUrl()` y la guarda en `pagos_manuales.comprobante_url`. `PagoComprobanteDialog` (`src/components/admin/pagos/pago-comprobante-dialog.tsx`) la muestra dentro del panel.
-2. **Riesgo de ser público**: la ruta incluye un UUID aleatorio (no enumerable por fuerza bruta razonable), pero cualquiera que obtenga esa URL exacta —por ejemplo, si queda en un log, en `auditoria.detalles` en texto plano, o se comparte por error— puede ver el comprobante (un documento financiero) sin sesión ni verificación de `super_admin`. Es seguridad por oscuridad, no control de acceso real.
-3. **Qué cambiar para usar URLs firmadas**: reemplazar `getPublicUrl(path)` por `createSignedUrl(path, expiresInSeconds)` (ej. 5 minutos), generada bajo demanda en el momento de mostrar el comprobante, no una sola vez al subir.
-4. **Archivos a modificar** (cuando se autorice): `src/app/api/admin/pagos/[pagoId]/comprobante/route.ts` (dejar de guardar una URL pública permanente; guardar solo el `path` interno), `src/components/admin/pagos/pago-comprobante-dialog.tsx` (resolver la URL firmada bajo demanda, probablemente vía un nuevo Route Handler o Server Action gateado por `requirePlatformOwner()`), y un patch SQL que cambie el bucket a `public: false` (`UPDATE storage.buckets` — mutación real, requiere autorización explícita aparte).
-5. **Pasos para más adelante**: (a) implementar la generación de URLs firmadas en el código, (b) probar que el diálogo siga funcionando con URLs de vida corta, (c) migrar o aceptar que los `comprobante_url` públicos ya existentes quedan expuestos hasta que se rote/borre ese contenido, (d) solo entonces pasar el bucket a privado.
+**Estado actual (verificado por introspección de solo lectura contra producción, API de Storage, 2026-07-20)**: el bucket `payment-proofs` tiene `public=false`. `src/lib/payment-proofs.ts` (nuevo, server-only) centraliza el manejo: `extraerPaymentProofPath()` reconoce tanto un path interno nuevo como una URL pública o firmada vieja de Supabase Storage; `crearPaymentProofSignedUrl()` genera una signed URL de 5 minutos con `service_role`; `obtenerUrlSeguraComprobantePago()` combina ambas y cae de vuelta al valor original solo si no se pudo interpretar como objeto del bucket (dato histórico atípico, siempre detrás de un Route Handler protegido, nunca expuesto directo al cliente).
 
-No se cambió el bucket ni el código de subida en esta sesión — solo se documentó. Ver también `docs/supabase-schema-map.md` §10.
+- **Subida**: `src/app/api/admin/pagos/[pagoId]/comprobante/route.ts` (POST, `getPlatformOwnerOrNull()`) y `src/app/api/dashboard/pagos/comprobante/route.ts` (POST, `requireAdminGlobalApi()`) ya guardan el **path interno** en `pagos_manuales.comprobante_url`, no una URL pública.
+- **Visualización**: ambos archivos exponen además un `GET` que resuelve la signed URL vigente y redirige (`NextResponse.redirect`, `Cache-Control: no-store`). El dashboard de negocio valida además `.eq("negocio_id", guard.access.negocio.id)` antes de resolver — un admin de un negocio no puede ver el comprobante de otro negocio cambiando el `pagoId` en la URL. Los componentes (`PagoComprobanteDialog`, `ComprobantePagoForm`) ya no linkean el valor crudo de `comprobante_url`: apuntan a estas rutas protegidas.
+- **Compatibilidad con datos viejos**: los `comprobante_url` guardados antes de este cambio (URL pública completa) se siguen resolviendo correctamente — `extraerPaymentProofPath()` reconoce el patrón `/storage/v1/object/public/payment-proofs/...` y genera una signed URL nueva para ese mismo objeto interno.
+- **Patch aplicado**: `supabase/patches/2026-07-payment-proofs-private-bucket.sql` (cabecera actualizada a "APLICADO: 2026-07-20, por el propietario en Supabase Studio").
+- **Documentación detallada**: `docs/payment-proofs-private-migration.md`.
+
+**Pendiente real, no verificado todavía por ninguna sesión de código**: falta la prueba manual en navegador — subir un comprobante nuevo desde `/dashboard/planes`, verlo desde ahí y desde `/admin/pagos`/`/admin/negocios/[id]`, y confirmar que un comprobante viejo (de antes del cambio) todavía abre. No se afirma que esto funcione en la práctica hasta que se pruebe con datos reales.
 
 ## 12. Checklist antes de dar por operativo el panel
 
@@ -218,5 +220,5 @@ No se cambió el bucket ni el código de subida en esta sesión — solo se docu
 - [ ] Confirmar que un usuario normal (o un `admin_global` de un negocio) recibe 404 al entrar a `/admin`. **Sigue sin probarse con sesión real** (sí está cubierto por Playwright para el caso sin sesión).
 - [x] `ciclo_facturacion` — aplicada y confirmada en producción (2026-07-10 / reconfirmado 2026-07-20).
 - [ ] Aplicar `supabase/patches/2026-07-admin-revoke-public-execute-original-rpcs.sql` (creada 2026-07-20, requiere autorización).
-- [ ] Decidir y ejecutar el plan de `payment-proofs` a URLs firmadas (ver §11).
+- [x] `payment-proofs` migrado a bucket privado + URLs firmadas (ver §11). **Falta probar manualmente** subir/ver comprobantes nuevos y viejos con datos reales antes de confiar en esto en producción con pagos reales.
 - [ ] Generar `tests/.auth/superadmin.json` y `tests/.auth/admin.json` para poder correr `npm run test:admin` completo (hoy 17/19 casos ejecutables sin credenciales, 2 documentados como skip).
