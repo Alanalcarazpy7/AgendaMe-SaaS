@@ -100,6 +100,7 @@ export function ComprobantePagoForm({ planes, planActualId, pagos }: Props) {
       formData.set("planId", planId);
       formData.set("montoGs", monto || String(montoSugerido));
       formData.set("metodo", metodo);
+      formData.set("ciclo", ciclo);
       formData.set("notasCliente", notas);
       formData.set("file", file);
 

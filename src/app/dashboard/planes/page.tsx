@@ -22,6 +22,7 @@ import {
 } from "@/lib/planes/planes-shared";
 import { DashboardPlanUsageOverview } from "@/components/dashboard/dashboard-plan-usage-overview";
 import { obtenerUsoPlanNegocio } from "@/lib/planes/plan-limits";
+import { RegularizarSucursalesCard } from "@/components/planes/regularizar-sucursales-card";
 
 type SuscripcionRaw = {
   id: string;
@@ -39,6 +40,14 @@ type PagoNegocioRaw = {
   notas_cliente: string | null;
   notas_admin: string | null;
   created_at: string;
+};
+
+type SucursalRegularizacionRaw = {
+  id: string;
+  nombre: string;
+  direccion: string | null;
+  estado: string | null;
+  es_principal: boolean | null;
 };
 
 function formatFechaVencimiento(fecha: string | null) {
@@ -139,6 +148,7 @@ export default async function DashboardPlanesPage() {
     { data: suscripcionData },
     { data: planes },
     { data: pagosRecientes },
+    { data: sucursalesActivas },
     planUsage,
   ] = await Promise.all([
     supabase.from("negocios").select("id, nombre").eq("id", membresia.negocio_id).maybeSingle(),
@@ -161,6 +171,14 @@ export default async function DashboardPlanesPage() {
       .order("created_at", { ascending: false })
       .limit(8),
 
+    supabase
+      .from("sucursales")
+      .select("id, nombre, direccion, estado, es_principal")
+      .eq("negocio_id", membresia.negocio_id)
+      .eq("estado", "activo")
+      .order("es_principal", { ascending: false })
+      .order("created_at", { ascending: true }),
+
     obtenerUsoPlanNegocio({
       supabase,
       negocioId: membresia.negocio_id,
@@ -174,12 +192,22 @@ export default async function DashboardPlanesPage() {
   const suscripcion = suscripcionData as SuscripcionRaw | null;
   const listaPlanes = (planes ?? []) as PlanPublico[];
   const listaPagosRecientes = (pagosRecientes ?? []) as PagoNegocioRaw[];
+  const listaSucursalesActivas = (sucursalesActivas ?? []) as SucursalRegularizacionRaw[];
   const planActual =
     listaPlanes.find((plan) => plan.id === suscripcion?.plan_id) ??
     listaPlanes.find((plan) => plan.clave === "gratis") ??
     null;
   const planActualClave = planActual?.clave ?? "gratis";
   const nivelActual = nivelPlan(planActualClave);
+  const limiteSucursales = planUsage.resources.find(
+    (resource) => resource.key === "sucursales"
+  );
+  const limiteRegularizacionSucursales =
+    typeof limiteSucursales?.limit === "number" ? limiteSucursales.limit : null;
+  const mostrarRegularizacionSucursales =
+    limiteSucursales?.overLimit &&
+    limiteRegularizacionSucursales !== null &&
+    listaSucursalesActivas.some((sucursal) => !sucursal.es_principal);
 
   return (
     <div className="space-y-5">
@@ -213,6 +241,18 @@ export default async function DashboardPlanesPage() {
       </section>
 
       <DashboardPlanUsageOverview snapshot={planUsage} puedeGestionarPlanes />
+
+      {mostrarRegularizacionSucursales ? (
+        <RegularizarSucursalesCard
+          limite={limiteRegularizacionSucursales}
+          sucursales={listaSucursalesActivas.map((sucursal) => ({
+            id: sucursal.id,
+            nombre: sucursal.nombre,
+            direccion: sucursal.direccion,
+            es_principal: !!sucursal.es_principal,
+          }))}
+        />
+      ) : null}
 
       <ComprobantePagoForm
         planes={listaPlanes}

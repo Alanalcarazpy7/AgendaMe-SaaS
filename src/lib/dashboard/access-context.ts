@@ -77,6 +77,16 @@ export type PlanRequiredDashboardContext = {
   restrictedFeature: "sucursales";
 };
 
+export type InactiveBranchDashboardContext = {
+  user: AccessOk["user"];
+  negocio: AccessOk["negocio"];
+  planClave: string;
+  planNombre: string;
+  rol: DashboardAccessRole;
+  scope: "sucursal";
+  sucursalNombre: string | null;
+};
+
 type AccessFail = {
   ok: false;
   reason:
@@ -88,6 +98,7 @@ type AccessFail = {
     | "plan_required";
   blockedContext?: BlockedBusinessContext;
   planRequiredContext?: PlanRequiredDashboardContext;
+  inactiveBranchContext?: InactiveBranchDashboardContext;
 };
 
 export type DashboardAccessResult = AccessOk | AccessFail;
@@ -387,7 +398,7 @@ export async function resolveDashboardAccess(): Promise<DashboardAccessResult> {
     };
   }
 
-  let { data: accesoSucursal, error: accesoUsuarioError } = await supabase
+  const accesoSucursalResult = await supabase
     .from("sucursal_usuarios")
     .select(
       `
@@ -413,6 +424,9 @@ export async function resolveDashboardAccess(): Promise<DashboardAccessResult> {
     .eq("activo", true)
     .limit(1)
     .maybeSingle();
+
+  let accesoSucursal = accesoSucursalResult.data;
+  const accesoUsuarioError = accesoSucursalResult.error;
 
   if (accesoUsuarioError) throw new Error(accesoUsuarioError.message);
 
@@ -467,13 +481,6 @@ export async function resolveDashboardAccess(): Promise<DashboardAccessResult> {
 
   const sucursal = obtenerObjeto((accesoSucursal as any).sucursales ?? null);
 
-  if (!sucursal || (sucursal as any).estado !== "activo") {
-    return {
-      ok: false,
-      reason: "inactive_branch",
-    };
-  }
-
   const { data: negocioSucursal, error: negocioError } = await supabase
     .from("negocios")
     .select("id, nombre, slug, logo_url, estado, motivo_bloqueo, bloqueado_at")
@@ -489,10 +496,44 @@ export async function resolveDashboardAccess(): Promise<DashboardAccessResult> {
     };
   }
 
-  if (negocioSucursal.estado !== "activo") {
-    const plan = await obtenerPlanActivo(supabase, negocioSucursal.id);
-    const rol = (accesoSucursal as any).rol as DashboardAccessRole;
+  const plan = await obtenerPlanActivo(supabase, negocioSucursal.id);
+  const rol = (accesoSucursal as any).rol as DashboardAccessRole;
 
+  if (!sucursal || (sucursal as any).estado !== "activo") {
+    return {
+      ok: false,
+      reason: "inactive_branch",
+      inactiveBranchContext: {
+        user: {
+          id: user.id,
+          email: user.email ?? null,
+          ...perfilUsuario,
+          nombre:
+            perfilUsuario.nombre ||
+            limpiar((accesoSucursal as any).nombre) ||
+            email.split("@")[0],
+          cargo: perfilUsuario.cargo || limpiar((accesoSucursal as any).cargo) || null,
+          avatar_url:
+            perfilUsuario.avatar_url ||
+            limpiar((accesoSucursal as any).avatar_url) ||
+            null,
+        },
+        negocio: {
+          id: negocioSucursal.id,
+          nombre: negocioSucursal.nombre,
+          slug: negocioSucursal.slug ?? null,
+          logo_url: negocioSucursal.logo_url ?? null,
+        },
+        planClave: plan.planClave,
+        planNombre: plan.planNombre,
+        rol,
+        scope: "sucursal",
+        sucursalNombre: (sucursal as any)?.nombre ?? "Sucursal",
+      },
+    };
+  }
+
+  if (negocioSucursal.estado !== "activo") {
     return {
       ok: false,
       reason: "inactive_business",
@@ -528,11 +569,7 @@ export async function resolveDashboardAccess(): Promise<DashboardAccessResult> {
     };
   }
 
-  const plan = await obtenerPlanActivo(supabase, negocioSucursal.id);
-
   if (plan.planNivel < 3) {
-    const rol = (accesoSucursal as any).rol as DashboardAccessRole;
-
     return {
       ok: false,
       reason: "plan_required",
@@ -567,8 +604,6 @@ export async function resolveDashboardAccess(): Promise<DashboardAccessResult> {
       },
     };
   }
-
-  const rol = (accesoSucursal as any).rol as DashboardAccessRole;
 
   const permisos = permisosPorRol({
     rol,

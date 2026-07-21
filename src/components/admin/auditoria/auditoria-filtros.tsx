@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 
@@ -38,6 +38,19 @@ export function AuditoriaFiltros() {
     [pathname, router, searchParams]
   );
 
+  // Busqueda instantanea con debounce, ver negocios-filtros.tsx para el
+  // mismo patron.
+  useEffect(() => {
+    const actual = searchParams.get("accion") ?? "";
+    if (accion === actual) return;
+
+    const timer = setTimeout(() => {
+      actualizar({ accion: accion || null });
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [accion, searchParams, actualizar]);
+
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
       <form
@@ -50,7 +63,6 @@ export function AuditoriaFiltros() {
         <Input
           value={accion}
           onChange={(e) => setAccion(e.target.value)}
-          onBlur={() => actualizar({ accion: accion || null })}
           placeholder="Buscar por acción…"
           aria-label="Buscar por acción"
         />

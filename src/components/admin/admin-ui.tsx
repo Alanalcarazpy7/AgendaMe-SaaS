@@ -21,6 +21,7 @@ type AdminMetricPillProps = {
   value: string;
   icon?: LucideIcon;
   tone?: "default" | "success" | "warning" | "danger";
+  help?: string;
 };
 
 type AdminTableShellProps = {
@@ -112,14 +113,24 @@ export function AdminMetricPill({
   value,
   icon: Icon,
   tone = "default",
+  help,
 }: AdminMetricPillProps) {
   return (
     <div className="rounded-[1.15rem] bg-background/70 p-3 ring-1 ring-border/65">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-semibold text-muted-foreground">{label}</p>
         {Icon ? (
-          <span className={cn("rounded-xl p-2 ring-1", toneClass[tone])}>
+          <span
+            className={cn("group/help relative rounded-xl p-2 ring-1", toneClass[tone])}
+            tabIndex={help ? 0 : -1}
+            aria-label={help ? `Ayuda: ${label}` : undefined}
+          >
             <Icon className="h-4 w-4" />
+            {help ? (
+              <span className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 w-64 translate-y-1 rounded-2xl border border-border/80 bg-popover p-3 text-left text-xs font-semibold leading-5 text-popover-foreground opacity-0 shadow-2xl shadow-slate-950/15 ring-1 ring-foreground/5 transition duration-150 group-hover/help:translate-y-0 group-hover/help:opacity-100 group-focus/help:translate-y-0 group-focus/help:opacity-100 dark:shadow-black/40">
+                {help}
+              </span>
+            ) : null}
           </span>
         ) : null}
       </div>

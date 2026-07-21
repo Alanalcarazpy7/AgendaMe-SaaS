@@ -84,6 +84,8 @@ export async function POST(request: Request) {
     const planId = limpiar(formData.get("planId"));
     const montoGs = Number(limpiar(formData.get("montoGs")).replace(/\D/g, ""));
     const metodo = limpiar(formData.get("metodo")) || "transferencia";
+    const cicloRaw = limpiar(formData.get("ciclo"));
+    const ciclo = cicloRaw === "mensual" || cicloRaw === "anual" ? cicloRaw : "manual";
     const notasCliente = limpiar(formData.get("notasCliente"));
     const file = formData.get("file");
 
@@ -151,6 +153,7 @@ export async function POST(request: Request) {
         plan_id: plan.id,
         monto_gs: montoGs,
         metodo,
+        ciclo_facturacion: ciclo,
         estado: "pendiente",
         fecha_pago: new Date().toISOString(),
         notas_cliente: notasCliente || "Comprobante subido desde el panel del negocio.",

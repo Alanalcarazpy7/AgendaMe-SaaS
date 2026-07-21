@@ -1,16 +1,17 @@
 import Link from "next/link";
-import { CheckCircle2, Clock3, Download, ReceiptText, Search, Wallet, XCircle } from "lucide-react";
+import { CheckCircle2, Clock3, Download, ReceiptText, Wallet, XCircle } from "lucide-react";
 import { requirePlatformOwner } from "@/lib/admin/guard";
 import { obtenerTodosPagos } from "@/lib/admin/queries/pagos";
+import { obtenerNegociosResumen } from "@/lib/admin/queries/negocios-resumen";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatearFechaCorta } from "@/lib/admin/formatters/date";
 import { formatearGuaranies, formatearNumero } from "@/lib/admin/formatters/currency";
 import { KpiCard } from "@/components/admin/kpi-card";
 import { AprobarPagoDialog, RechazarPagoDialog } from "@/components/admin/pagos/pago-acciones";
 import { PagoComprobanteDialog } from "@/components/admin/pagos/pago-comprobante-dialog";
+import { PagosBuscador } from "@/components/admin/pagos/pagos-buscador";
 import { AdminEmptyState, AdminPageHeader, AdminPanel, AdminTableShell } from "@/components/admin/admin-ui";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +48,8 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
   const paginaActual = Math.max(1, Number(params.pagina ?? 1) || 1);
   const porPagina = 25;
 
-  const pagos = await obtenerTodosPagos(500);
+  const [pagos, negocios] = await Promise.all([obtenerTodosPagos(500), obtenerNegociosResumen()]);
+  const vencimientoPorNegocio = new Map(negocios.map((n) => [n.negocio_id, n.fecha_vencimiento]));
 
   const pendientes = pagos.filter((p) => p.estado === "pendiente");
   const aprobados = pagos.filter((p) => p.estado === "aprobado");
@@ -146,16 +148,7 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
             ))}
           </nav>
 
-          <form className="relative w-full lg:w-80">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            {estadoFiltro !== "todos" ? <input type="hidden" name="estado" value={estadoFiltro} /> : null}
-            <Input
-              name="q"
-              defaultValue={params.q ?? ""}
-              placeholder="Buscar negocio, plan o metodo..."
-              className="h-10 rounded-2xl bg-background/70 pl-9"
-            />
-          </form>
+          <PagosBuscador />
         </div>
       </div>
 
@@ -221,7 +214,17 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
                   <TableCell className="text-right">
                     {pago.estado === "pendiente" ? (
                       <div className="flex justify-end gap-2">
-                        <AprobarPagoDialog pago={{ id: pago.id, negocioId: pago.negocio_id, negocioNombre: pago.negocios?.nombre }} />
+                        <AprobarPagoDialog
+                          pago={{
+                            id: pago.id,
+                            negocioId: pago.negocio_id,
+                            negocioNombre: pago.negocios?.nombre,
+                            fechaPago: pago.fecha_pago,
+                            periodoFin: pago.periodo_fin,
+                            cicloFacturacion: pago.ciclo_facturacion,
+                            fechaVencimientoActual: vencimientoPorNegocio.get(pago.negocio_id),
+                          }}
+                        />
                         <RechazarPagoDialog pago={{ id: pago.id, negocioId: pago.negocio_id, negocioNombre: pago.negocios?.nombre }} />
                       </div>
                     ) : (

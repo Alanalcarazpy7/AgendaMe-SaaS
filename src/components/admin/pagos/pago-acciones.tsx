@@ -16,18 +16,35 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { aprobarPagoAction, rechazarPagoAction } from "@/lib/admin/actions/negocios";
+import { calcularVencimientoSugerido } from "@/lib/admin/formatters/date";
 
-type PagoRef = { id: string; negocioId: string; negocioNombre?: string };
+type PagoRef = {
+  id: string;
+  negocioId: string;
+  negocioNombre?: string;
+  fechaPago?: string | null;
+  periodoFin?: string | null;
+  cicloFacturacion?: string | null;
+  /** Vencimiento de la suscripción activa del negocio ANTES de aprobar este pago. */
+  fechaVencimientoActual?: string | null;
+};
 
 export function AprobarPagoDialog({ pago }: { pago: PagoRef }) {
   const [open, setOpen] = useState(false);
-  const [fechaVencimiento, setFechaVencimiento] = useState(() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() + 1);
-    return d.toISOString().slice(0, 10);
-  });
+  const [fechaVencimiento, setFechaVencimiento] = useState(() =>
+    calcularVencimientoSugerido({
+      fechaPago: pago.fechaPago,
+      periodoFin: pago.periodoFin,
+      fechaVencimientoActual: pago.fechaVencimientoActual,
+      cicloFacturacion: pago.cicloFacturacion,
+    })
+  );
   const [notas, setNotas] = useState("");
   const [pending, startTransition] = useTransition();
+  const cicloValido = pago.cicloFacturacion === "mensual" || pago.cicloFacturacion === "anual";
+  const sugerenciaAutomatica = Boolean(
+    pago.periodoFin || ((pago.fechaVencimientoActual || pago.fechaPago) && cicloValido)
+  );
 
   function confirmar() {
     startTransition(async () => {
@@ -72,6 +89,11 @@ export function AprobarPagoDialog({ pago }: { pago: PagoRef }) {
                 onChange={(e) => setFechaVencimiento(e.target.value)}
                 className="h-11 rounded-2xl"
               />
+              <p className="text-xs text-muted-foreground">
+                {sugerenciaAutomatica
+                  ? "Sugerida a partir del vencimiento actual de la suscripción (no de la fecha en que se subió el comprobante). Podés cambiarla si pagó por adelantado o si el vencimiento anterior ya pasó hace tiempo."
+                  : "No hay ciclo informado para este pago: ajustá la fecha manualmente si corresponde."}
+              </p>
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor={`notas-${pago.id}`}>Notas internas (opcional)</Label>

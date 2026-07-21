@@ -199,3 +199,81 @@ export function calcularDistribucionSuscripciones(kpis: PlatformKpis): PuntoSusc
     { estado: "Por vencer (30d)", cantidad: kpis.suscripcionesPorVencer30 },
   ].map((p) => ({ ...p, cantidad: Math.max(0, p.cantidad) }));
 }
+
+export type RecursoConLimite = "citas" | "empleados" | "servicios" | "clientes" | "sucursales";
+
+export const ETIQUETA_RECURSO_LIMITE: Record<RecursoConLimite, string> = {
+  citas: "Citas/mes",
+  empleados: "Empleados",
+  servicios: "Servicios",
+  clientes: "Clientes",
+  sucursales: "Sucursales",
+};
+
+export type UsoLimitePlan = {
+  /** Mayor ratio uso/limite entre los 5 recursos (0 si ninguno tiene limite configurado). */
+  ratioMax: number;
+  /** Cual de los 5 recursos produjo ese ratio maximo. */
+  recursoMax: RecursoConLimite | null;
+  /** true si ratioMax >= 0.8 (mismo umbral historico de "cerca del limite", ahora sobre los 5 recursos). */
+  cercaOSobreLimite: boolean;
+};
+
+const RECURSOS_CON_TOTAL_EN_RESUMEN: {
+  recurso: RecursoConLimite;
+  usoKey: keyof Pick<
+    NegocioResumenRow,
+    "citas_usadas_mes_actual" | "empleados_total" | "servicios_total" | "clientes_total"
+  >;
+  limiteKey: keyof Pick<
+    PlanAdminRow,
+    "limite_citas_mensuales" | "limite_empleados" | "limite_servicios" | "limite_clientes"
+  >;
+}[] = [
+  { recurso: "citas", usoKey: "citas_usadas_mes_actual", limiteKey: "limite_citas_mensuales" },
+  { recurso: "empleados", usoKey: "empleados_total", limiteKey: "limite_empleados" },
+  { recurso: "servicios", usoKey: "servicios_total", limiteKey: "limite_servicios" },
+  { recurso: "clientes", usoKey: "clientes_total", limiteKey: "limite_clientes" },
+];
+
+/**
+ * Compara el uso real de un negocio contra los 5 limites de su plan (citas,
+ * empleados, servicios, clientes, sucursales) y devuelve el peor caso.
+ * Antes, "cerca del limite" en /admin/analitica solo miraba citas — un
+ * negocio bajado de plan que quedara sobre el limite de sucursales (por
+ * ejemplo) no aparecia ahi. `sucursalesTotal` no viene en
+ * `admin_obtener_negocios_resumen()`, por eso se recibe aparte (ver
+ * `obtenerConteoSucursalesPorNegocio()`).
+ */
+export function calcularUsoLimitePlan(
+  negocio: NegocioResumenRow,
+  plan: PlanAdminRow | undefined,
+  sucursalesTotal: number
+): UsoLimitePlan {
+  if (!plan) return { ratioMax: 0, recursoMax: null, cercaOSobreLimite: false };
+
+  let ratioMax = 0;
+  let recursoMax: RecursoConLimite | null = null;
+
+  for (const { recurso, usoKey, limiteKey } of RECURSOS_CON_TOTAL_EN_RESUMEN) {
+    const limite = plan[limiteKey];
+    const uso = negocio[usoKey] ?? 0;
+    if (typeof limite === "number" && limite > 0) {
+      const ratio = uso / limite;
+      if (ratio > ratioMax) {
+        ratioMax = ratio;
+        recursoMax = recurso;
+      }
+    }
+  }
+
+  if (typeof plan.limite_sucursales === "number" && plan.limite_sucursales > 0) {
+    const ratio = sucursalesTotal / plan.limite_sucursales;
+    if (ratio > ratioMax) {
+      ratioMax = ratio;
+      recursoMax = "sucursales";
+    }
+  }
+
+  return { ratioMax, recursoMax, cercaOSobreLimite: ratioMax >= 0.8 };
+}

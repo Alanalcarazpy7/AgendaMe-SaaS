@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
+import { DashboardBranchInactive } from "@/components/dashboard/dashboard-branch-inactive";
 import { DashboardBusinessBlocked } from "@/components/dashboard/dashboard-business-blocked";
 import { DashboardPlanLimitBanner } from "@/components/dashboard/dashboard-plan-limit-banner";
+import { DashboardVencimientoBanner } from "@/components/dashboard/dashboard-vencimiento-banner";
 import { DashboardPlanRestricted } from "@/components/dashboard/dashboard-plan-restricted";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { resolveDashboardAccess } from "@/lib/dashboard/access-context";
@@ -48,6 +50,30 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
           scopeLabel={scopeLabel}
         >
           <DashboardPlanRestricted context={restricted} />
+        </DashboardShell>
+      );
+    }
+
+    if (access.reason === "inactive_branch" && access.inactiveBranchContext) {
+      const inactiveBranch = access.inactiveBranchContext;
+
+      return (
+        <DashboardShell
+          tema={inactiveBranch.user.tema}
+          colorAcento={inactiveBranch.user.color_acento}
+          userEmail={inactiveBranch.user.email ?? undefined}
+          userName={inactiveBranch.user.nombre}
+          userAvatarUrl={inactiveBranch.user.avatar_url}
+          userCargo={inactiveBranch.user.cargo}
+          userColor={inactiveBranch.user.color_acento}
+          negocioNombre={inactiveBranch.negocio.nombre}
+          negocioLogoUrl={inactiveBranch.negocio.logo_url ?? null}
+          planClave={inactiveBranch.planClave}
+          accessRole={inactiveBranch.rol}
+          accessScope={inactiveBranch.scope}
+          scopeLabel={inactiveBranch.sucursalNombre ?? "Sucursal"}
+        >
+          <DashboardBranchInactive context={inactiveBranch} />
         </DashboardShell>
       );
     }
@@ -104,6 +130,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
       accessScope={access.scope}
       scopeLabel={scopeLabel}
     >
+      {access.puedeGestionarPlanes ? <DashboardVencimientoBanner negocioId={access.negocio.id} /> : null}
       {access.puedeVerTodo ? (
         <DashboardPlanLimitBanner
           negocioId={access.negocio.id}

@@ -23,9 +23,23 @@ export function PagoComprobanteDialog({ pagoId, comprobanteUrl }: Props) {
   const [open, setOpen] = useState(false);
   const [fileName, setFileName] = useState("");
   const [pending, startTransition] = useTransition();
+  const [previewError, setPreviewError] = useState(false);
+  // Reinicia el estado de error de previsualización cuando cambia el
+  // comprobante (ej. después de reemplazarlo), siguiendo el patrón de React
+  // para "ajustar estado cuando cambia una prop" sin usar un efecto (ver
+  // https://react.dev/learn/you-might-not-need-an-effect).
+  const [comprobanteUrlPrevio, setComprobanteUrlPrevio] = useState(comprobanteUrl);
+  if (comprobanteUrl !== comprobanteUrlPrevio) {
+    setComprobanteUrlPrevio(comprobanteUrl);
+    setPreviewError(false);
+  }
   const inputRef = useRef<HTMLInputElement | null>(null);
   const router = useRouter();
   const comprobanteHref = `/api/admin/pagos/${pagoId}/comprobante`;
+  // Cache-busting: el path interno cambia cuando se reemplaza el archivo,
+  // asi el navegador no sigue mostrando la imagen vieja desde cache tras
+  // subir una nueva (la URL del Route Handler es siempre la misma).
+  const previewSrc = comprobanteUrl ? `${comprobanteHref}?v=${encodeURIComponent(comprobanteUrl)}` : null;
 
   function subir() {
     const file = inputRef.current?.files?.[0];
@@ -76,16 +90,33 @@ export function PagoComprobanteDialog({ pagoId, comprobanteUrl }: Props) {
           </DialogHeader>
 
           <div className="grid gap-3">
-            {comprobanteUrl ? (
-              <a
-                href={comprobanteHref}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-11 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 px-4 text-sm font-bold text-primary transition hover:bg-primary hover:text-primary-foreground"
-              >
-                <ExternalLink className="mr-2 h-4 w-4" aria-hidden="true" />
-                Abrir comprobante actual
-              </a>
+            {previewSrc ? (
+              <div className="grid gap-2">
+                {!previewError ? (
+                  <div className="overflow-hidden rounded-2xl border border-border/80 bg-muted/20">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- viene de un Route Handler protegido, no de next/image */}
+                    <img
+                      src={previewSrc}
+                      alt="Comprobante de pago"
+                      className="max-h-72 w-full object-contain"
+                      onError={() => setPreviewError(true)}
+                    />
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-border/80 bg-muted/35 p-4 text-sm text-muted-foreground">
+                    No se pudo previsualizar el archivo (puede ser un PDF). Abrilo en tamaño completo para verlo.
+                  </div>
+                )}
+                <a
+                  href={comprobanteHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-11 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 px-4 text-sm font-bold text-primary transition hover:bg-primary hover:text-primary-foreground"
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Ver en tamaño completo
+                </a>
+              </div>
             ) : (
               <div className="rounded-2xl border border-dashed border-border/80 bg-muted/35 p-4 text-sm text-muted-foreground">
                 Este pago todavia no tiene comprobante asociado. Podes adjuntarlo manualmente si lo recibiste por otro canal.

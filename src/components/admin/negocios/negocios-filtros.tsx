@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,21 @@ export function NegociosFiltros({ planes }: Props) {
     [pathname, router, searchParams]
   );
 
+  // Busqueda instantanea: mientras se escribe, espera una pausa breve
+  // (debounce) y busca sola, sin depender de Enter ni de perder el foco. Si
+  // el valor ya coincide con la URL actual (por ejemplo, al montar el
+  // componente) no dispara una navegacion redundante.
+  useEffect(() => {
+    const actual = searchParams.get("q") ?? "";
+    if (q === actual) return;
+
+    const timer = setTimeout(() => {
+      actualizar({ q: q || null });
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [q, searchParams, actualizar]);
+
   const exportUrl = `/api/admin/negocios/exportar?${searchParams.toString()}`;
 
   return (
@@ -56,7 +71,6 @@ export function NegociosFiltros({ planes }: Props) {
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            onBlur={() => actualizar({ q: q || null })}
             placeholder="Buscar por nombre, email o slug..."
             className="h-10 rounded-2xl border-border/80 bg-background/70 pl-9 shadow-none"
             aria-label="Buscar negocios"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,19 @@ export function UsuariosFiltros() {
     [pathname, router, searchParams]
   );
 
+  // Busqueda instantanea con debounce, ver negocios-filtros.tsx para el
+  // mismo patron.
+  useEffect(() => {
+    const actual = searchParams.get("q") ?? "";
+    if (q === actual) return;
+
+    const timer = setTimeout(() => {
+      actualizar({ q: q || null });
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [q, searchParams, actualizar]);
+
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
       <form
@@ -46,7 +59,6 @@ export function UsuariosFiltros() {
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          onBlur={() => actualizar({ q: q || null })}
           placeholder="Buscar por nombre o email..."
           className="h-10 rounded-2xl bg-background/70 pl-8"
           aria-label="Buscar usuarios"

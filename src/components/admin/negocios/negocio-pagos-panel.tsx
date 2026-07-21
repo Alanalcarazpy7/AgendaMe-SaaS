@@ -37,6 +37,8 @@ type Props = {
   negocioId: string;
   pagos: PagoNegocioRow[];
   planes: PlanOpcion[];
+  /** Vencimiento de la suscripción activa hoy, para sugerir la fecha al aprobar un pago. */
+  fechaVencimientoActual?: string | null;
 };
 
 const selectClass =
@@ -231,7 +233,7 @@ function RegistrarPagoDialog({ negocioId, planes }: { negocioId: string; planes:
   );
 }
 
-export function NegocioPagosPanel({ negocioId, pagos, planes }: Props) {
+export function NegocioPagosPanel({ negocioId, pagos, planes, fechaVencimientoActual }: Props) {
   const resumen = useMemo(() => {
     const aprobados = pagos.filter((p) => p.estado === "aprobado");
     return {
@@ -320,7 +322,16 @@ export function NegocioPagosPanel({ negocioId, pagos, planes }: Props) {
                   <TableCell className="text-right">
                     {pago.estado === "pendiente" ? (
                       <div className="flex justify-end gap-2">
-                        <AprobarPagoDialog pago={{ id: pago.id, negocioId }} />
+                        <AprobarPagoDialog
+                          pago={{
+                            id: pago.id,
+                            negocioId,
+                            fechaPago: pago.fecha_pago,
+                            periodoFin: pago.periodo_fin,
+                            cicloFacturacion: pago.ciclo_facturacion,
+                            fechaVencimientoActual,
+                          }}
+                        />
                         <RechazarPagoDialog pago={{ id: pago.id, negocioId }} />
                       </div>
                     ) : (

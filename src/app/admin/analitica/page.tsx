@@ -4,10 +4,13 @@ import { requirePlatformOwner } from "@/lib/admin/guard";
 import { obtenerNegociosResumen } from "@/lib/admin/queries/negocios-resumen";
 import { obtenerPlanes } from "@/lib/admin/queries/planes";
 import { obtenerPagosAprobadosRecientes } from "@/lib/admin/queries/pagos";
+import { obtenerConteoSucursalesPorNegocio } from "@/lib/admin/queries/negocio-detalle";
 import {
   calcularDistribucionPorPlan,
   calcularIngresosPorMes,
   calcularNegociosNuevosPorMes,
+  calcularUsoLimitePlan,
+  ETIQUETA_RECURSO_LIMITE,
 } from "@/lib/admin/kpis";
 import { formatearGuaranies, formatearNumero } from "@/lib/admin/formatters/currency";
 import { KpiCard } from "@/components/admin/kpi-card";
@@ -30,27 +33,42 @@ export default async function AdminAnaliticaPage({ searchParams }: PageProps) {
   const params = (await searchParams) ?? {};
   const meses = [6, 12, 24].includes(Number(params.meses)) ? Number(params.meses) : 6;
 
-  const [negocios, planes, pagosAprobados] = await Promise.all([
+  const [negocios, planes, pagosAprobados, sucursalesPorNegocio] = await Promise.all([
     obtenerNegociosResumen(),
     obtenerPlanes(),
     obtenerPagosAprobadosRecientes(meses + 1),
+    obtenerConteoSucursalesPorNegocio(),
   ]);
 
   const ingresosPorMes = calcularIngresosPorMes(pagosAprobados, meses);
   const negociosNuevosPorMes = calcularNegociosNuevosPorMes(negocios, meses);
   const distribucionPorPlan = calcularDistribucionPorPlan(negocios, planes);
 
-  const sinActividad = negocios.filter((n) => n.estado === "activo" && (n.citas_mes_actual ?? 0) === 0);
-  const cercaDelLimite = negocios.filter(
-    (n) =>
-      typeof n.limite_citas_mensuales === "number" &&
-      n.limite_citas_mensuales > 0 &&
-      (n.citas_usadas_mes_actual ?? 0) / n.limite_citas_mensuales >= 0.8
+  const planPorClave = new Map(planes.map((p) => [p.clave, p]));
+
+  /**
+   * "Cerca del limite" antes solo miraba citas. Un negocio bajado de plan
+   * que quedara sobre el limite de sucursales/empleados/servicios/clientes
+   * (y no de citas) no aparecia aca — hallazgo real reportado tras probar
+   * con un negocio de prueba. Ahora compara los 5 recursos, igual que ya
+   * hace el dialogo de "Cambiar plan" en el detalle del negocio.
+   */
+  const usoLimitePorNegocio = new Map(
+    negocios.map((n) => [
+      n.negocio_id,
+      calcularUsoLimitePlan(
+        n,
+        n.plan_clave ? planPorClave.get(n.plan_clave) : undefined,
+        sucursalesPorNegocio.get(n.negocio_id) ?? 0
+      ),
+    ])
   );
+
+  const sinActividad = negocios.filter((n) => n.estado === "activo" && (n.citas_mes_actual ?? 0) === 0);
+  const cercaDelLimite = negocios.filter((n) => usoLimitePorNegocio.get(n.negocio_id)?.cercaOSobreLimite);
   const gratis = negocios.filter((n) => n.plan_clave === "gratis").length;
   const pagos = negocios.length - gratis;
   const porcentajePago = negocios.length > 0 ? Math.round((pagos / negocios.length) * 100) : 0;
-  const planPorClave = new Map(planes.map((p) => [p.clave, p]));
   const mrrEstimado = negocios.reduce((acc, n) => {
     if (n.suscripcion_estado !== "activa" || !n.plan_clave || n.plan_clave === "gratis") return acc;
     return acc + (planPorClave.get(n.plan_clave)?.precio_mensual_gs ?? n.precio_gs ?? 0);
@@ -62,13 +80,18 @@ export default async function AdminAnaliticaPage({ searchParams }: PageProps) {
   ).length;
   const churnRiesgo = pagos > 0 ? Math.round((vencidas / pagos) * 100) : 0;
 
+/**
+   * Antes ordenaba solo por uso de citas. Ahora usa el peor recurso de cada
+   * negocio (el mismo cálculo de "cerca del límite" de arriba), así un
+   * negocio sobre su límite de sucursales/empleados/etc. también aparece acá
+   * aunque su uso de citas esté bajo.
+   */
   const topPorUso = [...negocios]
-    .filter((n) => typeof n.limite_citas_mensuales === "number" && n.limite_citas_mensuales > 0)
-    .sort(
-      (a, b) =>
-        (b.citas_usadas_mes_actual ?? 0) / (b.limite_citas_mensuales ?? 1) -
-        (a.citas_usadas_mes_actual ?? 0) / (a.limite_citas_mensuales ?? 1)
+    .map((n) => ({ negocio: n, uso: usoLimitePorNegocio.get(n.negocio_id) }))
+    .filter((item): item is { negocio: (typeof negocios)[number]; uso: NonNullable<typeof item.uso> } =>
+      Boolean(item.uso && item.uso.recursoMax)
     )
+    .sort((a, b) => b.uso.ratioMax - a.uso.ratioMax)
     .slice(0, 10);
 
   const pagosAprobadosTotal = pagosAprobados.length;
@@ -104,15 +127,28 @@ export default async function AdminAnaliticaPage({ searchParams }: PageProps) {
               value={formatearNumero(sinActividad.length)}
               icon={Activity}
               tone={sinActividad.length > 0 ? "warning" : "default"}
+              help="Negocios activos que no registraron ninguna cita durante el mes actual. Sirve para detectar cuentas que necesitan ayuda, onboarding o seguimiento."
             />
             <AdminMetricPill
               label="Cerca del limite"
               value={formatearNumero(cercaDelLimite.length)}
               icon={Gauge}
               tone={cercaDelLimite.length > 0 ? "warning" : "default"}
+              help="Negocios que ya consumieron al menos el 80% de algun limite de su plan: citas, empleados, servicios, clientes o sucursales (el que este mas ajustado). Candidatos naturales para ofrecer un upgrade."
             />
-            <AdminMetricPill label="En plan pago" value={`${porcentajePago}%`} icon={PiggyBank} tone="success" />
-            <AdminMetricPill label="Pagos consultados" value={formatearNumero(pagosAprobadosTotal)} icon={TrendingUp} />
+            <AdminMetricPill
+              label="En plan pago"
+              value={`${porcentajePago}%`}
+              icon={PiggyBank}
+              tone="success"
+              help="Porcentaje de negocios que no estan en el plan gratis, sobre el total de negocios de la plataforma. Mide que tan bien convierte el producto de prueba/gratis a planes pagos."
+            />
+            <AdminMetricPill
+              label="Pagos consultados"
+              value={formatearNumero(pagosAprobadosTotal)}
+              icon={TrendingUp}
+              help="Cantidad de pagos aprobados dentro del rango de meses seleccionado arriba (6/12/24). Es la base de datos usada para los graficos de ingresos y para saber si hay historial suficiente para calcular retencion."
+            />
           </>
         }
       />
@@ -159,8 +195,8 @@ export default async function AdminAnaliticaPage({ searchParams }: PageProps) {
           value={formatearNumero(cercaDelLimite.length)}
           icon={Gauge}
           tone={cercaDelLimite.length > 0 ? "warning" : "default"}
-          hint="Uso de citas igual o mayor a 80%"
-          help="Negocios que ya consumieron al menos el 80% de su limite mensual de citas. Son candidatos naturales para conversar sobre un plan superior."
+          hint="Algun limite del plan al 80% o mas"
+          help="Negocios que ya consumieron al menos el 80% de algun limite de su plan: citas, empleados, servicios, clientes o sucursales (el que este mas ajustado). Son candidatos naturales para conversar sobre un plan superior."
         />
         <KpiCard
           label="Conversion a pago"
@@ -188,19 +224,25 @@ export default async function AdminAnaliticaPage({ searchParams }: PageProps) {
           className="min-h-[320px]"
         >
           {topPorUso.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No hay negocios con limite de citas configurado.</p>
+            <p className="text-sm text-muted-foreground">No hay negocios con algun limite de plan configurado.</p>
           ) : (
             <ul className="grid gap-2">
-              {topPorUso.map((n) => {
-                const porcentaje = Math.round(((n.citas_usadas_mes_actual ?? 0) / (n.limite_citas_mensuales ?? 1)) * 100);
+              {topPorUso.map(({ negocio: n, uso }) => {
+                const porcentaje = Math.round(uso.ratioMax * 100);
+                const etiquetaRecurso = uso.recursoMax ? ETIQUETA_RECURSO_LIMITE[uso.recursoMax] : null;
                 return (
                   <li
                     key={n.negocio_id}
                     className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-2xl border border-border/70 bg-background/60 p-3 text-sm"
                   >
-                    <Link href={`/admin/negocios/${n.negocio_id}`} className="min-w-0 truncate font-bold hover:text-primary">
-                      {n.nombre}
-                    </Link>
+                    <div className="min-w-0">
+                      <Link href={`/admin/negocios/${n.negocio_id}`} className="block truncate font-bold hover:text-primary">
+                        {n.nombre}
+                      </Link>
+                      {etiquetaRecurso ? (
+                        <span className="text-xs text-muted-foreground">Límite más ajustado: {etiquetaRecurso}</span>
+                      ) : null}
+                    </div>
                     <span className={porcentaje >= 100 ? "font-black text-destructive" : "font-black text-primary"}>
                       {porcentaje}%
                     </span>

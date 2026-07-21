@@ -28,13 +28,56 @@ export async function contarSucursales(negocioId: string): Promise<number> {
   const { count, error } = await admin
     .from("sucursales")
     .select("id", { count: "exact", head: true })
-    .eq("negocio_id", negocioId);
+    .eq("negocio_id", negocioId)
+    .eq("estado", "activo");
 
   if (error) {
-    throw new Error(`No se pudo contar las sucursales: ${error.message}`);
+    throw new Error(`No se pudo contar las sucursales activas: ${error.message}`);
   }
 
   return count ?? 0;
+}
+
+export async function contarSucursalesInactivas(negocioId: string): Promise<number> {
+  const admin = createServiceRoleClient();
+
+  const { count, error } = await admin
+    .from("sucursales")
+    .select("id", { count: "exact", head: true })
+    .eq("negocio_id", negocioId)
+    .eq("estado", "inactivo");
+
+  if (error) {
+    throw new Error(`No se pudo contar las sucursales inactivas: ${error.message}`);
+  }
+
+  return count ?? 0;
+}
+
+/**
+ * Igual que contarSucursales() pero para todos los negocios a la vez (una
+ * sola consulta), pensado para vistas de lista/analítica que necesitan el
+ * conteo de muchos negocios sin hacer una consulta por negocio.
+ */
+export async function obtenerConteoSucursalesPorNegocio(): Promise<Map<string, number>> {
+  const admin = createServiceRoleClient();
+
+  const { data, error } = await admin
+    .from("sucursales")
+    .select("negocio_id")
+    .eq("estado", "activo");
+
+  if (error) {
+    throw new Error(`No se pudo contar las sucursales activas por negocio: ${error.message}`);
+  }
+
+  const conteo = new Map<string, number>();
+  for (const fila of data ?? []) {
+    const negocioId = (fila as { negocio_id: string }).negocio_id;
+    conteo.set(negocioId, (conteo.get(negocioId) ?? 0) + 1);
+  }
+
+  return conteo;
 }
 
 export async function obtenerNegocioBase(negocioId: string): Promise<NegocioBase | null> {
@@ -92,6 +135,7 @@ export type PagoNegocioRow = {
   fecha_pago: string | null;
   periodo_inicio: string | null;
   periodo_fin: string | null;
+  ciclo_facturacion: string | null;
   comprobante_url: string | null;
   notas_cliente: string | null;
   notas_admin: string | null;
@@ -106,7 +150,7 @@ export async function obtenerPagosNegocio(negocioId: string): Promise<PagoNegoci
   const { data, error } = await admin
     .from("pagos_manuales")
     .select(
-      "id, suscripcion_id, plan_id, monto_gs, metodo, estado, fecha_pago, periodo_inicio, periodo_fin, comprobante_url, notas_cliente, notas_admin, aprobado_at, rechazado_at, created_at"
+      "id, suscripcion_id, plan_id, monto_gs, metodo, estado, fecha_pago, periodo_inicio, periodo_fin, ciclo_facturacion, comprobante_url, notas_cliente, notas_admin, aprobado_at, rechazado_at, created_at"
     )
     .eq("negocio_id", negocioId)
     .order("created_at", { ascending: false });

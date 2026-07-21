@@ -40,6 +40,7 @@ type Props = {
   planActualClave: string | null;
   planes: PlanOpcion[];
   uso: UsoActual;
+  sucursalesInactivas?: number;
 };
 
 const selectClass =
@@ -50,10 +51,16 @@ const RECURSOS: { key: keyof UsoActual; label: string; limiteKey: keyof PlanOpci
   { key: "empleados", label: "Empleados", limiteKey: "limite_empleados" },
   { key: "servicios", label: "Servicios", limiteKey: "limite_servicios" },
   { key: "clientes", label: "Clientes", limiteKey: "limite_clientes" },
-  { key: "sucursales", label: "Sucursales", limiteKey: "limite_sucursales" },
+  { key: "sucursales", label: "Sucursales activas", limiteKey: "limite_sucursales" },
 ];
 
-export function NegocioCambiarPlanDialog({ negocioId, planActualClave, planes, uso }: Props) {
+export function NegocioCambiarPlanDialog({
+  negocioId,
+  planActualClave,
+  planes,
+  uso,
+  sucursalesInactivas = 0,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [planClave, setPlanClave] = useState(planActualClave ?? "");
   const [fechaVencimiento, setFechaVencimiento] = useState("");
@@ -162,6 +169,17 @@ export function NegocioCambiarPlanDialog({ negocioId, planActualClave, planes, u
                   />
                   <span>Confirmo que quiero aplicar este cambio de todas formas.</span>
                 </label>
+              </div>
+            )}
+
+            {sucursalesInactivas > 0 && (
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
+                <p className="font-medium">
+                  Este negocio tiene {sucursalesInactivas} sucursal{sucursalesInactivas === 1 ? "" : "es"} inactiva{sucursalesInactivas === 1 ? "" : "s"} conservada{sucursalesInactivas === 1 ? "" : "s"}.
+                </p>
+                <p className="mt-1">
+                  No cuentan para los limites del plan seleccionado. Si el negocio vuelve a Empresarial, puede reactivarlas desde Sucursales.
+                </p>
               </div>
             )}
 

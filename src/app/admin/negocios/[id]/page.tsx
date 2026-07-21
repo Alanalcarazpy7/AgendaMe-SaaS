@@ -26,6 +26,7 @@ import {
   obtenerNotasNegocio,
   obtenerAuditoriaNegocio,
   contarSucursales,
+  contarSucursalesInactivas,
 } from "@/lib/admin/queries/negocio-detalle";
 import { Badge } from "@/components/ui/badge";
 import { formatearFechaCorta, formatearFechaHora } from "@/lib/admin/formatters/date";
@@ -91,7 +92,17 @@ export default async function NegocioDetallePage({ params }: PageProps) {
   const negocioBase = await obtenerNegocioBase(id);
   if (!negocioBase) notFound();
 
-  const [resumenLista, planes, historialSuscripciones, pagos, solicitudes, notas, auditoria, sucursalesCount] =
+  const [
+    resumenLista,
+    planes,
+    historialSuscripciones,
+    pagos,
+    solicitudes,
+    notas,
+    auditoria,
+    sucursalesCount,
+    sucursalesInactivasCount,
+  ] =
     await Promise.all([
       obtenerNegociosResumen(),
       obtenerPlanes(),
@@ -101,6 +112,7 @@ export default async function NegocioDetallePage({ params }: PageProps) {
       obtenerNotasNegocio(id),
       obtenerAuditoriaNegocio(id),
       contarSucursales(id),
+      contarSucursalesInactivas(id),
     ]);
 
   const resumen = resumenLista.find((n) => n.negocio_id === id) ?? null;
@@ -210,6 +222,7 @@ export default async function NegocioDetallePage({ params }: PageProps) {
                 clientes: resumen?.clientes_total ?? null,
                 sucursales: sucursalesCount,
               }}
+              sucursalesInactivas={sucursalesInactivasCount}
             />
             <NegocioBloqueoBoton negocioId={id} bloqueado={negocioBase.estado === "bloqueado"} />
           </>
@@ -307,8 +320,13 @@ export default async function NegocioDetallePage({ params }: PageProps) {
               <p className="mt-2 text-xl font-black">{resumen?.ultimo_pago_estado ?? "-"}</p>
             </div>
             <div className="rounded-[1.15rem] border border-border/70 bg-background/60 p-3">
-              <p className="text-xs font-semibold text-muted-foreground">Sucursales</p>
+              <p className="text-xs font-semibold text-muted-foreground">Sucursales activas</p>
               <p className="mt-2 text-xl font-black">{formatearNumero(sucursalesCount)}</p>
+              {sucursalesInactivasCount > 0 ? (
+                <p className="mt-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                  {formatearNumero(sucursalesInactivasCount)} inactiva{sucursalesInactivasCount === 1 ? "" : "s"} conservada{sucursalesInactivasCount === 1 ? "" : "s"}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -317,7 +335,7 @@ export default async function NegocioDetallePage({ params }: PageProps) {
             {usoLimite(resumen?.empleados_total, planActual?.limite_empleados, "Empleados")}
             {usoLimite(resumen?.servicios_total, planActual?.limite_servicios, "Servicios")}
             {usoLimite(resumen?.clientes_total, planActual?.limite_clientes, "Clientes")}
-            {usoLimite(sucursalesCount, planActual?.limite_sucursales, "Sucursales")}
+            {usoLimite(sucursalesCount, planActual?.limite_sucursales, "Sucursales activas")}
           </div>
         </AdminPanel>
       </section>
@@ -389,6 +407,7 @@ export default async function NegocioDetallePage({ params }: PageProps) {
             precio_mensual_gs: p.precio_mensual_gs,
             precio_anual_gs: p.precio_anual_gs,
           }))}
+          fechaVencimientoActual={resumen?.fecha_vencimiento}
         />
       </AdminPanel>
 
@@ -429,7 +448,10 @@ export default async function NegocioDetallePage({ params }: PageProps) {
         </p>
         <p className="rounded-2xl border bg-card/70 p-3">
           <MapPin className="mb-2 h-4 w-4 text-primary" aria-hidden="true" />
-          Sucursales actuales: {formatearNumero(sucursalesCount)}.
+          Sucursales activas: {formatearNumero(sucursalesCount)}.
+          {sucursalesInactivasCount > 0
+            ? ` Inactivas conservadas: ${formatearNumero(sucursalesInactivasCount)}.`
+            : ""}
         </p>
       </div>
     </div>
