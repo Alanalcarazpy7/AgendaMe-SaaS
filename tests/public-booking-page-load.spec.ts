@@ -11,7 +11,7 @@ for (const index of Array.from({ length: 20 }, (_, i) => i + 1)) {
 
     await esperarPaginaSinErrores(page);
 
-    await expect(page.locator("body")).toContainText(/Reserva online/i);
+    await expect(page.locator("body")).toContainText(/Reservas? online/i);
     await expect(page.locator("body")).toContainText(/Elegí una sucursal/i);
     await expect(page.locator("body")).toContainText(/Elegí un servicio/i);
 

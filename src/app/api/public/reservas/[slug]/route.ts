@@ -4,7 +4,11 @@ import {
   sumarMinutosHora,
 } from "@/lib/reservas/disponibilidad";
 import { validarCapacidadPlan } from "@/lib/planes/plan-limits";
-import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import {
+  checkRateLimit,
+  getClientIp,
+  RateLimitUnavailableError,
+} from "@/lib/rate-limit";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 type RouteContext = {
@@ -68,8 +72,10 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
+    const supabase = createServiceRoleClient();
     const ip = getClientIp(request);
-    const ipLimit = checkRateLimit({
+    const ipLimit = await checkRateLimit({
+      supabase,
       key: `public-reserva:ip:${slug}:${ip}`,
       limit: 8,
       windowMs: 10 * 60 * 1000,
@@ -82,7 +88,8 @@ export async function POST(request: Request, context: RouteContext) {
     const telefonoKey = soloDigitos(clienteTelefono);
 
     if (telefonoKey) {
-      const telefonoLimit = checkRateLimit({
+      const telefonoLimit = await checkRateLimit({
+        supabase,
         key: `public-reserva:phone:${slug}:${telefonoKey}`,
         limit: 3,
         windowMs: 30 * 60 * 1000,
@@ -92,8 +99,6 @@ export async function POST(request: Request, context: RouteContext) {
         return rateLimitResponse(telefonoLimit.retryAfterSeconds);
       }
     }
-
-    const supabase = createServiceRoleClient();
 
     const disponibilidad = await calcularDisponibilidadReserva({
       supabase,
@@ -243,6 +248,19 @@ export async function POST(request: Request, context: RouteContext) {
     });
   } catch (error) {
     console.error("Error creando reserva pública:", error);
+
+    if (error instanceof RateLimitUnavailableError) {
+      return NextResponse.json(
+        {
+          error:
+            "No pudimos validar la reserva de forma segura. Espera un momento y volve a intentar.",
+        },
+        {
+          status: 503,
+          headers: { "Retry-After": "60" },
+        }
+      );
+    }
 
     const mensaje =
       error instanceof Error && error.message

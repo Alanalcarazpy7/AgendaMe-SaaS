@@ -46,7 +46,11 @@ export function DashboardShell({
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    setCollapsed(window.localStorage.getItem("agendame-sidebar") === "compact");
+    const frame = window.requestAnimationFrame(() => {
+      setCollapsed(window.localStorage.getItem("agendame-sidebar") === "compact");
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   function toggleSidebar() {
@@ -70,7 +74,10 @@ export function DashboardShell({
 
       <div className="pointer-events-none fixed inset-0 z-0 ag-private-bg" />
 
-      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:block lg:w-[var(--dashboard-sidebar-width)] lg:p-3 lg:pr-0 lg:transition-[width] lg:duration-300 lg:ease-[var(--ease-out)]">
+      <div
+        data-testid="dashboard-sidebar-frame"
+        className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:block lg:w-[var(--dashboard-sidebar-width)] lg:p-3 lg:pr-0 lg:transition-[width] lg:duration-300 lg:ease-[var(--ease-out)]"
+      >
         <DashboardSidebar
           collapsed={collapsed}
           onToggleCollapsed={toggleSidebar}
@@ -101,7 +108,10 @@ export function DashboardShell({
       />
 
       <main className="relative z-10 lg:pl-[var(--dashboard-sidebar-width)] lg:transition-[padding] lg:duration-300 lg:ease-[var(--ease-out)]">
-        <div className="mx-auto w-full max-w-[1540px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+        <div
+          data-testid="dashboard-main-content"
+          className="mx-auto w-full max-w-[1540px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7"
+        >
           <DashboardUserContextCard
             userName={userName}
             userEmail={userEmail}

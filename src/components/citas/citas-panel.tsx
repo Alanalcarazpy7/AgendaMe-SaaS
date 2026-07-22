@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useRouter } from "next/navigation";
 import { CalendarPlus, ChevronLeft, ChevronRight, Plus, Save } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -261,6 +262,7 @@ export function CitasPanel({
   initialHora,
   highlightCitaId,
 }: CitasPanelProps) {
+  const router = useRouter();
   const hoy = new Date();
 
   const [fechaBase, setFechaBase] = useState(() =>
@@ -986,7 +988,7 @@ export function CitasPanel({
         servicios={servicios}
         empleados={empleados}
         empleadoServicios={empleadoServicios ?? []}
-        onSaved={() => window.location.reload()}
+        onSaved={() => router.refresh()}
       />
 
       <Dialog open={detalleOpen} onOpenChange={setDetalleOpen}>

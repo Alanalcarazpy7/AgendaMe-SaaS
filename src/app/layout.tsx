@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
@@ -51,6 +52,7 @@ export default function RootLayout({
   return (
     <html
       lang="es"
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
       className={cn(
         "h-full",
@@ -60,10 +62,10 @@ export default function RootLayout({
         inter.variable
       )}
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: TEMA_INIT_SCRIPT }} />
-      </head>
       <body className="flex min-h-full flex-col">
+        <Script id="agendame-theme-init" strategy="beforeInteractive">
+          {TEMA_INIT_SCRIPT}
+        </Script>
         {children}
         <Toaster richColors closeButton position="top-right" />
       </body>

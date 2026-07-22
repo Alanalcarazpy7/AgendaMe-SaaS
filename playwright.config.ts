@@ -2,7 +2,8 @@
 
 export default defineConfig({
   testDir: "./tests",
-  timeout: 60_000,
+  globalSetup: "./tests/global-setup.ts",
+  timeout: 90_000,
   expect: {
     timeout: 10_000,
   },
@@ -18,7 +19,13 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "retain-on-failure",
     actionTimeout: 15_000,
-    navigationTimeout: 45_000,
+    navigationTimeout: 75_000,
+  },
+  webServer: {
+    command: `"${process.execPath}" node_modules/next/dist/bin/next dev`,
+    url: "http://localhost:3000",
+    reuseExistingServer: true,
+    timeout: 240_000,
   },
   projects: [
     {

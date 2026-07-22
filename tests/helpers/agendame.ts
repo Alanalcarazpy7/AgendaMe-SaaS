@@ -1,9 +1,17 @@
 ﻿import { expect, type Browser, type BrowserContext, type Page, type TestInfo } from "@playwright/test";
 
+import fs from "node:fs";
+import path from "node:path";
+import { hasE2EFixtures, loadE2EFixtures } from "./e2e-fixtures";
+
+const fixtures = hasE2EFixtures() ? loadE2EFixtures() : null;
+const agendaBusiness = fixtures?.businesses.empresarial;
+
 export const AGENDA = {
-  slug: "barberia",
-  sucursal: "Secundaria",
-  servicio: "Barberia1",
+  slug: agendaBusiness?.slug ?? "barberia",
+  negocio: agendaBusiness?.name ?? "Barberia",
+  sucursal: agendaBusiness?.secondaryBranch?.nombre ?? "Secundaria",
+  servicio: agendaBusiness?.service.nombre ?? "Barberia1",
   adminStorage: "tests/.auth/admin.json",
   gerenteStorage: "tests/.auth/gerente.json",
   recepcionStorage: "tests/.auth/recepcion.json",
@@ -106,7 +114,7 @@ export async function crearReservaPublica(
   const id = uniqueId();
 
   const clienteNombre = `${opciones?.clientePrefijo ?? "Cliente Test"} ${id}`;
-  const clienteTelefono = `0982${id.slice(0, 6)}`;
+  const clienteTelefono = `0982${id.slice(-6)}`;
   const clienteEmail = `cliente.test.${id}@example.com`;
   const fechaReserva = opciones?.fechaReserva ?? siguienteLunesIso();
   const sucursal = opciones?.sucursal ?? AGENDA.sucursal;
@@ -115,14 +123,27 @@ export async function crearReservaPublica(
   await page.goto(`/reservar/${AGENDA.slug}`, { waitUntil: "domcontentloaded" });
 
   await esperarPaginaSinErrores(page);
+  await page.waitForLoadState("networkidle");
+  await page.setExtraHTTPHeaders({
+    "x-forwarded-for": `2001:db8:${id.slice(0, 4)}:${id.slice(-4)}::1`,
+  });
 
-  await expect(page.locator("body")).toContainText(/Reserva online/i);
-  await expect(page.locator("body")).toContainText(/Barberia|Barbería/i);
+  await expect(page.locator("body")).toContainText(/Reservas? online/i);
+  await expect(page.locator("body")).toContainText(new RegExp(AGENDA.negocio, "i"));
 
   await page.getByRole("button", { name: new RegExp(sucursal, "i") }).click();
   await page.getByRole("button", { name: new RegExp(servicio, "i") }).click();
 
+  const availabilityResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      url.pathname === `/api/public/disponibilidad/${AGENDA.slug}` &&
+      url.searchParams.get("fecha") === fechaReserva &&
+      response.request().method() === "GET"
+    );
+  });
   await page.locator('input[type="date"]').fill(fechaReserva);
+  await availabilityResponse;
 
   const horarios = page.getByRole("button", {
     name: /^\d{2}:\d{2}$/,
@@ -207,9 +228,12 @@ export async function esperarDashboardValido(page: Page) {
 }
 
 export async function adjuntarScreenshot(page: Page, testInfo: TestInfo, nombre: string) {
-  const buffer = await page.screenshot({
-    fullPage: true,
+  const screenshotDir = path.join(process.cwd(), ".e2e", "screenshots");
+  fs.mkdirSync(screenshotDir, { recursive: true });
+  await page.screenshot({
+    path: path.join(screenshotDir, nombre),
   });
+  const buffer = await page.screenshot({ fullPage: true });
 
   await testInfo.attach(nombre, {
     body: buffer,

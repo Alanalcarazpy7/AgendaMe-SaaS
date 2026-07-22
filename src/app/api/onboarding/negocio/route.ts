@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
   const { error: perfilError } = await admin.from("perfiles_usuario").upsert(
     {
       id: user.id,
+      usuario_id: user.id,
       nombre_completo: nombreResponsable,
       email: user.email,
       rol_global: "usuario",

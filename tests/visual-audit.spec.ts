@@ -1,4 +1,5 @@
 ﻿import { test } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { AGENDA, RUTAS_ADMIN, adjuntarScreenshot, esperarDashboardValido, esperarPaginaSinErrores } from "./helpers/agendame";
 
 test("captura visual de reserva pública", async ({ page }, testInfo) => {
@@ -17,6 +18,12 @@ test.describe("capturas visuales dashboard admin", () => {
       await page.goto(ruta, { waitUntil: "domcontentloaded" });
 
       await esperarDashboardValido(page);
+
+      const sidebarBox = await page.getByTestId("dashboard-sidebar-frame").boundingBox();
+      const contentBox = await page.getByTestId("dashboard-main-content").boundingBox();
+      expect(sidebarBox).not.toBeNull();
+      expect(contentBox).not.toBeNull();
+      expect(contentBox!.x).toBeGreaterThanOrEqual(sidebarBox!.x + sidebarBox!.width);
 
       const nombre = ruta.replaceAll("/", "_").replace(/^_/, "") || "dashboard";
 

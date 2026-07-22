@@ -281,8 +281,9 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
 
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label className="text-sm font-medium">Nombre visible</label>
+                <label htmlFor="perfil-nombre" className="text-sm font-medium">Nombre visible</label>
                 <input
+                  id="perfil-nombre"
                   value={nombre}
                   onChange={(event) => setNombre(event.target.value)}
                   className="mt-2 h-11 w-full rounded-xl border bg-background px-3 text-sm"
@@ -291,8 +292,9 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
               </div>
 
               <div>
-                <label className="text-sm font-medium">Teléfono</label>
+                <label htmlFor="perfil-telefono" className="text-sm font-medium">Teléfono</label>
                 <input
+                  id="perfil-telefono"
                   value={telefono}
                   onChange={(event) => setTelefono(event.target.value)}
                   className="mt-2 h-11 w-full rounded-xl border bg-background px-3 text-sm"
@@ -301,8 +303,9 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
               </div>
 
               <div>
-                <label className="text-sm font-medium">Cargo / título</label>
+                <label htmlFor="perfil-cargo" className="text-sm font-medium">Cargo / título</label>
                 <input
+                  id="perfil-cargo"
                   value={cargo}
                   onChange={(event) => setCargo(event.target.value)}
                   className="mt-2 h-11 w-full rounded-xl border bg-background px-3 text-sm"
@@ -317,8 +320,9 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
 
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <div>
-                <label className="text-sm font-medium">Tema</label>
+                <label htmlFor="perfil-tema" className="text-sm font-medium">Tema</label>
                 <select
+                  id="perfil-tema"
                   value={tema}
                   onChange={(event) =>
                     setTema(event.target.value as "sistema" | "claro" | "oscuro")
@@ -332,8 +336,9 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
               </div>
 
               <div>
-                <label className="text-sm font-medium">Color personal</label>
+                <label htmlFor="perfil-color" className="text-sm font-medium">Color personal</label>
                 <input
+                  id="perfil-color"
                   type="color"
                   value={colorAcento}
                   onChange={(event) => setColorAcento(event.target.value)}

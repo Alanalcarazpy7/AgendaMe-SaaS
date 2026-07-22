@@ -1,5 +1,8 @@
 ﻿import { test, expect } from "@playwright/test";
 
+import type { APIRequestContext } from "@playwright/test";
+import { AGENDA } from "./helpers/agendame";
+
 type ApiCheck = {
   method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   path: string;
@@ -36,24 +39,40 @@ const protectedApiChecks: ApiCheck[] = [
   { method: "POST", path: "/api/dashboard/mi-cuenta/avatar", data: {} },
   { method: "PATCH", path: "/api/dashboard/mi-cuenta/password", data: {} },
 
-  { method: "PATCH", path: "/api/dashboard/negocio/branding", data: {} },
+  { method: "GET", path: "/api/dashboard/negocio/branding" },
+  { method: "POST", path: "/api/dashboard/negocio/branding", data: {} },
+  { method: "DELETE", path: "/api/dashboard/negocio/branding", data: {} },
+  { method: "GET", path: "/api/dashboard/negocio/intervalo-reserva" },
   { method: "PATCH", path: "/api/dashboard/negocio/intervalo-reserva", data: {} },
-  { method: "PATCH", path: "/api/dashboard/configuracion/horarios", data: {} },
+  { method: "POST", path: "/api/dashboard/configuracion/horarios", data: {} },
 
   { method: "POST", path: "/api/dashboard/planes/solicitudes", data: {} },
+  { method: "PATCH", path: "/api/dashboard/planes/regularizar-sucursales", data: {} },
+
+  { method: "GET", path: "/api/dashboard/pagos/comprobante?pagoId=00000000-0000-0000-0000-000000000000" },
+  { method: "POST", path: "/api/dashboard/pagos/comprobante", data: {} },
 
   { method: "GET", path: "/api/dashboard/sucursales" },
   { method: "POST", path: "/api/dashboard/sucursales", data: {} },
   { method: "PATCH", path: "/api/dashboard/sucursales", data: {} },
   { method: "DELETE", path: "/api/dashboard/sucursales", data: {} },
 
-  { method: "POST", path: "/api/dashboard/sucursales/empleados", data: {} },
+  { method: "GET", path: "/api/dashboard/sucursales/empleados" },
+  { method: "PATCH", path: "/api/dashboard/sucursales/empleados", data: {} },
+  { method: "GET", path: "/api/dashboard/sucursales/usuarios" },
   { method: "POST", path: "/api/dashboard/sucursales/usuarios", data: {} },
+  { method: "PATCH", path: "/api/dashboard/sucursales/usuarios", data: {} },
+  { method: "DELETE", path: "/api/dashboard/sucursales/usuarios", data: {} },
+
+  { method: "GET", path: "/api/dashboard/servicios/imagenes" },
 
   { method: "POST", path: "/api/onboarding/negocio", data: {} },
+
+  { method: "GET", path: "/api/admin/pagos/00000000-0000-0000-0000-000000000000/comprobante" },
+  { method: "POST", path: "/api/admin/pagos/00000000-0000-0000-0000-000000000000/comprobante", data: {} },
 ];
 
-async function callApi(request: any, check: ApiCheck) {
+async function callApi(request: APIRequestContext, check: ApiCheck) {
   return request.fetch(check.path, {
     method: check.method,
     data: check.data,
@@ -89,7 +108,7 @@ test.describe("seguridad APIs privadas sin sesión", () => {
 test.describe("APIs públicas básicas", () => {
   test("disponibilidad pública no exige sesión y no rompe", async ({ request }) => {
     const response = await request.get(
-      "/api/public/disponibilidad/barberia?servicioId=00000000-0000-0000-0000-000000000000&fecha=2026-07-06&sucursalId=00000000-0000-0000-0000-000000000000",
+      `/api/public/disponibilidad/${AGENDA.slug}?servicioId=00000000-0000-0000-0000-000000000000&fecha=2026-07-06&sucursalId=00000000-0000-0000-0000-000000000000`,
       {
         failOnStatusCode: false,
       }
@@ -105,7 +124,7 @@ test.describe("APIs públicas básicas", () => {
   });
 
   test("reservas públicas inválidas no exigen sesión y no rompen", async ({ request }) => {
-    const response = await request.post("/api/public/reservas/barberia", {
+    const response = await request.post(`/api/public/reservas/${AGENDA.slug}`, {
       data: {},
       failOnStatusCode: false,
     });

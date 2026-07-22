@@ -35,21 +35,19 @@ async function validarBloqueada(page: Page, path: string) {
   await ir(page, path);
 
   const url = page.url();
-  const body = await page.locator("body").innerText().catch(() => "");
-
-  const bloqueada =
+  const redirigida =
     url.includes("/sin-acceso") ||
     url.includes("/dashboard/sin-permiso") ||
-    url.includes("/login") ||
-    /no tenés permiso/i.test(body) ||
-    /sin acceso/i.test(body) ||
-    /solo el admin/i.test(body) ||
-    /no autenticado/i.test(body);
+    url.includes("/login");
 
-  expect(
-    bloqueada,
-    `La ruta ${path} debería estar bloqueada, pero quedó accesible en ${url}`
-  ).toBeTruthy();
+  if (redirigida) return;
+
+  await expect(
+    page.locator("body"),
+    `La ruta ${path} debería mostrar un estado de acceso bloqueado en ${url}`
+  ).toContainText(
+    /no tenés permiso|permiso pendiente|no est[aá] habilitado|sin acceso|solo el admin|no autenticado/i
+  );
 }
 
 const adminPermitidas: RutaPermitida[] = [

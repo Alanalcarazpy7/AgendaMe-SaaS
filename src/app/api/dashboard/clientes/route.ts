@@ -6,8 +6,11 @@ import { createServiceRoleClient } from "@/lib/supabase/service-role";
 type Payload = {
   id?: string;
   nombre_completo?: string;
+  nombreCompleto?: string;
   telefono?: string;
   email?: string;
+  documento?: string;
+  notasInternas?: string;
   estado?: string;
 };
 
@@ -30,9 +33,11 @@ export async function POST(request: Request) {
 
     const body = (await request.json()) as Payload;
 
-    const nombre = limpiar(body.nombre_completo);
+    const nombre = limpiar(body.nombre_completo ?? body.nombreCompleto);
     const telefono = limpiar(body.telefono);
     const email = limpiar(body.email);
+    const documento = limpiar(body.documento);
+    const notasInternas = limpiar(body.notasInternas);
 
     if (!nombre) {
       return NextResponse.json(
@@ -62,6 +67,8 @@ export async function POST(request: Request) {
         nombre_completo: nombre,
         telefono: telefono || null,
         email: email || null,
+        documento: documento || null,
+        notas_internas: notasInternas || null,
         estado: "activo",
       })
       .select("id")

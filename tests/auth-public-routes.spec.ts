@@ -12,6 +12,6 @@ test("reserva pública carga sin iniciar sesión", async ({ page }) => {
 
   await esperarPaginaSinErrores(page);
 
-  await expect(page.locator("body")).toContainText(/Reserva online/i);
+  await expect(page.locator("body")).toContainText(/Reservas? online/i);
   await expect(page.locator("body")).toContainText(/Elegí una sucursal/i);
 });

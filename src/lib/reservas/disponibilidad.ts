@@ -1,4 +1,39 @@
-﻿type SupabaseLike = any;
+import type { createServiceRoleClient } from "@/lib/supabase/service-role";
+
+type SupabaseLike = ReturnType<typeof createServiceRoleClient>;
+
+type EmpleadoDisponible = {
+  id: string;
+  estado: string;
+  sucursal_id: string | null;
+};
+
+type EmpleadoServicioRow = {
+  empleado_id: string;
+  empleados: EmpleadoDisponible | EmpleadoDisponible[] | null;
+};
+
+type HorarioEmpleadoRow = {
+  empleado_id: string;
+  activo: boolean;
+  hora_inicio: string | null;
+  hora_fin: string | null;
+  descanso_inicio: string | null;
+  descanso_fin: string | null;
+};
+
+type CitaOcupadaRow = {
+  empleado_id: string;
+  hora_inicio: string;
+  hora_fin: string;
+};
+
+type BloqueoHorarioRow = {
+  empleado_id: string | null;
+  sucursal_id: string | null;
+  fecha_inicio: string;
+  fecha_fin: string;
+};
 
 type CalcularDisponibilidadParams = {
   supabase: SupabaseLike;
@@ -76,13 +111,64 @@ export async function calcularDisponibilidadReserva({
     };
   }
 
-  const { data: servicio, error: servicioError } = await supabase
+  const servicioPromise = supabase
     .from("servicios")
     .select("id, nombre, duracion_minutos, precio, estado")
     .eq("id", servicioId)
     .eq("negocio_id", negocio.id)
     .eq("estado", "activo")
     .maybeSingle();
+
+  const sucursalPromise = sucursalId
+    ? supabase
+      .from("sucursales")
+      .select("id")
+      .eq("id", sucursalId)
+      .eq("negocio_id", negocio.id)
+      .eq("estado", "activo")
+      .maybeSingle()
+    : supabase
+      .from("sucursales")
+      .select("id")
+      .eq("negocio_id", negocio.id)
+      .eq("es_principal", true)
+      .maybeSingle();
+
+  const date = new Date(`${fecha}T12:00:00`);
+  const diaSemana = date.getDay();
+
+  const horarioNegocioPromise = supabase
+    .from("horarios_negocio")
+    .select("dia_semana, activo, hora_apertura, hora_cierre")
+    .eq("negocio_id", negocio.id)
+    .eq("dia_semana", diaSemana)
+    .maybeSingle();
+
+  const empleadoServiciosPromise = supabase
+    .from("empleado_servicios")
+    .select(
+      `
+      empleado_id,
+      empleados (
+        id,
+        estado,
+        sucursal_id
+      )
+    `
+    )
+    .eq("servicio_id", servicioId);
+
+  const [
+    { data: servicio, error: servicioError },
+    { data: sucursal, error: sucursalError },
+    { data: horarioNegocio, error: horarioNegocioError },
+    { data: empleadoServicios, error: empleadoServiciosError },
+  ] = await Promise.all([
+    servicioPromise,
+    sucursalPromise,
+    horarioNegocioPromise,
+    empleadoServiciosPromise,
+  ]);
 
   if (servicioError) throw new Error(servicioError.message);
 
@@ -96,48 +182,19 @@ export async function calcularDisponibilidadReserva({
     };
   }
 
-  let sucursalFinalId = sucursalId || null;
+  if (sucursalId && sucursalError) throw new Error(sucursalError.message);
 
-  if (sucursalFinalId) {
-    const { data: sucursal, error: sucursalError } = await supabase
-      .from("sucursales")
-      .select("id")
-      .eq("id", sucursalFinalId)
-      .eq("negocio_id", negocio.id)
-      .eq("estado", "activo")
-      .maybeSingle();
-
-    if (sucursalError) throw new Error(sucursalError.message);
-
-    if (!sucursal) {
-      return {
-        slots: [] as string[],
-        slotEmployees: {} as Record<string, string[]>,
-        negocio,
-        servicio,
-        sucursalId: null,
-      };
-    }
-  } else {
-    const { data: sucursalPrincipal } = await supabase
-      .from("sucursales")
-      .select("id")
-      .eq("negocio_id", negocio.id)
-      .eq("es_principal", true)
-      .maybeSingle();
-
-    sucursalFinalId = sucursalPrincipal?.id ?? null;
+  if (sucursalId && !sucursal) {
+    return {
+      slots: [] as string[],
+      slotEmployees: {} as Record<string, string[]>,
+      negocio,
+      servicio,
+      sucursalId: null,
+    };
   }
 
-  const date = new Date(`${fecha}T12:00:00`);
-  const diaSemana = date.getDay();
-
-  const { data: horarioNegocio, error: horarioNegocioError } = await supabase
-    .from("horarios_negocio")
-    .select("dia_semana, activo, hora_apertura, hora_cierre")
-    .eq("negocio_id", negocio.id)
-    .eq("dia_semana", diaSemana)
-    .maybeSingle();
+  const sucursalFinalId = sucursal?.id ?? null;
 
   if (horarioNegocioError) throw new Error(horarioNegocioError.message);
 
@@ -156,31 +213,14 @@ export async function calcularDisponibilidadReserva({
     };
   }
 
-  let empleadoServiciosQuery = supabase
-    .from("empleado_servicios")
-    .select(
-      `
-      empleado_id,
-      empleados (
-        id,
-        estado,
-        sucursal_id
-      )
-    `
-    )
-    .eq("servicio_id", servicio.id);
-
-  const { data: empleadoServicios, error: empleadoServiciosError } =
-    await empleadoServiciosQuery;
-
   if (empleadoServiciosError) throw new Error(empleadoServiciosError.message);
 
-  const empleadosDisponibles = (empleadoServicios ?? [])
-    .map((row: any) => {
+  const empleadosDisponibles = ((empleadoServicios ?? []) as EmpleadoServicioRow[])
+    .map((row) => {
       const empleado = Array.isArray(row.empleados) ? row.empleados[0] : row.empleados;
-      return empleado;
+      return empleado ?? null;
     })
-    .filter((empleado: any) => {
+    .filter((empleado): empleado is EmpleadoDisponible => {
       if (!empleado || empleado.estado !== "activo") return false;
       if (sucursalFinalId && empleado.sucursal_id !== sucursalFinalId) return false;
       return true;
@@ -196,17 +236,15 @@ export async function calcularDisponibilidadReserva({
     };
   }
 
-  const empleadoIds = empleadosDisponibles.map((empleado: any) => empleado.id);
+  const empleadoIds = empleadosDisponibles.map((empleado) => empleado.id);
 
-  const { data: horariosEmpleado, error: horariosEmpleadoError } = await supabase
+  const horariosEmpleadoPromise = supabase
     .from("horarios_empleado")
     .select(
       "empleado_id, dia_semana, activo, hora_inicio, hora_fin, descanso_inicio, descanso_fin"
     )
     .in("empleado_id", empleadoIds)
     .eq("dia_semana", diaSemana);
-
-  if (horariosEmpleadoError) throw new Error(horariosEmpleadoError.message);
 
   let citasQuery = supabase
     .from("citas")
@@ -220,18 +258,21 @@ export async function calcularDisponibilidadReserva({
     citasQuery = citasQuery.eq("sucursal_id", sucursalFinalId);
   }
 
-  const { data: citasOcupadas, error: citasError } = await citasQuery;
-
-  if (citasError) throw new Error(citasError.message);
-
-  let bloqueosQuery = supabase
+  const bloqueosQuery = supabase
     .from("bloqueos_horario")
     .select("id, empleado_id, sucursal_id, fecha_inicio, fecha_fin")
     .eq("negocio_id", negocio.id)
     .lte("fecha_inicio", `${fecha}T23:59:59`)
     .gte("fecha_fin", `${fecha}T00:00:00`);
 
-  const { data: bloqueos, error: bloqueosError } = await bloqueosQuery;
+  const [
+    { data: horariosEmpleado, error: horariosEmpleadoError },
+    { data: citasOcupadas, error: citasError },
+    { data: bloqueos, error: bloqueosError },
+  ] = await Promise.all([horariosEmpleadoPromise, citasQuery, bloqueosQuery]);
+
+  if (horariosEmpleadoError) throw new Error(horariosEmpleadoError.message);
+  if (citasError) throw new Error(citasError.message);
 
   if (bloqueosError) throw new Error(bloqueosError.message);
 
@@ -249,8 +290,8 @@ export async function calcularDisponibilidadReserva({
   const slotEmployees: Record<string, string[]> = {};
 
   for (const empleado of empleadosDisponibles) {
-    const horario = (horariosEmpleado ?? []).find(
-      (item: any) => item.empleado_id === empleado.id
+    const horario = ((horariosEmpleado ?? []) as HorarioEmpleadoRow[]).find(
+      (item) => item.empleado_id === empleado.id
     );
 
     if (horario && !horario.activo) continue;
@@ -283,7 +324,7 @@ export async function calcularDisponibilidadReserva({
         continue;
       }
 
-      const ocupadoPorCita = (citasOcupadas ?? []).some((cita: any) => {
+      const ocupadoPorCita = ((citasOcupadas ?? []) as CitaOcupadaRow[]).some((cita) => {
         if (cita.empleado_id !== empleado.id) return false;
 
         return overlap(
@@ -296,7 +337,7 @@ export async function calcularDisponibilidadReserva({
 
       if (ocupadoPorCita) continue;
 
-      const bloqueado = (bloqueos ?? []).some((bloqueo: any) => {
+      const bloqueado = ((bloqueos ?? []) as BloqueoHorarioRow[]).some((bloqueo) => {
         const bloqueoEmpleadoId = bloqueo.empleado_id ?? null;
         const bloqueoSucursalId = bloqueo.sucursal_id ?? null;
 

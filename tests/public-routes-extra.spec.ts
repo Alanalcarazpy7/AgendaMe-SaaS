@@ -22,7 +22,7 @@ test("reserva pública muestra datos principales del negocio", async ({ page }) 
 
   await esperarPaginaSinErrores(page);
 
-  await expect(page.locator("body")).toContainText(/Reserva online/i);
+  await expect(page.locator("body")).toContainText(/Reservas? online/i);
   await expect(page.locator("body")).toContainText(/Reservá tu turno/i);
   await expect(page.locator("body")).toContainText(/Elegí una sucursal/i);
   await expect(page.locator("body")).toContainText(/Elegí un servicio/i);

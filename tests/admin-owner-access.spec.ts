@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { test, expect } from "@playwright/test";
+import { hasE2EFixtures, loadE2EFixtures } from "./helpers/e2e-fixtures";
 
 /**
  * Pruebas de seguridad para /admin (panel privado del propietario).
@@ -14,6 +15,7 @@ import { test, expect } from "@playwright/test";
 
 const ADMIN_TENANT_STORAGE_STATE = "tests/.auth/admin.json"; // usuario admin_global de un negocio (NO propietario de la plataforma)
 const PLATFORM_OWNER_STORAGE_STATE = "tests/.auth/superadmin.json"; // propietario real de AgendaMe
+const fixtures = hasE2EFixtures() ? loadE2EFixtures() : null;
 
 function storageStateDisponible(relativePath: string) {
   return fs.existsSync(path.join(process.cwd(), relativePath));
@@ -65,6 +67,39 @@ test.describe("Acceso a /admin con el propietario real de la plataforma", () => 
     await page.goto("/admin", { waitUntil: "domcontentloaded" });
 
     await expect(page).not.toHaveURL(/\/login/i);
-    await expect(page.locator("body")).toContainText(/Panel del propietario/i);
+    await expect(page.locator("body")).toContainText(/Control privado/i);
+    await expect(page.locator("body")).toContainText(/Vista general/i);
+  });
+
+  const ownerRoutes = [
+    "/admin",
+    "/admin/negocios",
+    "/admin/suscripciones",
+    "/admin/renovaciones",
+    "/admin/pagos",
+    "/admin/usuarios",
+    "/admin/planes",
+    "/admin/invitaciones",
+    "/admin/auditoria",
+    "/admin/analitica",
+    "/admin/configuracion",
+  ];
+
+  for (const route of ownerRoutes) {
+    test(`propietario carga ${route} sin error`, async ({ page }) => {
+      const response = await page.goto(route, { waitUntil: "domcontentloaded" });
+      expect(response?.status()).toBeLessThan(400);
+      await expect(page).not.toHaveURL(/\/login/i);
+      await expect(page.locator("body")).not.toContainText(/Internal Server Error|Application error|Build Error/i);
+    });
+  }
+
+  test("propietario abre el detalle de un negocio", async ({ page }) => {
+    test.skip(!fixtures, "Requiere fixtures E2E para identificar un negocio aislado.");
+    const response = await page.goto(`/admin/negocios/${fixtures!.businesses.empresarial.id}`, {
+      waitUntil: "domcontentloaded",
+    });
+    expect(response?.status()).toBeLessThan(400);
+    await expect(page.locator("body")).toContainText(fixtures!.businesses.empresarial.name);
   });
 });

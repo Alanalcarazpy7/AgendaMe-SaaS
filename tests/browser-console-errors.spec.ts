@@ -7,16 +7,25 @@ const rutasPublicas = [
   `/reservar/${AGENDA.slug}`,
 ];
 
+const WARNING_CRITICO =
+  /Encountered a script tag|hydration|Each child in a list|unique ["']key["']|Cannot update a component/i;
+
+function observarConsola(page: import("@playwright/test").Page) {
+  const errores: string[] = [];
+
+  page.on("console", (msg) => {
+    if (msg.type() === "error" || (msg.type() === "warning" && WARNING_CRITICO.test(msg.text()))) {
+      errores.push(msg.text());
+    }
+  });
+
+  return errores;
+}
+
 test.describe("sin errores graves en consola pública", () => {
   for (const ruta of rutasPublicas) {
     test(`sin errores consola: ${ruta}`, async ({ page }) => {
-      const errores: string[] = [];
-
-      page.on("console", (msg) => {
-        if (msg.type() === "error") {
-          errores.push(msg.text());
-        }
-      });
+      const errores = observarConsola(page);
 
       await page.goto(ruta, { waitUntil: "domcontentloaded" });
 
@@ -38,13 +47,7 @@ test.describe("sin errores graves en consola dashboard admin", () => {
 
   for (const ruta of ["/dashboard", "/dashboard/reservas", "/dashboard/citas", "/dashboard/clientes"]) {
     test(`sin errores consola admin: ${ruta}`, async ({ page }) => {
-      const errores: string[] = [];
-
-      page.on("console", (msg) => {
-        if (msg.type() === "error") {
-          errores.push(msg.text());
-        }
-      });
+      const errores = observarConsola(page);
 
       await page.goto(ruta, { waitUntil: "domcontentloaded" });
 

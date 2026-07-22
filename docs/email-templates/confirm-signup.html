@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Confirma tu cuenta en AgendaMe</title>
+  </head>
+  <body style="margin:0;background:#f3f6f8;color:#101828;font-family:Arial,Helvetica,sans-serif;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+      Confirma tu correo para terminar de crear tu cuenta en AgendaMe.
+    </div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f6f8;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#ffffff;border:1px solid #dce3e8;">
+            <tr>
+              <td style="height:6px;background:#0bb8c9;font-size:0;line-height:0;">&nbsp;</td>
+            </tr>
+            <tr>
+              <td style="padding:30px 34px 12px;">
+                <div style="font-size:20px;font-weight:700;color:#0b1726;">Agenda<span style="color:#079caf;">Me</span></div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 34px 34px;">
+                <p style="margin:0 0 10px;color:#079caf;font-size:13px;font-weight:700;text-transform:uppercase;">Verificacion de cuenta</p>
+                <h1 style="margin:0 0 16px;font-size:28px;line-height:1.25;color:#0b1726;">Confirma tu correo</h1>
+                <p style="margin:0 0 24px;color:#475467;font-size:16px;line-height:1.6;">
+                  Recibimos una solicitud para crear una cuenta en AgendaMe. Confirma que este correo te pertenece para continuar.
+                </p>
+                <table role="presentation" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td style="background:#0bb8c9;">
+                      <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 22px;color:#06141c;text-decoration:none;font-size:16px;font-weight:700;">
+                        Confirmar mi cuenta
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:26px 0 8px;color:#667085;font-size:13px;line-height:1.55;">
+                  Si el boton no funciona, abre este enlace en tu navegador:
+                </p>
+                <p style="margin:0;word-break:break-all;font-size:12px;line-height:1.5;">
+                  <a href="{{ .ConfirmationURL }}" style="color:#087f8c;">{{ .ConfirmationURL }}</a>
+                </p>
+                <div style="margin-top:28px;padding-top:22px;border-top:1px solid #e4e7ec;">
+                  <p style="margin:0;color:#667085;font-size:13px;line-height:1.55;">
+                    Si no creaste esta cuenta, ignora este mensaje. No compartas este enlace con nadie.
+                  </p>
+                </div>
+              </td>
+            </tr>
+          </table>
+          <p style="margin:18px 0 0;color:#98a2b3;font-size:12px;">AgendaMe &middot; Acceso seguro a tu cuenta</p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

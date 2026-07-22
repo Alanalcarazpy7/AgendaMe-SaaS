@@ -13,6 +13,7 @@ export function requirePermission(
     | "puedeGestionarEmpleados"
     | "puedeGestionarClientes"
     | "puedeGestionarCitas"
+    | "puedeGestionarReservas"
     | "puedeVerReportes"
     | "puedeExportar"
     | "puedeUsarRecordatorios"
@@ -23,7 +24,7 @@ export function requirePermission(
   }
 }
 
-export function applySucursalScope<T extends { eq: Function }>(
+export function applySucursalScope<T extends { eq(column: string, value: string): T }>(
   query: T,
   access: DashboardAccess,
   column = "sucursal_id"
