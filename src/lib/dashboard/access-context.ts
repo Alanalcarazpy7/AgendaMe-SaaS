@@ -135,41 +135,15 @@ function nombreDesdeUsuario(user: any) {
   return "Usuario";
 }
 
-async function obtenerPerfilUsuario(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  user: any
-) {
+/**
+ * Reemplaza la version anterior que consultaba perfiles_usuario por su
+ * cuenta (con un fallback de error propio). Ahora el perfil llega como
+ * parte del jsonb que devuelve resolver_acceso_dashboard() -- misma logica
+ * de defaults, aplicada a los datos ya traidos en esa unica RPC.
+ */
+function construirPerfilUsuario(perfil: Record<string, unknown> | null | undefined, user: any) {
   const nombreAuth = nombreDesdeUsuario(user);
   const email = normalizarEmail(user.email);
-
-  const { data: perfil, error } = await supabase
-    .from("perfiles_usuario")
-    .select(
-      `
-      usuario_id,
-      nombre,
-      telefono,
-      cargo,
-      avatar_url,
-      tema,
-      color_acento,
-      recibir_notificaciones
-    `
-    )
-    .eq("usuario_id", user.id)
-    .maybeSingle();
-
-  if (error) {
-    return {
-      nombre: nombreAuth,
-      telefono: null,
-      cargo: limpiar(user?.user_metadata?.cargo) || null,
-      avatar_url: limpiar(user?.user_metadata?.avatar_url) || null,
-      tema: "sistema" as const,
-      color_acento: null,
-      recibir_notificaciones: true,
-    };
-  }
 
   return {
     nombre: limpiar((perfil as any)?.nombre) || nombreAuth || email.split("@")[0] || "Usuario",
@@ -223,29 +197,18 @@ async function obtenerPlanActivo(
   };
 }
 
-async function esPlatformOwner(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  userId: string
-) {
+/**
+ * Reemplaza la version anterior que hacia hasta 2 consultas propias (por
+ * id y por usuario_id). resolver_acceso_dashboard() ya resuelve esa misma
+ * busqueda dual dentro de la RPC; aca solo se combina con la env var, que
+ * la funcion de Postgres no puede leer.
+ */
+function esPlatformOwnerDesdeRol(userId: string, rolGlobal: string | null | undefined) {
   const ownerId = process.env.ADMIN_OWNER_USER_ID;
 
   if (!ownerId || ownerId !== userId) return false;
 
-  const { data: perfilPorId } = await supabase
-    .from("perfiles_usuario")
-    .select("rol_global")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (perfilPorId?.rol_global === "super_admin") return true;
-
-  const { data: perfilPorUsuarioId } = await supabase
-    .from("perfiles_usuario")
-    .select("rol_global")
-    .eq("usuario_id", userId)
-    .maybeSingle();
-
-  return perfilPorUsuarioId?.rol_global === "super_admin";
+  return rolGlobal === "super_admin";
 }
 
 function permisosPorRol({
@@ -299,71 +262,64 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
   const supabase = createServiceRoleClient();
 
   /**
-   * Estas 4 lecturas no dependen entre si (ninguna necesita el resultado de
-   * otra para poder ejecutarse), pero antes corrian una despues de la otra
-   * — hasta 4 viajes de ida y vuelta secuenciales a Supabase en el camino
-   * mas comun. Medido localmente: ~2-2.5s por carga de dashboard incluso
-   * con un solo usuario sin ninguna concurrencia, la mayor parte de ese
-   * tiempo era esta cadena secuencial. Dispararlas en paralelo con
-   * Promise.all no cambia ningun resultado (mismas consultas, mismos
-   * filtros) — solo cambia CUANDO se piden. El costo extra para un
-   * admin_global (que nunca necesita el resultado de sucursal_usuarios) es
-   * una consulta de mas sobre una tabla chica; se descarta sin usar si
-   * `negocioGlobal` ya resolvio el acceso.
+   * Antes esto eran 4 consultas separadas a la API REST (perfil,
+   * rol_global, negocio_usuarios, sucursal_usuarios) -- primero
+   * secuenciales, despues paralelizadas con Promise.all. Paralelizar
+   * ayudo a la latencia de UNA carga, pero bajo concurrencia real
+   * multiplica la cantidad de conexiones simultaneas contra el pool de
+   * Supabase: confirmado con una prueba de carga real contra produccion
+   * (20 usuarios continuos) que genero errores 522 "Connection timed
+   * out" de Supabase (ver docs/load-test-audit-2026-07-22.md y
+   * tests/load/results/dashboard-probe20-vercel-real-after-fix.json).
+   * resolver_acceso_dashboard() (ver
+   * supabase/patches/2026-07-consolidar-acceso-dashboard.sql) hace las
+   * mismas 4 lecturas DENTRO de una sola funcion de Postgres -- 1 conexion
+   * por carga en vez de 4. Se llama con el cliente de sesion (no service
+   * role): la funcion usa auth.uid() internamente, que solo esta
+   * disponible en una conexion con el JWT del usuario.
    */
-  const [perfilUsuario, esOwner, membresiaGlobalResult, accesoPorUsuarioIdResult] =
-    await Promise.all([
-      obtenerPerfilUsuario(supabase, user),
-      esPlatformOwner(supabase, user.id),
-      supabase
-        .from("negocio_usuarios")
-        .select(
-          `
-          negocio_id,
-          rol,
-          activo,
-          negocios (
-            id,
-            nombre,
-            slug,
-            logo_url,
-            estado,
-            motivo_bloqueo,
-            bloqueado_at
-          )
-        `
-        )
-        .eq("usuario_id", user.id)
-        .eq("activo", true)
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from("sucursal_usuarios")
-        .select(
-          `
-          id,
-          negocio_id,
-          sucursal_id,
-          usuario_id,
-          empleado_id,
-          nombre,
-          cargo,
-          avatar_url,
-          email,
-          rol,
-          activo,
-          sucursales (
-            id,
-            nombre,
-            estado
-          )
-        `
-        )
-        .eq("usuario_id", user.id)
-        .eq("activo", true)
-        .limit(1)
-        .maybeSingle(),
-    ]);
+  const { data: accesoRpc, error: accesoRpcError } = await authSupabase.rpc(
+    "resolver_acceso_dashboard"
+  );
+
+  if (accesoRpcError) throw new Error(accesoRpcError.message);
+
+  const datos = accesoRpc as {
+    autenticado: boolean;
+    perfil: Record<string, unknown> | null;
+    rol_global: string | null;
+    membresia_negocio: {
+      negocio_id: string;
+      rol: string;
+      activo: boolean;
+      negocio: {
+        id: string;
+        nombre: string;
+        slug: string | null;
+        logo_url: string | null;
+        estado: string;
+        motivo_bloqueo: string | null;
+        bloqueado_at: string | null;
+      };
+    } | null;
+    acceso_sucursal: {
+      id: string;
+      negocio_id: string;
+      sucursal_id: string;
+      usuario_id: string | null;
+      empleado_id: string | null;
+      nombre: string | null;
+      cargo: string | null;
+      avatar_url: string | null;
+      email: string | null;
+      rol: DashboardAccessRole;
+      activo: boolean;
+      sucursales: { id: string; nombre: string; estado: string };
+    } | null;
+  };
+
+  const perfilUsuario = construirPerfilUsuario(datos.perfil, user);
+  const esOwner = esPlatformOwnerDesdeRol(user.id, datos.rol_global);
 
   if (esOwner) {
     return {
@@ -372,11 +328,7 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
     };
   }
 
-  const { data: membresiaGlobal, error: membresiaError } = membresiaGlobalResult;
-
-  if (membresiaError) throw new Error(membresiaError.message);
-
-  const negocioGlobal = obtenerObjeto((membresiaGlobal as any)?.negocios ?? null);
+  const negocioGlobal = datos.membresia_negocio?.negocio ?? null;
 
   if (negocioGlobal) {
     const plan = await obtenerPlanActivo(supabase, (negocioGlobal as any).id);
@@ -444,10 +396,7 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
     };
   }
 
-  let accesoSucursal = accesoPorUsuarioIdResult.data;
-  const accesoUsuarioError = accesoPorUsuarioIdResult.error;
-
-  if (accesoUsuarioError) throw new Error(accesoUsuarioError.message);
+  let accesoSucursal: any = datos.acceso_sucursal;
 
   if (!accesoSucursal) {
     const { data: accesoPorEmail, error: accesoEmailError } = await supabase
