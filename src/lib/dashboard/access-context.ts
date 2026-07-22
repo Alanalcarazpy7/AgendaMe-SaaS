@@ -297,37 +297,82 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
 
   const email = normalizarEmail(user.email);
   const supabase = createServiceRoleClient();
-  const perfilUsuario = await obtenerPerfilUsuario(supabase, user);
 
-  if (await esPlatformOwner(supabase, user.id)) {
+  /**
+   * Estas 4 lecturas no dependen entre si (ninguna necesita el resultado de
+   * otra para poder ejecutarse), pero antes corrian una despues de la otra
+   * — hasta 4 viajes de ida y vuelta secuenciales a Supabase en el camino
+   * mas comun. Medido localmente: ~2-2.5s por carga de dashboard incluso
+   * con un solo usuario sin ninguna concurrencia, la mayor parte de ese
+   * tiempo era esta cadena secuencial. Dispararlas en paralelo con
+   * Promise.all no cambia ningun resultado (mismas consultas, mismos
+   * filtros) — solo cambia CUANDO se piden. El costo extra para un
+   * admin_global (que nunca necesita el resultado de sucursal_usuarios) es
+   * una consulta de mas sobre una tabla chica; se descarta sin usar si
+   * `negocioGlobal` ya resolvio el acceso.
+   */
+  const [perfilUsuario, esOwner, membresiaGlobalResult, accesoPorUsuarioIdResult] =
+    await Promise.all([
+      obtenerPerfilUsuario(supabase, user),
+      esPlatformOwner(supabase, user.id),
+      supabase
+        .from("negocio_usuarios")
+        .select(
+          `
+          negocio_id,
+          rol,
+          activo,
+          negocios (
+            id,
+            nombre,
+            slug,
+            logo_url,
+            estado,
+            motivo_bloqueo,
+            bloqueado_at
+          )
+        `
+        )
+        .eq("usuario_id", user.id)
+        .eq("activo", true)
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("sucursal_usuarios")
+        .select(
+          `
+          id,
+          negocio_id,
+          sucursal_id,
+          usuario_id,
+          empleado_id,
+          nombre,
+          cargo,
+          avatar_url,
+          email,
+          rol,
+          activo,
+          sucursales (
+            id,
+            nombre,
+            estado
+          )
+        `
+        )
+        .eq("usuario_id", user.id)
+        .eq("activo", true)
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+  if (esOwner) {
     return {
       ok: false,
       reason: "platform_owner",
     };
   }
 
-  const { data: membresiaGlobal, error: membresiaError } = await supabase
-    .from("negocio_usuarios")
-    .select(
-      `
-      negocio_id,
-      rol,
-      activo,
-      negocios (
-        id,
-        nombre,
-        slug,
-        logo_url,
-        estado,
-        motivo_bloqueo,
-        bloqueado_at
-      )
-    `
-    )
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1)
-    .maybeSingle();
+  const { data: membresiaGlobal, error: membresiaError } = membresiaGlobalResult;
 
   if (membresiaError) throw new Error(membresiaError.message);
 
@@ -399,35 +444,8 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
     };
   }
 
-  const accesoSucursalResult = await supabase
-    .from("sucursal_usuarios")
-    .select(
-      `
-      id,
-      negocio_id,
-      sucursal_id,
-      usuario_id,
-      empleado_id,
-      nombre,
-      cargo,
-      avatar_url,
-      email,
-      rol,
-      activo,
-      sucursales (
-        id,
-        nombre,
-        estado
-      )
-    `
-    )
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1)
-    .maybeSingle();
-
-  let accesoSucursal = accesoSucursalResult.data;
-  const accesoUsuarioError = accesoSucursalResult.error;
+  let accesoSucursal = accesoPorUsuarioIdResult.data;
+  const accesoUsuarioError = accesoPorUsuarioIdResult.error;
 
   if (accesoUsuarioError) throw new Error(accesoUsuarioError.message);
 
