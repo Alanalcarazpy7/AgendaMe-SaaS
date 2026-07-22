@@ -24,6 +24,9 @@ registrado ni a una persona que deja el dashboard abierto sin hacer acciones.
 | Dashboard, 10 VU durante 6 min | Pasa | 0/1.072 | 1.04 s |
 | Dashboard, 20 VU durante 6 min | Falla por latencia | 1/1.466 | 6.97 s |
 | Dashboard, 30 VU durante 13 min | Falla por latencia | 15/3.585 | 11.73 s |
+| Dashboard mixto, 10 VU despues de RPC | Pasa | 0/1.061 | 1.10 s |
+| Dashboard mixto, 20 VU despues de RPC | Pasa | 0/1.965 | 2.59 s |
+| Dashboard mixto, 30 VU despues de RPC | Falla | 38/2.199 | 7.76 s |
 | Abuso de reserva, 6 intentos | Pasa | 3 respuestas 429 | aplica `Retry-After` |
 
 En la prueba de 20 VU, la mediana fue 930 ms pero el p95 subio a 6.97 s. Esto
@@ -41,31 +44,39 @@ acceso era parte importante del problema.
 - Citas carga clientes en paralelo con citas, empleados y servicios.
 - Empleados carga sucursales en paralelo con empleados y servicios.
 
-El build de produccion y el typecheck pasan. Un smoke autenticado local posterior
-a estas correcciones devolvio 9/9 respuestas 200 y ninguna redireccion a login.
-La capacidad real posterior a la mejora debe medirse nuevamente en Vercel,
-porque una ejecucion local no reproduce la infraestructura de produccion.
+La RPC consolidada mejoro de forma importante el nivel de 20 VU: paso de p95
+6.97 s con un 500 a p95 2.59 s sin errores. A 30 VU vuelve a aparecer cola:
+mediana 886 ms, p90 4.79 s, p95 7.76 s, maximo 36.45 s y 1.73% de respuestas
+fallidas. Los 500 afectaron varias rutas, por lo que el costo comun del layout
+sigue siendo el principal sospechoso.
+
+La siguiente optimizacion comparte entre solicitudes durante 30 segundos el
+resumen visual de limites (1 lectura de plan + 5 conteos) y durante 60 segundos
+el aviso de vencimiento (2 lecturas). Las validaciones de escritura conservan
+consultas sin cache, por lo que no se relajan limites ni reglas de negocio. El
+build de produccion y ESLint pasan; falta medir este cambio desplegado.
 
 ## Lectura de capacidad
 
 - El flujo publico soporta con margen el piloto previsto de 3 o 4 negocios.
-- Diez personas navegando de forma continua y simultanea por el dashboard pasan
-  con buen margen en el deployment actual.
+- Veinte personas navegando de forma continua y simultanea por el dashboard
+  pasan en el deployment actual, aunque con poco margen frente al objetivo de
+  p95 menor a 3 s.
 - No se debe interpretar el fallo de 20 VU como un limite de 20 negocios. La
   carga simula recargas completas y continuas, mas agresivas que la navegacion
   normal de Next.js, que reutiliza layouts en transiciones del cliente.
-- Antes de un lanzamiento masivo conviene lograr p95 menor a 3 s con 20 VU y
-  luego probar 30 VU. No corresponde ejecutar todavia 100 o 200 VU.
+- El deployment anterior al cache no aprueba 30 VU. No corresponde ejecutar
+  40 o 50 hasta desplegar la optimizacion y repetir ese nivel.
 
 ## Siguiente ronda
 
-1. Desplegar las optimizaciones en Vercel.
-2. Repetir `probe20` con las mismas cuatro sesiones y comparar ruta por ruta.
+1. Desplegar el cache visual en Vercel.
+2. Repetir `probe30` con las siete sesiones de roles mixtos.
 3. Ejecutar `supabase/diagnostics/dashboard-performance.sql` en modo lectura y
-   revisar indices y escaneos secuenciales.
-4. Si 20 VU sigue por encima de 3 s, medir por separado acceso, limites del plan
-   y consultas de cada pagina antes de agregar cache entre solicitudes.
-5. Solo cuando 20 y 30 VU pasen, ejecutar una prueba de pico corta. El soak de
+   revisar indices, conexiones y `pg_stat_statements`.
+4. Si 30 VU sigue fallando, cruzar los 500 con Runtime Logs de Vercel y los
+   reportes de CPU, conexiones e IO de Supabase.
+5. Solo cuando 30, 40 y 50 VU pasen, ejecutar una prueba de pico corta. El soak de
    una hora queda para un staging separado y con presupuesto de ancho de banda.
 
 ## Pendientes manuales antes del piloto
@@ -76,4 +87,3 @@ porque una ejecucion local no reproduce la infraestructura de produccion.
 - Revisar Vercel Functions y Supabase durante una prueba para correlacionar
   latencia, errores 5xx, CPU, conexiones y consumo de ancho de banda.
 - Confirmar backup y restauracion antes de limpiar los datos de prueba.
-

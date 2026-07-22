@@ -35,6 +35,36 @@ export function scenarioFor(profile) {
       ],
       gracefulRampDown: "30s",
     },
+    probe30: {
+      executor: "ramping-vus",
+      startVUs: 0,
+      stages: [
+        { duration: "1m", target: 30 },
+        { duration: "4m", target: 30 },
+        { duration: "1m", target: 0 },
+      ],
+      gracefulRampDown: "30s",
+    },
+    probe40: {
+      executor: "ramping-vus",
+      startVUs: 0,
+      stages: [
+        { duration: "1m", target: 40 },
+        { duration: "4m", target: 40 },
+        { duration: "1m", target: 0 },
+      ],
+      gracefulRampDown: "30s",
+    },
+    probe50: {
+      executor: "ramping-vus",
+      startVUs: 0,
+      stages: [
+        { duration: "1m", target: 50 },
+        { duration: "4m", target: 50 },
+        { duration: "1m", target: 0 },
+      ],
+      gracefulRampDown: "30s",
+    },
     load: {
       executor: "ramping-vus",
       startVUs: 0,

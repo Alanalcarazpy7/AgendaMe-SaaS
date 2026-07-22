@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { AlertTriangle, CalendarClock } from "lucide-react";
-import { obtenerVencimientoPlanNegocio } from "@/lib/planes/plan-vencimiento";
-import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { obtenerVencimientoPlanDashboard } from "@/lib/planes/plan-vencimiento";
 
 type Props = {
   negocioId: string;
@@ -27,8 +26,7 @@ const ESTILOS = {
  * conocida sobre cómo se determina el ciclo real del negocio.
  */
 export async function DashboardVencimientoBanner({ negocioId }: Props) {
-  const supabase = createServiceRoleClient();
-  const vencimiento = await obtenerVencimientoPlanNegocio(supabase, negocioId);
+  const vencimiento = await obtenerVencimientoPlanDashboard(negocioId);
 
   if (!vencimiento || !vencimiento.severidad) return null;
 

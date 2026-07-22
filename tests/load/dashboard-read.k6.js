@@ -24,6 +24,10 @@ const dashboardSessions = new SharedArray("dashboard-load-sessions", () => {
     if (!session || typeof session.cookie !== "string" || !session.cookie.trim()) {
       throw new Error(`La sesion ${index + 1} no tiene una cookie valida.`);
     }
+
+    if (session.routes && !Array.isArray(session.routes)) {
+      throw new Error(`La sesion ${index + 1} tiene routes invalido.`);
+    }
   }
 
   return parsed;
@@ -69,12 +73,16 @@ export const options = {
 };
 
 export default function dashboardRead() {
-  const route = routes[(__VU + __ITER) % routes.length];
   const selectedSession = dashboardSessions.length
-    ? dashboardSessions[(__VU + __ITER) % dashboardSessions.length]
+    ? dashboardSessions[(__VU - 1) % dashboardSessions.length]
     : null;
   const requestCookie = selectedSession?.cookie || sessionCookie;
   const cookieJar = http.cookieJar();
+  const allowedPaths = selectedSession?.routes;
+  const availableRoutes = Array.isArray(allowedPaths) && allowedPaths.length
+    ? routes.filter((route) => allowedPaths.includes(route.path))
+    : routes;
+  const route = availableRoutes[(__VU + __ITER) % availableRoutes.length];
 
   if (!selectedSession && !sessionCookie) {
     for (const cookie of storageCookies) {
@@ -105,6 +113,15 @@ export default function dashboardRead() {
     console.error(
       `${route.name} respondio ${response.status}; destino: ${response.headers.Location || "sin Location"}`
     );
+
+    if (response.status >= 500) {
+      const body = String(response.body || "")
+        .replace(/\s+/g, " ")
+        .slice(0, 300);
+      console.error(
+        `${route.name} 5xx; vercel=${response.headers["X-Vercel-Id"] || "sin id"}; cuerpo=${body || "vacio"}`
+      );
+    }
   }
 
   check(response, {

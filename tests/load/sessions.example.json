@@ -1,10 +1,12 @@
 [
   {
     "name": "negocio-gratis-01",
+    "routes": ["/dashboard", "/dashboard/citas", "/dashboard/clientes"],
     "cookie": "nombre_cookie=valor_cookie"
   },
   {
     "name": "negocio-profesional-01",
+    "routes": ["/dashboard", "/dashboard/citas", "/dashboard/clientes"],
     "cookie": "nombre_cookie=valor_cookie"
   }
 ]

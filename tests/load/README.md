@@ -32,10 +32,10 @@ $env:PROFILE="smoke"
 npm run test:load:public
 ```
 
-Perfiles disponibles: `smoke`, `baseline`, `probe10`, `probe20`, `load`,
-`stress`, `spike` y `soak`. Los perfiles `probe` ayudan a localizar el punto
-estable cuando `load` falla. Ejecutarlos de forma gradual y detenerse si los
-umbrales fallan.
+Perfiles disponibles: `smoke`, `baseline`, `probe10`, `probe20`, `probe30`,
+`probe40`, `probe50`, `load`, `stress`, `spike` y `soak`. Los perfiles `probe`
+ayudan a localizar el punto estable cuando `load` falla. Ejecutarlos de forma
+gradual y detenerse si los umbrales fallan.
 
 ## Dashboard
 
@@ -73,7 +73,9 @@ npm run test:load:dashboard
 ```
 
 `sessions.local.json` esta ignorado por Git y nunca debe compartirse ni
-commitearse.
+commitearse. Cada sesion puede declarar `routes` para que los roles limitados
+solo visiten pantallas permitidas. k6 fija una sesion por VU. Regenerar las
+sesiones justo antes de una auditoria para que no venzan durante la prueba.
 
 ## Proteccion de reservas
 

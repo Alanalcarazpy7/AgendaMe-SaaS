@@ -1,6 +1,8 @@
 import "server-only";
 
-import type { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { unstable_cache } from "next/cache";
+import { cache } from "react";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { diasEntreFechasAsuncion } from "@/lib/admin/formatters/date";
 
 type SupabaseAdmin = ReturnType<typeof createServiceRoleClient>;
@@ -92,3 +94,19 @@ export async function obtenerVencimientoPlanNegocio(
     severidad: calcularSeveridad(diasParaVencer, ciclo),
   };
 }
+
+const obtenerVencimientoPlanDashboardPersistido = unstable_cache(
+  async (negocioId: string) => {
+    return obtenerVencimientoPlanNegocio(createServiceRoleClient(), negocioId);
+  },
+  ["dashboard-plan-expiry-v1"],
+  {
+    revalidate: 60,
+    tags: ["dashboard-plan-expiry"],
+  }
+);
+
+/** El aviso cambia lentamente; compartirlo reduce dos lecturas por navegacion. */
+export const obtenerVencimientoPlanDashboard = cache(
+  obtenerVencimientoPlanDashboardPersistido
+);

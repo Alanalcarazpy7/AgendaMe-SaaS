@@ -73,3 +73,34 @@ where schemaname = 'public'
     'pagos_manuales'
   )
 order by idx_scan asc, relname, indexrelname;
+
+-- Foto del uso actual del pool. Durante una prueba de carga interesan en
+-- especial muchas conexiones active, wait_event_type = 'Lock' o esperas de IO.
+select
+  backend_type,
+  state,
+  wait_event_type,
+  wait_event,
+  count(*) as conexiones
+from pg_stat_activity
+where datname = current_database()
+group by backend_type, state, wait_event_type, wait_event
+order by conexiones desc, backend_type, state;
+
+-- Consultas que mas tiempo total consumieron desde el ultimo reset de las
+-- estadisticas. Ejecutar despues de k6 y compartir las primeras filas.
+select
+  queryid,
+  calls,
+  round(total_exec_time::numeric, 2) as tiempo_total_ms,
+  round(mean_exec_time::numeric, 2) as promedio_ms,
+  round(max_exec_time::numeric, 2) as maximo_ms,
+  rows,
+  shared_blks_hit,
+  shared_blks_read,
+  temp_blks_written,
+  left(regexp_replace(query, E'[\\n\\r\\t ]+', ' ', 'g'), 500) as consulta
+from pg_stat_statements
+where dbid = (select oid from pg_database where datname = current_database())
+order by total_exec_time desc
+limit 30;

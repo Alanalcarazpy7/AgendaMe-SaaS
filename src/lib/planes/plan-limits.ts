@@ -1,5 +1,6 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
@@ -37,6 +38,10 @@ type PlanRow = {
   limite_servicios: number | null;
   limite_clientes: number | null;
   limite_sucursales: number | null;
+};
+
+type SuscripcionConPlan = {
+  planes_saas: PlanRow | PlanRow[] | null;
 };
 
 const RESOURCE_LABELS: Record<PlanLimitKey, string> = {
@@ -104,9 +109,11 @@ async function obtenerPlanActivoConLimites(
 
   if (error) throw new Error(error.message);
 
-  const plan = Array.isArray((suscripcion as any)?.planes_saas)
-    ? (suscripcion as any).planes_saas[0]
-    : (suscripcion as any)?.planes_saas;
+  const planesRelacion = (suscripcion as unknown as SuscripcionConPlan | null)
+    ?.planes_saas;
+  const plan = Array.isArray(planesRelacion)
+    ? planesRelacion[0]
+    : planesRelacion;
 
   if (plan) return plan as PlanRow;
 
@@ -201,12 +208,27 @@ export async function obtenerUsoPlanNegocio({
   };
 }
 
-export const obtenerUsoPlanDashboard = cache(async (negocioId: string) => {
-  return obtenerUsoPlanNegocio({
-    supabase: createServiceRoleClient(),
-    negocioId,
-  });
-});
+const obtenerUsoPlanDashboardPersistido = unstable_cache(
+  async (negocioId: string) => {
+    return obtenerUsoPlanNegocio({
+      supabase: createServiceRoleClient(),
+      negocioId,
+    });
+  },
+  ["dashboard-plan-usage-v1"],
+  {
+    revalidate: 30,
+    tags: ["dashboard-plan-usage"],
+  }
+);
+
+/**
+ * El resumen se muestra en el layout y en Inicio. Mantenerlo unos segundos
+ * evita repetir 1 lectura de plan y 5 conteos en cada navegacion. Las
+ * validaciones de escritura usan obtenerUsoPlanNegocio directamente y, por
+ * lo tanto, nunca dependen de este cache visual.
+ */
+export const obtenerUsoPlanDashboard = cache(obtenerUsoPlanDashboardPersistido);
 
 export async function validarCapacidadPlan({
   supabase,

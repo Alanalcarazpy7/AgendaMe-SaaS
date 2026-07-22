@@ -31,8 +31,23 @@ fs.writeFileSync(
 );
 
 const dashboardSessions = [];
+const dashboardRoutesByAccount = {
+  gerente: ["/dashboard", "/dashboard/citas", "/dashboard/clientes", "/dashboard/empleados"],
+  recepcion: ["/dashboard", "/dashboard/citas", "/dashboard/clientes"],
+  empleado: ["/dashboard", "/dashboard/citas"],
+};
+
 for (const [accountKey, account] of Object.entries(fixtures.accounts ?? {})) {
-  if (!accountKey.startsWith("admin_")) continue;
+  const routes = accountKey.startsWith("admin_")
+    ? [
+        "/dashboard",
+        "/dashboard/citas",
+        "/dashboard/clientes",
+        "/dashboard/empleados",
+        "/dashboard/servicios",
+      ]
+    : dashboardRoutesByAccount[accountKey];
+  if (!routes) continue;
 
   const storagePath = path.join(root, account.storage);
   if (!fs.existsSync(storagePath)) continue;
@@ -46,7 +61,7 @@ for (const [accountKey, account] of Object.entries(fixtures.accounts ?? {})) {
     .join("; ");
 
   if (cookie) {
-    dashboardSessions.push({ name: accountKey, cookie });
+    dashboardSessions.push({ name: accountKey, routes, cookie });
   }
 }
 
