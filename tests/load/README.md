@@ -5,24 +5,37 @@ datos descartables. No ejecutar `stress`, `spike` o `soak` contra produccion.
 
 ## Preparacion
 
-1. Instalar k6 en Windows: `winget install k6.k6`.
+1. Instalar k6 en Windows o descargar el binario portatil oficial.
+   Si no esta en `PATH`, definir `K6_BIN` con la ruta completa a `k6.exe`.
 2. Copiar `fixtures.example.json` como `fixtures.local.json`.
 3. Completar un registro por negocio de staging. El archivo local esta ignorado
    por Git.
 4. Usar una fecha futura con horarios configurados.
 
+Si ya se preparo el entorno E2E, generar los fixtures automaticamente:
+
+```powershell
+npm run test:load:prepare
+```
+
+Para ejecutar Playwright contra Vercel en lugar de localhost, definir
+`PLAYWRIGHT_BASE_URL` con la URL HTTPS antes de lanzar las pruebas.
+
 ## Lectura publica
 
 ```powershell
 $env:BASE_URL="https://staging.example.com"
+$env:K6_BIN="C:\ruta\a\k6.exe"
 $env:FIXTURES_FILE="./fixtures.local.json"
 $env:LOAD_DATE="2026-08-10"
 $env:PROFILE="smoke"
 npm run test:load:public
 ```
 
-Perfiles disponibles: `smoke`, `load`, `stress`, `spike` y `soak`. Ejecutarlos
-en ese orden y detenerse si los umbrales fallan.
+Perfiles disponibles: `smoke`, `baseline`, `probe10`, `probe20`, `load`,
+`stress`, `spike` y `soak`. Los perfiles `probe` ayudan a localizar el punto
+estable cuando `load` falla. Ejecutarlos de forma gradual y detenerse si los
+umbrales fallan.
 
 ## Dashboard
 
@@ -47,7 +60,20 @@ npm run test:load:dashboard
 ```
 
 Una sola sesion sirve como referencia del costo de renderizado. La prueba final
-multinegocio debe usar varias sesiones y negocios con volumen realista.
+multinegocio debe usar varias sesiones y negocios con volumen realista. Para
+eso, copiar `sessions.example.json` como `sessions.local.json`, completar una
+cookie por cuenta exclusiva de staging y ejecutar:
+
+```powershell
+$env:BASE_URL="https://staging.example.com"
+$env:DASHBOARD_SESSIONS_FILE="./sessions.local.json"
+$env:PROFILE="smoke"
+$env:K6_SUMMARY_EXPORT="tests/load/results/dashboard-smoke.json"
+npm run test:load:dashboard
+```
+
+`sessions.local.json` esta ignorado por Git y nunca debe compartirse ni
+commitearse.
 
 ## Proteccion de reservas
 
@@ -63,6 +89,10 @@ $env:BOOKING_DATE="2026-08-10"
 $env:BOOKING_TIME="10:00"
 npm run test:load:booking-abuse
 ```
+
+Para conservar una medicion, definir `K6_SUMMARY_EXPORT` antes del comando npm.
+Guardar cada perfil en `tests/load/results/`, carpeta ignorada por Git. El
+runner crea la carpeta automaticamente si todavia no existe.
 
 ## Lectura de resultados
 

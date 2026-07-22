@@ -15,7 +15,7 @@ import {
 import { DashboardPlanUsageOverview } from "@/components/dashboard/dashboard-plan-usage-overview";
 import { requireDashboardAccess } from "@/lib/dashboard/access-context";
 import { applySucursalScope } from "@/lib/dashboard/scope-helpers";
-import { obtenerUsoPlanNegocio } from "@/lib/planes/plan-limits";
+import { obtenerUsoPlanDashboard } from "@/lib/planes/plan-limits";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 type Relacion<T> = T | T[] | null | undefined;
@@ -242,10 +242,7 @@ export default async function DashboardPage() {
   const totalSemana = proximasCitas.length;
   const esPlanEmpresarial = access.planClave === "empresarial";
   const planUsage = access.puedeVerTodo
-    ? await obtenerUsoPlanNegocio({
-        supabase,
-        negocioId: access.negocio.id,
-      })
+    ? await obtenerUsoPlanDashboard(access.negocio.id)
     : null;
 
   return (

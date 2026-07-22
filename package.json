@@ -43,9 +43,10 @@
         "test:e2e:prepare": "node scripts/e2e-reset-and-seed.mjs --seed-only",
         "test:e2e:complete": "node scripts/e2e-run.mjs",
         "test:e2e:complete:headed": "node scripts/e2e-run.mjs --headed",
-        "test:load:public": "k6 run tests/load/public-read.k6.js",
-        "test:load:dashboard": "k6 run tests/load/dashboard-read.k6.js",
-        "test:load:booking-abuse": "k6 run tests/load/booking-abuse.k6.js",
+        "test:load:prepare": "node scripts/prepare-k6-fixtures.mjs",
+        "test:load:public": "node scripts/run-k6.mjs tests/load/public-read.k6.js",
+        "test:load:dashboard": "node scripts/run-k6.mjs tests/load/dashboard-read.k6.js",
+        "test:load:booking-abuse": "node scripts/run-k6.mjs tests/load/booking-abuse.k6.js",
         "generate:rate-limit-secret": "node scripts/generate-rate-limit-secret.mjs",
         "verify:rate-limit": "node scripts/verify-rate-limit.mjs"
     },

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowUpRight } from "lucide-react";
-import { obtenerUsoPlanNegocio } from "@/lib/planes/plan-limits";
-import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { obtenerUsoPlanDashboard } from "@/lib/planes/plan-limits";
 
 type Props = {
   negocioId: string;
@@ -12,8 +11,7 @@ export async function DashboardPlanLimitBanner({
   negocioId,
   puedeGestionarPlanes,
 }: Props) {
-  const supabase = createServiceRoleClient();
-  const snapshot = await obtenerUsoPlanNegocio({ supabase, negocioId });
+  const snapshot = await obtenerUsoPlanDashboard(negocioId);
 
   if (snapshot.exceeded.length === 0) return null;
 

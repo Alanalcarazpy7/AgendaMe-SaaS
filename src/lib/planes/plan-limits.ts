@@ -1,6 +1,7 @@
 import "server-only";
 
-import type { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { cache } from "react";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 export type PlanLimitKey =
   | "citas"
@@ -199,6 +200,13 @@ export async function obtenerUsoPlanNegocio({
     exceeded: resources.filter((resource) => resource.overLimit),
   };
 }
+
+export const obtenerUsoPlanDashboard = cache(async (negocioId: string) => {
+  return obtenerUsoPlanNegocio({
+    supabase: createServiceRoleClient(),
+    negocioId,
+  });
+});
 
 export async function validarCapacidadPlan({
   supabase,

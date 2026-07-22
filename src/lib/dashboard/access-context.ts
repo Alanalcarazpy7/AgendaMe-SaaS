@@ -1,5 +1,6 @@
 ﻿import { redirect } from "next/navigation";
 import { nivelPlan } from "@/lib/planes/plan-access";
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
@@ -280,7 +281,7 @@ function permisosPorRol({
   };
 }
 
-export async function resolveDashboardAccess(): Promise<DashboardAccessResult> {
+export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessResult> => {
   const authSupabase = await createClient();
 
   const {
@@ -641,7 +642,7 @@ export async function resolveDashboardAccess(): Promise<DashboardAccessResult> {
     empleadoId: (accesoSucursal as any).empleado_id ?? null,
     ...permisos,
   };
-}
+});
 
 export async function requireDashboardAccess() {
   const access = await resolveDashboardAccess();

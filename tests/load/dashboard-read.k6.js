@@ -1,30 +1,53 @@
 import http from "k6/http";
 import { check, sleep } from "k6";
+import { SharedArray } from "k6/data";
 import { scenarioFor } from "./profiles.js";
 
 const baseUrl = (__ENV.BASE_URL || "").replace(/\/$/, "");
+const sessionsFile = __ENV.DASHBOARD_SESSIONS_FILE || "";
 const storageStateFile = __ENV.DASHBOARD_STORAGE_STATE || "";
 const storageState = storageStateFile
   ? JSON.parse(open(storageStateFile))
   : null;
 const sessionCookie = __ENV.DASHBOARD_COOKIE || "";
 const storageCookies = storageState?.cookies ?? [];
+const dashboardSessions = new SharedArray("dashboard-load-sessions", () => {
+  if (!sessionsFile) return [];
+
+  const parsed = JSON.parse(open(sessionsFile));
+
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    throw new Error("DASHBOARD_SESSIONS_FILE debe contener al menos una sesion.");
+  }
+
+  for (const [index, session] of parsed.entries()) {
+    if (!session || typeof session.cookie !== "string" || !session.cookie.trim()) {
+      throw new Error(`La sesion ${index + 1} no tiene una cookie valida.`);
+    }
+  }
+
+  return parsed;
+});
 const profile = __ENV.PROFILE || "smoke";
 const routes = [
-  "/dashboard",
-  "/dashboard/citas",
-  "/dashboard/clientes",
-  "/dashboard/empleados",
-  "/dashboard/servicios",
+  { name: "inicio", path: "/dashboard" },
+  { name: "citas", path: "/dashboard/citas" },
+  { name: "clientes", path: "/dashboard/clientes" },
+  { name: "empleados", path: "/dashboard/empleados" },
+  { name: "servicios", path: "/dashboard/servicios" },
 ];
 
 if (!baseUrl) {
   throw new Error("Falta BASE_URL del deployment de staging.");
 }
 
-if (!sessionCookie && storageCookies.length === 0) {
+if (
+  dashboardSessions.length === 0 &&
+  !sessionCookie &&
+  storageCookies.length === 0
+) {
   throw new Error(
-    "Falta DASHBOARD_COOKIE o DASHBOARD_STORAGE_STATE de una cuenta exclusiva de staging."
+    "Falta DASHBOARD_SESSIONS_FILE, DASHBOARD_COOKIE o DASHBOARD_STORAGE_STATE."
   );
 }
 
@@ -36,29 +59,51 @@ export const options = {
     checks: ["rate>0.99"],
     http_req_failed: ["rate<0.01"],
     "http_req_duration{endpoint:dashboard}": ["p(95)<3000"],
+    ...Object.fromEntries(
+      routes.map((route) => [
+        `http_req_duration{route:${route.name}}`,
+        ["p(95)<3000"],
+      ])
+    ),
   },
 };
 
-export default function () {
+export default function dashboardRead() {
   const route = routes[(__VU + __ITER) % routes.length];
+  const selectedSession = dashboardSessions.length
+    ? dashboardSessions[(__VU + __ITER) % dashboardSessions.length]
+    : null;
+  const requestCookie = selectedSession?.cookie || sessionCookie;
   const cookieJar = http.cookieJar();
 
-  for (const cookie of storageCookies) {
-    cookieJar.set(baseUrl, cookie.name, cookie.value, {
-      path: cookie.path || "/",
-      secure: Boolean(cookie.secure),
-    });
+  if (!selectedSession && !sessionCookie) {
+    for (const cookie of storageCookies) {
+      cookieJar.set(baseUrl, cookie.name, cookie.value, {
+        path: cookie.path || "/",
+        secure: Boolean(cookie.secure),
+      });
+    }
   }
 
-  const response = http.get(`${baseUrl}${route}`, {
-    headers: sessionCookie ? { Cookie: sessionCookie } : {},
+  const response = http.get(`${baseUrl}${route.path}`, {
+    headers: requestCookie ? { Cookie: requestCookie } : {},
     redirects: 0,
-    tags: { endpoint: "dashboard" },
+    tags: {
+      endpoint: "dashboard",
+      route: route.name,
+      account: selectedSession?.name || "single-session",
+    },
   });
 
   if (__VU === 1 && __ITER === 0 && response.status !== 200) {
     console.error(
       `Dashboard respondio ${response.status}; destino: ${response.headers.Location || "sin Location"}`
+    );
+  }
+
+  if (response.status !== 200) {
+    console.error(
+      `${route.name} respondio ${response.status}; destino: ${response.headers.Location || "sin Location"}`
     );
   }
 

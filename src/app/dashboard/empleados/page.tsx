@@ -49,6 +49,7 @@ export default async function EmpleadosPage() {
   const [
     { data: empleados, error: empleadosError },
     { data: servicios, error: serviciosError },
+    { data: sucursalesData, error: sucursalesError },
   ] = await Promise.all([
     empleadosQuery,
 
@@ -58,25 +59,21 @@ export default async function EmpleadosPage() {
       .eq("negocio_id", access.negocio.id)
       .eq("estado", "activo")
       .order("nombre", { ascending: true }),
+    mostrarAsignacionSucursal
+      ? supabase
+          .from("sucursales")
+          .select("id, nombre, estado, es_principal")
+          .eq("negocio_id", access.negocio.id)
+          .order("es_principal", { ascending: false })
+          .order("created_at", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (empleadosError) throw new Error(empleadosError.message);
   if (serviciosError) throw new Error(serviciosError.message);
+  if (sucursalesError) throw new Error(sucursalesError.message);
 
-  let sucursales: any[] = [];
-
-  if (mostrarAsignacionSucursal) {
-    const { data: sucursalesData, error: sucursalesError } = await supabase
-      .from("sucursales")
-      .select("id, nombre, estado, es_principal")
-      .eq("negocio_id", access.negocio.id)
-      .order("es_principal", { ascending: false })
-      .order("created_at", { ascending: true });
-
-    if (sucursalesError) throw new Error(sucursalesError.message);
-
-    sucursales = sucursalesData ?? [];
-  }
+  const sucursales = sucursalesData ?? [];
 
   const empleadosNormalizados = (empleados ?? []).map((empleado: any) => {
     const servicioIds = (empleado.empleado_servicios ?? [])

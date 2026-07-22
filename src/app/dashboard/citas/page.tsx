@@ -161,36 +161,36 @@ export default async function CitasPage({ searchParams }: PageProps) {
 
   empleadosQuery = applySucursalScope(empleadosQuery, access);
 
-  let clientes: ClienteDashboard[] = [];
-
-  if (access.scope === "sucursal" && access.sucursalId) {
-    const { data: clientesSucursal, error: clientesSucursalError } = await supabase
-      .from("cliente_sucursales")
-      .select(
+  const clientesPromise = (async (): Promise<ClienteDashboard[]> => {
+    if (access.scope === "sucursal" && access.sucursalId) {
+      const { data: clientesSucursal, error: clientesSucursalError } = await supabase
+        .from("cliente_sucursales")
+        .select(
+          `
+          clientes (
+            id,
+            nombre_completo,
+            telefono,
+            email,
+            estado
+          )
         `
-        clientes (
-          id,
-          nombre_completo,
-          telefono,
-          email,
-          estado
         )
-      `
-      )
-      .eq("negocio_id", access.negocio.id)
-      .eq("sucursal_id", access.sucursalId);
+        .eq("negocio_id", access.negocio.id)
+        .eq("sucursal_id", access.sucursalId);
 
-    if (clientesSucursalError) {
-      throw new Error(clientesSucursalError.message);
+      if (clientesSucursalError) {
+        throw new Error(clientesSucursalError.message);
+      }
+
+      const clientesSucursalRows = (clientesSucursal ?? []) as ClienteSucursalRow[];
+
+      return clientesSucursalRows
+        .map((row) => obtenerObjeto(row.clientes))
+        .filter((cliente): cliente is ClienteDashboard => Boolean(cliente))
+        .filter((cliente) => cliente.estado === "activo");
     }
 
-    const clientesSucursalRows = (clientesSucursal ?? []) as ClienteSucursalRow[];
-
-    clientes = clientesSucursalRows
-      .map((row) => obtenerObjeto(row.clientes))
-      .filter((cliente): cliente is ClienteDashboard => Boolean(cliente))
-      .filter((cliente) => cliente.estado === "activo");
-  } else {
     const { data: clientesData, error: clientesError } = await supabase
       .from("clientes")
       .select("id, nombre_completo, telefono, email, estado")
@@ -202,13 +202,14 @@ export default async function CitasPage({ searchParams }: PageProps) {
       throw new Error(clientesError.message);
     }
 
-    clientes = (clientesData ?? []) as ClienteDashboard[];
-  }
+    return (clientesData ?? []) as ClienteDashboard[];
+  })();
 
   const [
     { data: citas, error: citasError },
     { data: empleados, error: empleadosError },
     { data: servicios, error: serviciosError },
+    clientes,
   ] = await Promise.all([
     citasQuery,
 
@@ -220,6 +221,7 @@ export default async function CitasPage({ searchParams }: PageProps) {
       .eq("negocio_id", access.negocio.id)
       .eq("estado", "activo")
       .order("nombre", { ascending: true }),
+    clientesPromise,
   ]);
 
   if (citasError) throw new Error(citasError.message);

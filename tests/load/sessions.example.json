@@ -1,0 +1,10 @@
+[
+  {
+    "name": "negocio-gratis-01",
+    "cookie": "nombre_cookie=valor_cookie"
+  },
+  {
+    "name": "negocio-profesional-01",
+    "cookie": "nombre_cookie=valor_cookie"
+  }
+]

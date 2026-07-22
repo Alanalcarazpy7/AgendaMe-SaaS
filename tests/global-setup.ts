@@ -23,12 +23,14 @@ export default async function globalSetup(config: FullConfig) {
   fs.mkdirSync(path.join(process.cwd(), "tests", ".auth"), { recursive: true });
 
   const browser = await chromium.launch();
+  const forceAuth = process.env.PLAYWRIGHT_FORCE_AUTH === "1";
 
   try {
     for (const account of Object.values(fixtures.accounts)) {
       const storagePath = path.join(process.cwd(), account.storage);
       const maxSessionAgeMs = 45 * 60 * 1000;
       if (
+        !forceAuth &&
         fs.existsSync(storagePath) &&
         fs.statSync(storagePath).mtimeMs > new Date(fixtures.generatedAt).getTime() &&
         Date.now() - fs.statSync(storagePath).mtimeMs < maxSessionAgeMs

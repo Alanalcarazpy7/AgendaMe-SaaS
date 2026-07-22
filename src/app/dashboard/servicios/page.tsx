@@ -1,7 +1,7 @@
 ﻿import { requireDashboardAccess } from "@/lib/dashboard/access-context";
 import { redirect } from "next/navigation";
 import { ServiciosImagenesPanel } from "@/components/servicios/servicios-imagenes-panel";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { ServiciosPanel } from "@/components/servicios/servicios-panel";
 import type { ServicioItem } from "@/components/servicios/servicio-dialog";
 
@@ -11,39 +11,14 @@ export default async function ServiciosPage() {
     redirect("/dashboard/sin-permiso");
   }
 
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const { data: membresias, error: membresiaError } = await supabase
-    .from("negocio_usuarios")
-    .select("negocio_id")
-    .eq("usuario_id", user.id)
-    .eq("activo", true)
-    .limit(1);
-
-  if (membresiaError) {
-    throw new Error(membresiaError.message);
-  }
-
-  const membresia = membresias?.[0];
-
-  if (!membresia) {
-    redirect("/sin-acceso?motivo=no_access");
-  }
+  const supabase = createServiceRoleClient();
 
   const { data: serviciosData, error: serviciosError } = await supabase
     .from("servicios")
     .select(
       "id, nombre, descripcion, duracion_minutos, precio, color, estado, created_at"
     )
-    .eq("negocio_id", membresia.negocio_id)
+    .eq("negocio_id", access.negocio.id)
     .order("created_at", { ascending: false });
 
   if (serviciosError) {

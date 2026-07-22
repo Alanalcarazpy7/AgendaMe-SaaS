@@ -36,7 +36,7 @@ export const options = {
   },
 };
 
-export default function () {
+export default function bookingAbuse() {
   const response = http.post(
     `${baseUrl}/api/public/reservas/${slug}`,
     JSON.stringify({
@@ -57,9 +57,15 @@ export default function () {
     limitedResponses.add(1);
   }
 
+  const controlledStatuses = [200, 400, 403, 409, 429];
+  if (!controlledStatuses.includes(response.status)) {
+    console.error(
+      `Respuesta inesperada ${response.status}: ${String(response.body || "").slice(0, 300)}`
+    );
+  }
+
   check(response, {
-    "respuesta controlada": (result) =>
-      [200, 400, 403, 409, 429].includes(result.status),
+    "respuesta controlada": (result) => controlledStatuses.includes(result.status),
     "429 incluye Retry-After": (result) =>
       result.status !== 429 || Number(result.headers["Retry-After"]) > 0,
   });
