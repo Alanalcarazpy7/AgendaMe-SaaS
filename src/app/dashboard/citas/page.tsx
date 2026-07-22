@@ -56,6 +56,37 @@ function obtenerObjeto<T>(valor: Relacion<T>): T | null {
   return Array.isArray(valor) ? valor[0] ?? null : valor;
 }
 
+/**
+ * El calendario (CitasPanel) navega semana a semana enteramente en el
+ * cliente sobre el array ya cargado -- no vuelve a pedir al servidor al
+ * apretar "Anterior"/"Siguiente" ni al cambiar de mes/año. Antes esta
+ * pagina traia TODAS las citas del negocio sin ningun limite de fecha: con
+ * pocos meses de uso no se nota, pero un negocio real acumulando años de
+ * historial terminaria trayendo miles de filas en cada carga del
+ * calendario. Se acota a una ventana generosa (3 meses atras, 12 meses
+ * adelante de la fecha que se este mirando) -- cubre por lejos el uso real
+ * de un calendario de reservas. Fuera de esa ventana (ej. el selector de
+ * año permite ir 5 años para atras/adelante) el calendario simplemente
+ * mostraria la semana vacia, no un error. Si mas adelante hace falta
+ * navegar bien lejos en el tiempo con datos reales, conviene que el
+ * calendario vuelva a pedir al servidor por rango en vez de agrandar esta
+ * ventana.
+ */
+function calcularVentanaCitas(fechaParam?: string) {
+  const fechaValida = fechaParam && !Number.isNaN(new Date(fechaParam).getTime());
+  const base = fechaValida ? new Date(fechaParam as string) : new Date();
+
+  const desde = new Date(base);
+  desde.setDate(desde.getDate() - 90);
+
+  const hasta = new Date(base);
+  hasta.setDate(hasta.getDate() + 365);
+
+  const aIso = (fecha: Date) => fecha.toISOString().slice(0, 10);
+
+  return { desde: aIso(desde), hasta: aIso(hasta) };
+}
+
 export default async function CitasPage({ searchParams }: PageProps) {
   const access = await requireDashboardAccess();
   requirePermission(access, "puedeGestionarCitas");
@@ -75,6 +106,7 @@ export default async function CitasPage({ searchParams }: PageProps) {
   }
 
   const supabase = createServiceRoleClient();
+  const { desde: fechaDesde, hasta: fechaHasta } = calcularVentanaCitas(params.fecha);
 
   let citasQuery = supabase
     .from("citas")
@@ -121,6 +153,8 @@ export default async function CitasPage({ searchParams }: PageProps) {
     `
     )
     .eq("negocio_id", access.negocio.id)
+    .gte("fecha", fechaDesde)
+    .lte("fecha", fechaHasta)
     .order("fecha", { ascending: true })
     .order("hora_inicio", { ascending: true });
 
