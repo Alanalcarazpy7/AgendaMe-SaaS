@@ -28,10 +28,11 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Instalar cliente de Postgres
+      - name: Instalar cliente de PostgreSQL 17
         run: |
           sudo apt-get update
-          sudo apt-get install -y postgresql-client
+          sudo apt-get install -y postgresql-client-17
+          /usr/lib/postgresql/17/bin/pg_dump --version
 
       - name: Volcar la base completa (schema + datos)
         env:
@@ -47,13 +48,14 @@ jobs:
             exit 1
           }
           fecha=$(date +%Y-%m-%d)
-          pg_dump \
+          /usr/lib/postgresql/17/bin/pg_dump \
             --no-owner \
             --no-privileges \
             --format=custom \
             --file="agendame-backup-${fecha}.dump"
           test -s "agendame-backup-${fecha}.dump"
-          pg_restore --list "agendame-backup-${fecha}.dump" > /dev/null
+          /usr/lib/postgresql/17/bin/pg_restore \
+            --list "agendame-backup-${fecha}.dump" > /dev/null
 
       - name: Subir el backup como artifact privado
         uses: actions/upload-artifact@v4
