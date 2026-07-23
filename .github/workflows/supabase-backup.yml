@@ -14,13 +14,10 @@ name: Supabase backup
 # de Storage, pero NO descarga los archivos fisicos de los buckets.
 # Logos, imagenes y comprobantes requieren un backup de Storage aparte.
 #
-# Requiere un secret de repo: SUPABASE_DB_URL
-#   Supabase Dashboard -> Connect -> Session pooler -> URI, puerto 5432.
-#   La conexion directa db.<project-ref>.supabase.co:5432 tambien sirve
-#   si el runner tiene IPv6, pero el Session pooler es compatible con
-#   redes IPv4. No usar Transaction pooler (puerto 6543) para pg_dump.
-#   Reemplazar [YOUR-PASSWORD] por la password codificada para URI y
-#   agregar sslmode=require. Guardar la URI SOLO como secret de GitHub.
+# Requiere un secret de repo: SUPABASE_DB_PASSWORD
+#   Debe contener solamente la password real de PostgreSQL, sin comillas,
+#   corchetes ni codificacion para URI. Host, usuario, puerto y SSL se
+#   configuran por separado para evitar errores con caracteres especiales.
 
 on:
   schedule:
@@ -37,17 +34,26 @@ jobs:
           sudo apt-get install -y postgresql-client
 
       - name: Volcar la base completa (schema + datos)
+        env:
+          PGHOST: aws-1-ca-central-1.pooler.supabase.com
+          PGPORT: "5432"
+          PGDATABASE: postgres
+          PGUSER: postgres.fbhccpvhbsbrdtxkliih
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PGSSLMODE: require
         run: |
+          test -n "$PGPASSWORD" || {
+            echo "Falta el secret SUPABASE_DB_PASSWORD."
+            exit 1
+          }
           fecha=$(date +%Y-%m-%d)
-          pg_dump "$SUPABASE_DB_URL" \
+          pg_dump \
             --no-owner \
             --no-privileges \
             --format=custom \
             --file="agendame-backup-${fecha}.dump"
           test -s "agendame-backup-${fecha}.dump"
           pg_restore --list "agendame-backup-${fecha}.dump" > /dev/null
-        env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
 
       - name: Subir el backup como artifact privado
         uses: actions/upload-artifact@v4
