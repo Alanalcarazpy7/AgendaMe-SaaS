@@ -1,0 +1,57 @@
+name: Supabase backup
+
+# El plan gratis de Supabase NO incluye backups automaticos ni
+# Point-in-Time Recovery (eso es de planes pagos). Si el proyecto se
+# pausa por inactividad y despues se elimina (60 dias sin reactivar,
+# segun aviso de Supabase), no hay forma de recuperar tablas, RPC ni
+# datos salvo que exista un respaldo propio. Este workflow corre un
+# pg_dump completo cada semana y lo deja como artifact privado del
+# repo (solo visible para quienes tienen acceso al repo), listo para
+# restaurar en otro proyecto de Supabase (o cualquier Postgres) si
+# hiciera falta migrar.
+#
+# Este dump incluye schema y datos de PostgreSQL, incluida la metadata
+# de Storage, pero NO descarga los archivos fisicos de los buckets.
+# Logos, imagenes y comprobantes requieren un backup de Storage aparte.
+#
+# Requiere un secret de repo: SUPABASE_DB_URL
+#   Supabase Dashboard -> Connect -> Session pooler -> URI, puerto 5432.
+#   La conexion directa db.<project-ref>.supabase.co:5432 tambien sirve
+#   si el runner tiene IPv6, pero el Session pooler es compatible con
+#   redes IPv4. No usar Transaction pooler (puerto 6543) para pg_dump.
+#   Reemplazar [YOUR-PASSWORD] por la password codificada para URI y
+#   agregar sslmode=require. Guardar la URI SOLO como secret de GitHub.
+
+on:
+  schedule:
+    - cron: "0 6 * * 0" # todos los domingos, 06:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar cliente de Postgres
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Volcar la base completa (schema + datos)
+        run: |
+          fecha=$(date +%Y-%m-%d)
+          pg_dump "$SUPABASE_DB_URL" \
+            --no-owner \
+            --no-privileges \
+            --format=custom \
+            --file="agendame-backup-${fecha}.dump"
+          test -s "agendame-backup-${fecha}.dump"
+          pg_restore --list "agendame-backup-${fecha}.dump" > /dev/null
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+      - name: Subir el backup como artifact privado
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-backup-${{ github.run_id }}
+          path: agendame-backup-*.dump
+          retention-days: 90

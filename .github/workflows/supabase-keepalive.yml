@@ -1,0 +1,34 @@
+name: Supabase keep-alive
+
+# Supabase pausa los proyectos del plan gratis tras 7 dias sin actividad
+# (la unica forma que Supabase garantiza oficialmente para evitarlo es
+# pagar el plan Pro). Este workflow hace una lectura minima y real cada
+# 3 dias contra una vista publica existente, para que el proyecto se
+# registre como activo y no se pause solo. Es un workaround de la
+# comunidad, no una garantia oficial de Supabase -- pero no cuesta nada
+# y el riesgo de que falle es bajo.
+
+on:
+  schedule:
+    - cron: "0 12 */3 * *" # cada 3 dias, 12:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Leer una vista publica para mantener el proyecto activo
+        run: |
+          status=$(curl -s -o /tmp/respuesta.json -w "%{http_code}" \
+            "${SUPABASE_URL}/rest/v1/vista_planes_publicos?select=clave&limit=1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
+          echo "HTTP status: $status"
+          cat /tmp/respuesta.json
+          if [ "$status" -ge 300 ]; then
+            echo "El ping fallo (status $status) -- revisar si el proyecto esta pausado o los secrets son correctos."
+            exit 1
+          fi
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
