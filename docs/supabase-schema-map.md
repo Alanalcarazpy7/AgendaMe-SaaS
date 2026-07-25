@@ -62,7 +62,7 @@ negocios (raíz del tenant)
 ## 5. Vistas críticas
 
 - `vista_admin_negocios_resumen` — base de `admin_obtener_negocios_resumen()`. Sin grant directo a `anon`/`authenticated` en el backup (solo `service_role`); el acceso real pasa por la RPC, que sí valida `es_super_admin()`.
-- `vista_planes_publicos`, `vista_negocios_publicos`, `vista_servicios_publicos`, `vista_empleados_publicos`, `vista_horarios_*_publicos`, `vista_bloqueos_publicos`, `vista_configuracion_publica` — DTOs públicos para la reserva sin sesión; confirmadas expuestas en producción vía OpenAPI.
+- `vista_planes_publicos` continúa expuesta para el catálogo de planes. Las otras ocho vistas históricas de negocio ya no alimentan la reserva pública: `/reservar/[slug]` y sus APIs consultan las tablas desde el servidor con `service_role`. Las nueve vistas usan `security_invoker=true` desde el 2026-07-22.
 
 ## 6. RPC críticas
 
@@ -168,3 +168,45 @@ Buckets confirmados en producción (vía API de Storage, solo lectura, hoy):
 - Aplicar el patch de revoke de grants (`2026-07-admin-revoke-public-execute-original-rpcs.sql`) después de la verificación de `pg_proc.proacl` sugerida en su propio encabezado.
 - Priorizar la migración de `payment-proofs` a URLs firmadas antes de manejar volumen real de pagos con datos sensibles.
 - Resolver de una vez la inconsistencia `id`/`usuario_id` de `perfiles_usuario` (fuera del alcance de esta sesión, pero es una fuente recurrente de código defensivo repetido en varios archivos).
+
+## 15. Advisor: vistas y hardening (aplicado 2026-07-22)
+
+La revisión del código confirmó que la reserva pública actual no consume
+las ocho vistas históricas de negocio. Se aplicó
+`2026-07-fix-security-definer-vista-planes.sql` para convertir las nueve
+vistas a `security_invoker=true`, sin abrir SELECT anónimo sobre las tablas
+base. `vista_planes_publicos` conserva acceso público porque `planes_saas`
+ya cuenta con su policy de lectura.
+
+También se aplicó `2026-07-security-advisor-hardening.sql`: revocó EXECUTE
+anónimo de funciones `SECURITY DEFINER` preservando los permisos efectivos
+de `authenticated` y `service_role`, retiró EXECUTE API de funciones trigger,
+fijó los tres `search_path` señalados y eliminó las policies que permitían
+listar los buckets públicos. Los archivos públicos siguen sirviéndose por
+URL; el parche no modifica ni elimina objetos almacenados.
+
+## 16. Backup y anti-pausa (plan gratis de Supabase)
+
+El plan gratis pausa proyectos tras 7 días sin actividad y los elimina
+si no se reactivan (ver aviso de Supabase); no incluye backups
+automáticos ni PITR. Se agregaron dos workflows de GitHub Actions
+(gratis, sin infraestructura nueva):
+
+- `.github/workflows/supabase-keepalive.yml` — lee una vista pública
+  cada 3 días para evitar la pausa por inactividad. Requiere los
+  secrets de repo `SUPABASE_URL` y `SUPABASE_ANON_KEY` (mismos valores
+  que `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY`, no
+  son secretos sensibles en sí, pero se cargan como secret por prolijidad).
+- `.github/workflows/supabase-backup.yml` — `pg_dump` completo cada
+  domingo, subido como artifact privado del repo (retención 90 días).
+  Respalda schema y datos PostgreSQL, pero no los archivos físicos de
+  Storage; esos objetos requieren un proceso de copia independiente.
+  Requiere el secret `SUPABASE_DB_URL` con password y `sslmode=require`.
+  Para GitHub Actions se recomienda la URI de **Session pooler**, puerto
+  5432; la conexión directa también sirve si el runner dispone de IPv6.
+  No debe usarse Transaction pooler, puerto 6543.
+
+**Pendiente del usuario**: cargar esos 3 secrets en GitHub (Settings →
+Secrets and variables → Actions) para que los workflows corran. Sin
+los secrets, ambos van a fallar en rojo (visible en la pestaña Actions)
+pero no rompen nada del proyecto.

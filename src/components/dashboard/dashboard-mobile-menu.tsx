@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -223,11 +224,14 @@ export function DashboardMobileMenu({
             </span>
 
             {negocioLogoUrl ? (
-              <img
-                src={negocioLogoUrl}
-                alt={negocioNombre}
-                className="hidden h-9 w-9 rounded-xl border object-cover sm:block"
-              />
+              <Image
+                  src={negocioLogoUrl}
+                  alt={negocioNombre}
+                  width={36}
+                  height={36}
+                  unoptimized
+                  className="hidden h-9 w-9 rounded-xl border object-cover sm:block"
+                />
             ) : (
               <div className="hidden h-9 w-9 items-center justify-center rounded-xl bg-primary text-xs font-bold text-primary-foreground sm:flex">
                 {iniciales(negocioNombre)}

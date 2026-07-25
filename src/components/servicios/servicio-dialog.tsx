@@ -88,6 +88,8 @@ export function ServicioDialog({ servicio, variant }: ServicioDialogProps) {
   useEffect(() => {
     if (!open) return;
 
+    // Reset the form from the service selected by the parent on every opening.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setNombre(servicio?.nombre ?? "");
     setDescripcion(servicio?.descripcion ?? "");
     setDuracionMinutos(String(servicio?.duracion_minutos ?? 30));

@@ -15,6 +15,10 @@ type ClienteRaw = {
   updated_at?: string | null;
 };
 
+type ClienteSucursalRow = {
+  clientes: Relacion<ClienteRaw>;
+};
+
 function obtenerObjeto<T>(valor: Relacion<T>): T | null {
   if (!valor) return null;
   return Array.isArray(valor) ? valor[0] ?? null : valor;
@@ -63,8 +67,8 @@ export default async function ClientesPage() {
 
     if (error) throw new Error(error.message);
 
-    clientes = (data ?? [])
-      .map((row: any) => obtenerObjeto(row.clientes))
+    clientes = ((data ?? []) as ClienteSucursalRow[])
+      .map((row) => obtenerObjeto(row.clientes))
       .filter(Boolean) as ClienteRaw[];
   } else {
     const { data, error } = await supabase

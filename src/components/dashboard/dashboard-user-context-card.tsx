@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Building2, UserCircle2 } from "lucide-react";
 import type {
@@ -61,11 +62,14 @@ export function DashboardUserContextCard({
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex min-w-0 items-center gap-3">
           {userAvatarUrl ? (
-            <img
-              src={userAvatarUrl}
-              alt={userName}
-              className="h-11 w-11 rounded-2xl border object-cover shadow-sm"
-            />
+            <Image
+                src={userAvatarUrl}
+                alt={userName}
+                width={44}
+                height={44}
+                unoptimized
+                className="h-11 w-11 rounded-2xl border object-cover shadow-sm"
+              />
           ) : (
             <div
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-sm"

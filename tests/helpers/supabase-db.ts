@@ -411,7 +411,7 @@ export async function asignarEmpleadoServicio(
         empleado_id: empleadoId,
         servicio_id: servicioId,
         negocio_id: negocioId,
-      } as any);
+      });
   }
 
   if (result.error) {

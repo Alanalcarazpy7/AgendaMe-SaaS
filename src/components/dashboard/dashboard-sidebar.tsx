@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -196,11 +197,14 @@ export function DashboardSidebar({
           }`}
         >
           {negocioLogoUrl ? (
-            <img
-              src={negocioLogoUrl}
-              alt={negocioNombre}
-              className="h-10 w-10 rounded-2xl border border-sidebar-border object-cover shadow-sm"
-            />
+            <Image
+                src={negocioLogoUrl}
+                alt={negocioNombre}
+                width={40}
+                height={40}
+                unoptimized
+                className="h-10 w-10 rounded-2xl border border-sidebar-border object-cover shadow-sm"
+              />
           ) : (
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground shadow-sm shadow-sidebar-primary/20">
               {iniciales(negocioNombre)}
@@ -304,11 +308,14 @@ export function DashboardSidebar({
           } ${pathname === "/dashboard/mi-cuenta" ? "bg-sidebar-accent shadow-sm" : ""}`}
         >
           {userAvatarUrl ? (
-            <img
-              src={userAvatarUrl}
-              alt={nombreVisible}
-              className="h-9 w-9 rounded-2xl border object-cover"
-            />
+            <Image
+                src={userAvatarUrl}
+                alt={nombreVisible}
+                width={36}
+                height={36}
+                unoptimized
+                className="h-9 w-9 rounded-2xl border object-cover"
+              />
           ) : (
             <div
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-xs font-bold text-white"

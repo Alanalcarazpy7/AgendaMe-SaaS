@@ -37,30 +37,7 @@ export default async function PlanesPage() {
     <main className="min-h-screen overflow-x-clip bg-background">
       <SiteNavbar />
 
-      <section className="relative overflow-hidden px-4 py-16 sm:px-6 lg:py-20">
-        <div className="ag-bg-blobs absolute inset-x-0 top-0 -z-20 h-[34rem]" />
-        <div className="ag-bg-dots absolute inset-x-0 top-0 -z-10 h-[34rem] opacity-50" />
-
-        <div className="mx-auto max-w-4xl text-center">
-          <Reveal>
-            <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-5 py-2 text-sm font-bold uppercase tracking-wider text-primary">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              Planes de AgendaMe
-            </span>
-          </Reveal>
-
-          <Reveal delay={80}>
-            <h1 className="mt-7 text-4xl font-extrabold tracking-tight text-balance sm:text-6xl">
-              Un plan para cada <AccentWord>etapa</AccentWord> de tu negocio
-            </h1>
-            <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
-              Límites, funciones y precios siempre actualizados. El plan Profesional se destaca automáticamente cuando está marcado como recomendado.
-            </p>
-          </Reveal>
-        </div>
-      </section>
-
-      <PlanesPublicosSection planes={planes} />
+      <PlanesPublicosSection planes={planes} mostrarEnlaceCompleto={false} />
 
       <section className="relative overflow-hidden bg-[#0B1120] px-4 py-20 text-slate-300 sm:px-6">
         <div className="ag-bg-dots pointer-events-none absolute inset-0 -z-10 opacity-[0.06]" />
@@ -137,10 +114,10 @@ export default async function PlanesPage() {
               Crear cuenta gratis
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
-            <a href="/#contacto" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-whatsapp px-5 text-sm font-bold text-white shadow-md shadow-black/10 transition hover:-translate-y-0.5 hover:bg-[color-mix(in_srgb,var(--whatsapp)_88%,black)]">
+            <Link href="/#contacto" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-whatsapp px-5 text-sm font-bold text-white shadow-md shadow-black/10 transition hover:-translate-y-0.5 hover:bg-[color-mix(in_srgb,var(--whatsapp)_88%,black)]">
               <WhatsAppIcon className="h-4 w-4" />
               Hablar por WhatsApp
-            </a>
+            </Link>
           </div>
         </Reveal>
       </section>

@@ -51,6 +51,8 @@ export function ClienteDialog({ cliente, variant }: ClienteDialogProps) {
   useEffect(() => {
     if (!open) return;
 
+    // Reset the form from the record selected by the parent on every opening.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setNombreCompleto(cliente?.nombre_completo ?? "");
     setTelefono(cliente?.telefono ?? "");
     setEmail(cliente?.email ?? "");

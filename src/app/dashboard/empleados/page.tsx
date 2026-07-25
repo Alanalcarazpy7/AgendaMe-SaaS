@@ -5,6 +5,28 @@ import { applySucursalScope, requirePermission } from "@/lib/dashboard/scope-hel
 import { nivelPlan } from "@/lib/planes/plan-access";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
+type EmpleadoRaw = {
+  id: string;
+  nombre: string;
+  email: string | null;
+  telefono: string | null;
+  color_calendario: string | null;
+  estado: "activo" | "inactivo";
+  sucursal_id: string | null;
+  created_at: string;
+  updated_at: string | null;
+  empleado_servicios: Array<{ servicio_id: string | null }> | null;
+  horarios_empleado: Array<{
+    id: string;
+    dia_semana: number;
+    activo: boolean;
+    hora_inicio: string | null;
+    hora_fin: string | null;
+    descanso_inicio: string | null;
+    descanso_fin: string | null;
+  }> | null;
+};
+
 export default async function EmpleadosPage() {
   const access = await requireDashboardAccess();
   requirePermission(access, "puedeGestionarEmpleados");
@@ -75,10 +97,10 @@ export default async function EmpleadosPage() {
 
   const sucursales = sucursalesData ?? [];
 
-  const empleadosNormalizados = (empleados ?? []).map((empleado: any) => {
+  const empleadosNormalizados = ((empleados ?? []) as EmpleadoRaw[]).map((empleado) => {
     const servicioIds = (empleado.empleado_servicios ?? [])
-      .map((item: any) => item.servicio_id)
-      .filter(Boolean);
+      .map((item) => item.servicio_id)
+      .filter((id): id is string => Boolean(id));
 
     return {
       ...empleado,

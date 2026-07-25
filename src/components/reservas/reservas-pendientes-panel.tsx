@@ -99,11 +99,20 @@ function fechaRecibidaDisplay(fecha?: string | null) {
   if (!fecha) return "Sin fecha";
 
   try {
-    return new Intl.DateTimeFormat("es-PY", {
-      dateStyle: "short",
-      timeStyle: "short",
-      timeZone: "America/Asuncion",
-    }).format(new Date(fecha));
+    const instante = new Date(fecha);
+    if (Number.isNaN(instante.getTime())) return fecha;
+
+    // Paraguay usa UTC-3 de forma permanente. Formatear desde UTC evita que
+    // versiones distintas de la base de zonas horarias en Node y Chromium
+    // produzcan una hora diferente durante la hidratacion.
+    const asuncion = new Date(instante.getTime() - 3 * 60 * 60 * 1000);
+    const dia = String(asuncion.getUTCDate()).padStart(2, "0");
+    const mes = String(asuncion.getUTCMonth() + 1).padStart(2, "0");
+    const anio = String(asuncion.getUTCFullYear()).slice(-2);
+    const hora = String(asuncion.getUTCHours()).padStart(2, "0");
+    const minutos = String(asuncion.getUTCMinutes()).padStart(2, "0");
+
+    return `${dia}/${mes}/${anio}, ${hora}:${minutos}`;
   } catch {
     return fecha;
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -14,6 +15,7 @@ import {
   MapPin,
   NotebookText,
   Phone,
+  Sparkles,
   UserRound,
 } from "lucide-react";
 
@@ -145,20 +147,6 @@ export function ReservaPublicaForm({
     () => sucursales.find((sucursal) => sucursal.id === sucursalId),
     [sucursalId, sucursales]
   );
-
-  useEffect(() => {
-    if (!servicioId) return;
-
-    const existeEnSucursal = serviciosVisibles.some(
-      (servicio) => servicio.id === servicioId
-    );
-
-    if (!existeEnSucursal) {
-      setServicioId("");
-      setHoraInicio("");
-      setSlots([]);
-    }
-  }, [servicioId, serviciosVisibles]);
 
   useEffect(() => {
     async function cargarDisponibilidad() {
@@ -368,14 +356,25 @@ export function ReservaPublicaForm({
                   >
                     <div className="relative h-36 bg-muted">
                       {servicio.imagen_url ? (
-                        <img
-                          src={servicio.imagen_url}
-                          alt={servicio.nombre}
-                          className="h-full w-full object-cover transition-transform duration-300 ease-[var(--ease-out)] group-hover:scale-[1.03]"
-                        />
+                        <Image
+                            src={servicio.imagen_url}
+                            alt={servicio.nombre}
+                            fill
+                            sizes="(min-width: 1280px) 30vw, (min-width: 640px) 50vw, 100vw"
+                            unoptimized
+                            className="h-full w-full object-cover transition-transform duration-300 ease-[var(--ease-out)] group-hover:scale-[1.03]"
+                          />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary)_18%,transparent),color-mix(in_srgb,var(--ring)_16%,transparent))] text-primary">
-                          <ListChecks className="h-8 w-8" />
+                        <div
+                          className="flex h-full w-full items-center justify-center"
+                          style={{
+                            background: `linear-gradient(135deg, color-mix(in srgb, ${servicio.color ?? "var(--primary)"} 55%, transparent), color-mix(in srgb, ${servicio.color ?? "var(--ring)"} 30%, transparent))`,
+                          }}
+                        >
+                          <Sparkles
+                            className="h-12 w-12 drop-shadow-sm"
+                            style={{ color: servicio.color ?? "var(--primary)" }}
+                          />
                         </div>
                       )}
 

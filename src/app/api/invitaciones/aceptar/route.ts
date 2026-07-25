@@ -1,5 +1,6 @@
 ﻿import crypto from "node:crypto";
 import { NextResponse } from "next/server";
+import type { User } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 function limpiar(valor: unknown) {
@@ -14,7 +15,10 @@ function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-async function buscarAuthUserPorEmail(supabase: any, email: string) {
+async function buscarAuthUserPorEmail(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  email: string
+) {
   let page = 1;
   const perPage = 1000;
 
@@ -28,7 +32,7 @@ async function buscarAuthUserPorEmail(supabase: any, email: string) {
 
     const users = data?.users ?? [];
     const user = users.find(
-      (item: any) => String(item.email ?? "").toLowerCase() === email
+      (item: User) => String(item.email ?? "").toLowerCase() === email
     );
 
     if (user) return user;
@@ -47,7 +51,7 @@ async function validarEmpleadoDisponible({
   excludeEmail,
   excludeInviteId,
 }: {
-  supabase: any;
+  supabase: ReturnType<typeof createServiceRoleClient>;
   negocioId: string;
   empleadoId: string;
   excludeEmail: string;
@@ -113,7 +117,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = createServiceRoleClient() as any;
+    const supabase = createServiceRoleClient();
     const tokenHash = hashToken(token);
 
     const { data: invitacion, error: invitacionError } = await supabase

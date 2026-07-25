@@ -139,6 +139,8 @@ export function EmpleadoDialog({
   useEffect(() => {
     if (!open) return;
 
+    // Reset the form from the employee selected by the parent on every opening.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setNombre(empleado?.nombre ?? "");
     setEmail(empleado?.email ?? "");
     setTelefono(empleado?.telefono ?? "");

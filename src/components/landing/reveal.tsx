@@ -48,8 +48,8 @@ export function Reveal({ children, delay = 0, className }: RevealProps) {
     const observer = getSharedObserver();
 
     if (!observer) {
-      setVisible(true);
-      return;
+      const frame = window.requestAnimationFrame(() => setVisible(true));
+      return () => window.cancelAnimationFrame(frame);
     }
 
     callbacks.set(node, setVisible);

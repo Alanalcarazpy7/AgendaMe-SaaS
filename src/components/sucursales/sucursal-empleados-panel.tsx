@@ -32,7 +32,10 @@ export function SucursalEmpleadosPanel({
   empleados,
   initialEmpleados,
 }: Props) {
-  const sucursalesSafe = sucursales ?? initialSucursales ?? [];
+  const sucursalesSafe = useMemo(
+    () => sucursales ?? initialSucursales ?? [],
+    [initialSucursales, sucursales]
+  );
   const [items, setItems] = useState<Empleado[]>(empleados ?? initialEmpleados ?? []);
   const [loadingId, setLoadingId] = useState("");
   const [error, setError] = useState("");

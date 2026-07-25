@@ -10,6 +10,23 @@ type PageProps = {
   }>;
 };
 
+type NegocioBloqueado = {
+  id: string;
+  nombre: string;
+  estado: string;
+  motivo_bloqueo: string | null;
+  bloqueado_at: string | null;
+};
+
+type MembresiaGlobal = {
+  negocios: NegocioBloqueado | NegocioBloqueado[] | null;
+};
+
+type AccesoSucursal = {
+  negocio_id: string;
+  rol: string;
+};
+
 function contenidoPorMotivo(motivo?: string) {
   if (motivo === "plan_required") {
     return {
@@ -75,9 +92,10 @@ async function obtenerBloqueoNegocioActual() {
     .limit(1)
     .maybeSingle();
 
-  const negocioGlobal = Array.isArray((membresiaGlobal as any)?.negocios)
-    ? (membresiaGlobal as any).negocios[0]
-    : (membresiaGlobal as any)?.negocios;
+  const negociosRelacion = (membresiaGlobal as MembresiaGlobal | null)?.negocios;
+  const negocioGlobal = Array.isArray(negociosRelacion)
+    ? negociosRelacion[0]
+    : negociosRelacion;
 
   if (negocioGlobal?.estado && negocioGlobal.estado !== "activo") {
     return {
@@ -86,7 +104,7 @@ async function obtenerBloqueoNegocioActual() {
     };
   }
 
-  let accesoQuery = supabase
+  const accesoQuery = supabase
     .from("sucursal_usuarios")
     .select("negocio_id, rol")
     .eq("usuario_id", user.id)
@@ -107,19 +125,20 @@ async function obtenerBloqueoNegocioActual() {
     accesoSucursal = result.data;
   }
 
-  if (!(accesoSucursal as any)?.negocio_id) return null;
+  const acceso = accesoSucursal as AccesoSucursal | null;
+  if (!acceso?.negocio_id) return null;
 
   const { data: negocioSucursal } = await supabase
     .from("negocios")
     .select("id, nombre, estado, motivo_bloqueo, bloqueado_at")
-    .eq("id", (accesoSucursal as any).negocio_id)
+    .eq("id", acceso.negocio_id)
     .maybeSingle();
 
   if (!negocioSucursal || negocioSucursal.estado === "activo") return null;
 
   return {
     ...negocioSucursal,
-    puedeVerMotivoReal: (accesoSucursal as any).rol === "gerente_sucursal",
+    puedeVerMotivoReal: acceso.rol === "gerente_sucursal",
   };
 }
 

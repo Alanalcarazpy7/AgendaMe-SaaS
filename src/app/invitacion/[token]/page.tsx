@@ -1,4 +1,5 @@
 ﻿import crypto from "node:crypto";
+import Image from "next/image";
 import Link from "next/link";
 import { AceptarInvitacionForm } from "@/components/invitaciones/aceptar-invitacion-form";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -10,6 +11,21 @@ type PageProps = {
 };
 
 type Relacion<T> = T | T[] | null;
+
+type InvitacionRow = {
+  id: string;
+  email: string;
+  rol: string;
+  estado: string;
+  expires_at: string;
+  negocios: Relacion<{
+    nombre: string;
+    logo_url: string | null;
+  }>;
+  sucursales: Relacion<{
+    nombre: string;
+  }>;
+};
 
 function obtenerObjeto<T>(valor: Relacion<T>): T | null {
   if (!valor) return null;
@@ -58,16 +74,18 @@ export default async function InvitacionPage({ params }: PageProps) {
     .eq("estado", "pendiente")
     .maybeSingle();
 
-  const negocio = obtenerObjeto((invitacion as any)?.negocios ?? null);
-  const sucursal = obtenerObjeto((invitacion as any)?.sucursales ?? null);
+  const invitacionRow = invitacion as InvitacionRow | null;
+  const negocio = obtenerObjeto(invitacionRow?.negocios ?? null);
+  const sucursal = obtenerObjeto(invitacionRow?.sucursales ?? null);
 
-  const invalida =
-    !invitacion ||
+  if (
+    !invitacionRow ||
     !negocio ||
     !sucursal ||
-    new Date((invitacion as any).expires_at).getTime() < Date.now();
-
-  if (invalida) {
+    // This is a Server Component request-time expiration check, not render state.
+    // eslint-disable-next-line react-hooks/purity
+    new Date(invitacionRow.expires_at).getTime() < Date.now()
+  ) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
         <section className="w-full max-w-lg rounded-3xl border bg-background p-8 text-center shadow-sm">
@@ -92,10 +110,13 @@ export default async function InvitacionPage({ params }: PageProps) {
     <main className="min-h-screen bg-muted/30 px-4 py-10">
       <section className="mx-auto w-full max-w-xl rounded-3xl border bg-background p-6 shadow-sm">
         <div className="text-center">
-          {(negocio as any).logo_url && (
-            <img
-              src={(negocio as any).logo_url}
-              alt={(negocio as any).nombre}
+          {negocio.logo_url && (
+            <Image
+              src={negocio.logo_url}
+              alt={negocio.nombre}
+              width={80}
+              height={80}
+              unoptimized
               className="mx-auto h-20 w-20 rounded-3xl border object-cover"
             />
           )}
@@ -105,19 +126,19 @@ export default async function InvitacionPage({ params }: PageProps) {
           </p>
 
           <h1 className="mt-1 text-3xl font-bold">
-            {(negocio as any).nombre}
+            {negocio.nombre}
           </h1>
 
           <p className="mt-2 text-sm text-muted-foreground">
             Vas a tener acceso al dashboard de{" "}
-            <strong>{(sucursal as any).nombre}</strong> como{" "}
-            <strong>{rolLabel((invitacion as any).rol)}</strong>.
+            <strong>{sucursal.nombre}</strong> como{" "}
+            <strong>{rolLabel(invitacionRow.rol)}</strong>.
           </p>
         </div>
 
         <AceptarInvitacionForm
           token={token}
-          email={(invitacion as any).email}
+          email={invitacionRow.email}
         />
       </section>
     </main>

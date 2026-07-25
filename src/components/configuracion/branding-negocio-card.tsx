@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { ImagePlus, Loader2, Trash2, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -47,7 +48,11 @@ export function BrandingNegocioCard() {
   }
 
   useEffect(() => {
-    cargar();
+    const task = window.setTimeout(() => {
+      void cargar();
+    }, 0);
+
+    return () => window.clearTimeout(task);
   }, []);
 
   async function subir(tipo: TipoBranding, file: File | null) {
@@ -177,9 +182,12 @@ export function BrandingNegocioCard() {
 
             <div className="mt-4 flex items-center gap-4">
               {negocio?.logo_url ? (
-                <img
+                <Image
                   src={negocio.logo_url}
                   alt="Logo del negocio"
+                  width={96}
+                  height={96}
+                  unoptimized
                   className="h-24 w-24 rounded-3xl border object-cover"
                 />
               ) : (
@@ -246,16 +254,22 @@ export function BrandingNegocioCard() {
             <div className="relative mt-4 h-40 overflow-hidden rounded-3xl border bg-black">
               {negocio?.banner_url ? (
                 <>
-                  <img
+                  <Image
                     src={negocio.banner_url}
                     alt=""
                     aria-hidden="true"
+                    width={1600}
+                    height={640}
+                    unoptimized
                     className="absolute inset-0 h-full w-full scale-105 object-cover opacity-100 blur-sm"
                   />
                   <div className="absolute inset-0 bg-black/25" />
-                  <img
+                  <Image
                     src={negocio.banner_url}
                     alt="Banner del negocio"
+                    width={1600}
+                    height={640}
+                    unoptimized
                     className="relative z-10 h-full w-full object-contain"
                   />
                 </>

@@ -101,6 +101,8 @@ export function CitaDialog({
   useEffect(() => {
     if (!open) return;
 
+    // The controlled dialog can reopen with a different calendar selection.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFecha(initialFecha);
     setHoraInicio(initialHoraInicio);
     setError(null);

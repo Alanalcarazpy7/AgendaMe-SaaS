@@ -49,7 +49,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const supabase = createServiceRoleClient() as any;
+    const supabase = createServiceRoleClient();
 
     const payload = {
       usuario_id: access.user.id,

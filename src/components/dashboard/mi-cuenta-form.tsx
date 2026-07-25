@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { Camera, KeyRound, Loader2, Save, ShieldCheck } from "lucide-react";
 
 type Perfil = {
@@ -230,11 +231,14 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
         <aside className="rounded-3xl border bg-background p-5 shadow-sm">
           <div className="flex flex-col items-center text-center">
             {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt={nombre}
-                className="h-28 w-28 rounded-full border object-cover shadow-sm"
-              />
+              <Image
+                  src={avatarUrl}
+                  alt={nombre}
+                  width={112}
+                  height={112}
+                  unoptimized
+                  className="h-28 w-28 rounded-full border object-cover shadow-sm"
+                />
             ) : (
               <div
                 className="flex h-28 w-28 items-center justify-center rounded-full text-3xl font-bold text-white shadow-sm"

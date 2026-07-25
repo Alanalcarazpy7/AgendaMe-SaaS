@@ -115,7 +115,10 @@ export function SucursalUsuariosPanel({
   invitaciones = [],
   empleados = [],
 }: Props) {
-  const sucursalesSafe = sucursales ?? initialSucursales ?? [];
+  const sucursalesSafe = useMemo(
+    () => sucursales ?? initialSucursales ?? [],
+    [initialSucursales, sucursales]
+  );
   const [items, setItems] = useState<Acceso[]>(accesos ?? usuarios ?? []);
   const [pending, setPending] = useState<Invitacion[]>(invitaciones);
   const [email, setEmail] = useState("");

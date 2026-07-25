@@ -43,7 +43,7 @@ function tenantForIteration() {
   return tenants[(__VU + __ITER) % tenants.length];
 }
 
-export default function () {
+export default function publicReadScenario() {
   const tenant = tenantForIteration();
   const page = http.get(`${baseUrl}/reservar/${tenant.slug}`, {
     tags: { endpoint: "public_page" },

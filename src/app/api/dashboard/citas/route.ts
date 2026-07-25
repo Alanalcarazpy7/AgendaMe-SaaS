@@ -62,13 +62,46 @@ function fechaHoraPasada(fecha: string, hora: string) {
 }
 
 type SeleccionarEmpleadoAutomaticoParams = {
-  supabase: any;
+  supabase: ReturnType<typeof createServiceRoleClient>;
   negocioId: string;
   servicioId: string;
   fecha: string;
   horaInicio: string;
   duracionMinutos: number;
   sucursalId?: string | null;
+};
+
+type EmpleadoDisponible = {
+  id: string;
+  estado: string;
+  sucursal_id: string | null;
+};
+
+type EmpleadoServicioRow = {
+  empleado_id: string;
+  empleados: EmpleadoDisponible | EmpleadoDisponible[] | null;
+};
+
+type HorarioEmpleadoRow = {
+  empleado_id: string;
+  activo: boolean;
+  hora_inicio: string | null;
+  hora_fin: string | null;
+  descanso_inicio: string | null;
+  descanso_fin: string | null;
+};
+
+type CitaOcupadaRow = {
+  empleado_id: string;
+  hora_inicio: string;
+  hora_fin: string;
+};
+
+type BloqueoHorarioRow = {
+  empleado_id: string | null;
+  sucursal_id: string | null;
+  fecha_inicio: string;
+  fecha_fin: string;
 };
 
 async function seleccionarEmpleadoAutomatico({
@@ -126,12 +159,12 @@ async function seleccionarEmpleadoAutomatico({
 
   if (empleadoServiciosError) throw new Error(empleadoServiciosError.message);
 
-  const empleadosDisponibles = (empleadoServicios ?? [])
-    .map((row: any) => {
+  const empleadosDisponibles = ((empleadoServicios ?? []) as EmpleadoServicioRow[])
+    .map((row) => {
       const empleado = Array.isArray(row.empleados) ? row.empleados[0] : row.empleados;
       return empleado;
     })
-    .filter((empleado: any) => {
+    .filter((empleado): empleado is EmpleadoDisponible => {
       if (!empleado || empleado.estado !== "activo") return false;
       if (sucursalId && empleado.sucursal_id !== sucursalId) return false;
       return true;
@@ -139,7 +172,7 @@ async function seleccionarEmpleadoAutomatico({
 
   if (empleadosDisponibles.length === 0) return null;
 
-  const empleadoIds = empleadosDisponibles.map((empleado: any) => empleado.id);
+  const empleadoIds = empleadosDisponibles.map((empleado) => empleado.id);
 
   const [
     { data: horariosEmpleado, error: horariosEmpleadoError },
@@ -173,8 +206,8 @@ async function seleccionarEmpleadoAutomatico({
   if (bloqueosError) throw new Error(bloqueosError.message);
 
   for (const empleado of empleadosDisponibles) {
-    const horario = (horariosEmpleado ?? []).find(
-      (item: any) => item.empleado_id === empleado.id
+    const horario = ((horariosEmpleado ?? []) as HorarioEmpleadoRow[]).find(
+      (item) => item.empleado_id === empleado.id
     );
 
     if (horario && !horario.activo) continue;
@@ -202,7 +235,7 @@ async function seleccionarEmpleadoAutomatico({
       continue;
     }
 
-    const tieneCita = (citasOcupadas ?? []).some((cita: any) => {
+    const tieneCita = ((citasOcupadas ?? []) as CitaOcupadaRow[]).some((cita) => {
       if (cita.empleado_id !== empleado.id) return false;
 
       return overlap(
@@ -215,7 +248,7 @@ async function seleccionarEmpleadoAutomatico({
 
     if (tieneCita) continue;
 
-    const estaBloqueado = (bloqueos ?? []).some((bloqueo: any) => {
+    const estaBloqueado = ((bloqueos ?? []) as BloqueoHorarioRow[]).some((bloqueo) => {
       const bloqueoEmpleadoId = bloqueo.empleado_id ?? null;
       const bloqueoSucursalId = bloqueo.sucursal_id ?? null;
 

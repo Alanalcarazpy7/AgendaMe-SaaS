@@ -1,4 +1,5 @@
 ﻿import { redirect } from "next/navigation";
+import type { User } from "@supabase/supabase-js";
 import { nivelPlan } from "@/lib/planes/plan-access";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
@@ -106,6 +107,50 @@ export type DashboardAccessResult = AccessOk | AccessFail;
 
 type Relacion<T> = T | T[] | null;
 
+type NegocioAcceso = {
+  id: string;
+  nombre: string;
+  slug: string | null;
+  logo_url: string | null;
+  estado: string;
+  motivo_bloqueo: string | null;
+  bloqueado_at: string | null;
+};
+
+type SucursalAcceso = {
+  id: string;
+  nombre: string;
+  estado: string;
+};
+
+type AccesoSucursalRpc = {
+  id: string;
+  negocio_id: string;
+  sucursal_id: string;
+  usuario_id: string | null;
+  empleado_id: string | null;
+  nombre: string | null;
+  cargo: string | null;
+  avatar_url: string | null;
+  email: string | null;
+  rol: DashboardAccessRole;
+  activo: boolean;
+  sucursales: Relacion<SucursalAcceso>;
+};
+
+type AccesoDashboardRpc = {
+  autenticado: boolean;
+  perfil: Record<string, unknown> | null;
+  rol_global: string | null;
+  membresia_negocio: {
+    negocio_id: string;
+    rol: string;
+    activo: boolean;
+    negocio: NegocioAcceso;
+  } | null;
+  acceso_sucursal: AccesoSucursalRpc | null;
+};
+
 function obtenerObjeto<T>(valor: Relacion<T>): T | null {
   if (!valor) return null;
   return Array.isArray(valor) ? valor[0] ?? null : valor;
@@ -119,7 +164,7 @@ function normalizarEmail(email?: string | null) {
   return limpiar(email).toLowerCase();
 }
 
-function nombreDesdeUsuario(user: any) {
+function nombreDesdeUsuario(user: User) {
   const email = normalizarEmail(user?.email);
   const metadata = user?.user_metadata ?? {};
 
@@ -141,23 +186,30 @@ function nombreDesdeUsuario(user: any) {
  * parte del jsonb que devuelve resolver_acceso_dashboard() -- misma logica
  * de defaults, aplicada a los datos ya traidos en esa unica RPC.
  */
-function construirPerfilUsuario(perfil: Record<string, unknown> | null | undefined, user: any) {
+function construirPerfilUsuario(
+  perfil: Record<string, unknown> | null | undefined,
+  user: User
+) {
   const nombreAuth = nombreDesdeUsuario(user);
   const email = normalizarEmail(user.email);
+  const tema: AccessOk["user"]["tema"] =
+    perfil?.tema === "claro" || perfil?.tema === "oscuro"
+      ? perfil.tema
+      : "sistema";
 
   return {
-    nombre: limpiar((perfil as any)?.nombre) || nombreAuth || email.split("@")[0] || "Usuario",
-    telefono: limpiar((perfil as any)?.telefono) || null,
-    cargo: limpiar((perfil as any)?.cargo) || limpiar(user?.user_metadata?.cargo) || null,
+    nombre: limpiar(perfil?.nombre) || nombreAuth || email.split("@")[0] || "Usuario",
+    telefono: limpiar(perfil?.telefono) || null,
+    cargo: limpiar(perfil?.cargo) || limpiar(user.user_metadata?.cargo) || null,
     avatar_url:
-      limpiar((perfil as any)?.avatar_url) ||
-      limpiar(user?.user_metadata?.avatar_url) ||
+      limpiar(perfil?.avatar_url) ||
+      limpiar(user.user_metadata?.avatar_url) ||
       null,
-    tema: ((perfil as any)?.tema ?? "sistema") as "sistema" | "claro" | "oscuro",
-    color_acento: limpiar((perfil as any)?.color_acento) || null,
+    tema,
+    color_acento: limpiar(perfil?.color_acento) || null,
     recibir_notificaciones:
-      typeof (perfil as any)?.recibir_notificaciones === "boolean"
-        ? (perfil as any).recibir_notificaciones
+      typeof perfil?.recibir_notificaciones === "boolean"
+        ? perfil.recibir_notificaciones
         : true,
   };
 }
@@ -185,7 +237,10 @@ async function obtenerPlanActivo(
 
   if (error) throw new Error(error.message);
 
-  const plan = obtenerObjeto((suscripcion as any)?.planes_saas ?? null);
+  const suscripcionConPlan = suscripcion as {
+    planes_saas: Relacion<{ clave: string; nombre: string }>;
+  } | null;
+  const plan = obtenerObjeto(suscripcionConPlan?.planes_saas ?? null);
 
   const planClave = plan?.clave ?? "gratis";
   const planNombre = plan?.nombre ?? "Gratis";
@@ -284,39 +339,7 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
 
   if (accesoRpcError) throw new Error(accesoRpcError.message);
 
-  const datos = accesoRpc as {
-    autenticado: boolean;
-    perfil: Record<string, unknown> | null;
-    rol_global: string | null;
-    membresia_negocio: {
-      negocio_id: string;
-      rol: string;
-      activo: boolean;
-      negocio: {
-        id: string;
-        nombre: string;
-        slug: string | null;
-        logo_url: string | null;
-        estado: string;
-        motivo_bloqueo: string | null;
-        bloqueado_at: string | null;
-      };
-    } | null;
-    acceso_sucursal: {
-      id: string;
-      negocio_id: string;
-      sucursal_id: string;
-      usuario_id: string | null;
-      empleado_id: string | null;
-      nombre: string | null;
-      cargo: string | null;
-      avatar_url: string | null;
-      email: string | null;
-      rol: DashboardAccessRole;
-      activo: boolean;
-      sucursales: { id: string; nombre: string; estado: string };
-    } | null;
-  };
+  const datos = accesoRpc as AccesoDashboardRpc;
 
   const perfilUsuario = construirPerfilUsuario(datos.perfil, user);
   const esOwner = esPlatformOwnerDesdeRol(user.id, datos.rol_global);
@@ -331,9 +354,9 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
   const negocioGlobal = datos.membresia_negocio?.negocio ?? null;
 
   if (negocioGlobal) {
-    const plan = await obtenerPlanActivo(supabase, (negocioGlobal as any).id);
+    const plan = await obtenerPlanActivo(supabase, negocioGlobal.id);
 
-    if ((negocioGlobal as any).estado !== "activo") {
+    if (negocioGlobal.estado !== "activo") {
       return {
         ok: false,
         reason: "inactive_business",
@@ -344,13 +367,13 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
             ...perfilUsuario,
           },
           negocio: {
-            id: (negocioGlobal as any).id,
-            nombre: (negocioGlobal as any).nombre,
-            slug: (negocioGlobal as any).slug ?? null,
-            logo_url: (negocioGlobal as any).logo_url ?? null,
-            estado: (negocioGlobal as any).estado,
-            motivo_bloqueo: (negocioGlobal as any).motivo_bloqueo ?? null,
-            bloqueado_at: (negocioGlobal as any).bloqueado_at ?? null,
+            id: negocioGlobal.id,
+            nombre: negocioGlobal.nombre,
+            slug: negocioGlobal.slug ?? null,
+            logo_url: negocioGlobal.logo_url ?? null,
+            estado: negocioGlobal.estado,
+            motivo_bloqueo: negocioGlobal.motivo_bloqueo ?? null,
+            bloqueado_at: negocioGlobal.bloqueado_at ?? null,
           },
           planClave: plan.planClave,
           rol: "admin_global",
@@ -374,10 +397,10 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
         ...perfilUsuario,
       },
       negocio: {
-        id: (negocioGlobal as any).id,
-        nombre: (negocioGlobal as any).nombre,
-        slug: (negocioGlobal as any).slug ?? null,
-        logo_url: (negocioGlobal as any).logo_url ?? null,
+        id: negocioGlobal.id,
+        nombre: negocioGlobal.nombre,
+        slug: negocioGlobal.slug ?? null,
+        logo_url: negocioGlobal.logo_url ?? null,
       },
       ...plan,
       scope: "global",
@@ -396,7 +419,7 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
     };
   }
 
-  let accesoSucursal: any = datos.acceso_sucursal;
+  let accesoSucursal = datos.acceso_sucursal;
 
   if (!accesoSucursal) {
     const { data: accesoPorEmail, error: accesoEmailError } = await supabase
@@ -428,15 +451,15 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
 
     if (accesoEmailError) throw new Error(accesoEmailError.message);
 
-    accesoSucursal = accesoPorEmail;
+    accesoSucursal = accesoPorEmail as AccesoSucursalRpc | null;
 
-    if (accesoSucursal && !(accesoSucursal as any).usuario_id) {
+    if (accesoSucursal && !accesoSucursal.usuario_id) {
       await supabase
         .from("sucursal_usuarios")
         .update({
           usuario_id: user.id,
         })
-        .eq("id", (accesoSucursal as any).id);
+        .eq("id", accesoSucursal.id);
     }
   }
 
@@ -447,12 +470,12 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
     };
   }
 
-  const sucursal = obtenerObjeto((accesoSucursal as any).sucursales ?? null);
+  const sucursal = obtenerObjeto(accesoSucursal.sucursales ?? null);
 
   const { data: negocioSucursal, error: negocioError } = await supabase
     .from("negocios")
     .select("id, nombre, slug, logo_url, estado, motivo_bloqueo, bloqueado_at")
-    .eq("id", (accesoSucursal as any).negocio_id)
+    .eq("id", accesoSucursal.negocio_id)
     .maybeSingle();
 
   if (negocioError) throw new Error(negocioError.message);
@@ -465,9 +488,9 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
   }
 
   const plan = await obtenerPlanActivo(supabase, negocioSucursal.id);
-  const rol = (accesoSucursal as any).rol as DashboardAccessRole;
+  const rol = accesoSucursal.rol;
 
-  if (!sucursal || (sucursal as any).estado !== "activo") {
+  if (!sucursal || sucursal.estado !== "activo") {
     return {
       ok: false,
       reason: "inactive_branch",
@@ -478,12 +501,12 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
           ...perfilUsuario,
           nombre:
             perfilUsuario.nombre ||
-            limpiar((accesoSucursal as any).nombre) ||
+            limpiar(accesoSucursal.nombre) ||
             email.split("@")[0],
-          cargo: perfilUsuario.cargo || limpiar((accesoSucursal as any).cargo) || null,
+          cargo: perfilUsuario.cargo || limpiar(accesoSucursal.cargo) || null,
           avatar_url:
             perfilUsuario.avatar_url ||
-            limpiar((accesoSucursal as any).avatar_url) ||
+            limpiar(accesoSucursal.avatar_url) ||
             null,
         },
         negocio: {
@@ -496,7 +519,7 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
         planNombre: plan.planNombre,
         rol,
         scope: "sucursal",
-        sucursalNombre: (sucursal as any)?.nombre ?? "Sucursal",
+        sucursalNombre: sucursal?.nombre ?? "Sucursal",
       },
     };
   }
@@ -512,12 +535,12 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
           ...perfilUsuario,
           nombre:
             perfilUsuario.nombre ||
-            limpiar((accesoSucursal as any).nombre) ||
+            limpiar(accesoSucursal.nombre) ||
             email.split("@")[0],
-          cargo: perfilUsuario.cargo || limpiar((accesoSucursal as any).cargo) || null,
+          cargo: perfilUsuario.cargo || limpiar(accesoSucursal.cargo) || null,
           avatar_url:
             perfilUsuario.avatar_url ||
-            limpiar((accesoSucursal as any).avatar_url) ||
+            limpiar(accesoSucursal.avatar_url) ||
             null,
         },
         negocio: {
@@ -532,7 +555,7 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
         planClave: plan.planClave,
         rol,
         scope: "sucursal",
-        sucursalNombre: (sucursal as any).nombre ?? "Sucursal",
+        sucursalNombre: sucursal.nombre ?? "Sucursal",
       },
     };
   }
@@ -548,12 +571,12 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
           ...perfilUsuario,
           nombre:
             perfilUsuario.nombre ||
-            limpiar((accesoSucursal as any).nombre) ||
+            limpiar(accesoSucursal.nombre) ||
             email.split("@")[0],
-          cargo: perfilUsuario.cargo || limpiar((accesoSucursal as any).cargo) || null,
+          cargo: perfilUsuario.cargo || limpiar(accesoSucursal.cargo) || null,
           avatar_url:
             perfilUsuario.avatar_url ||
-            limpiar((accesoSucursal as any).avatar_url) ||
+            limpiar(accesoSucursal.avatar_url) ||
             null,
         },
         negocio: {
@@ -566,7 +589,7 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
         planNombre: plan.planNombre,
         rol,
         scope: "sucursal",
-        sucursalNombre: (sucursal as any).nombre ?? "Sucursal",
+        sucursalNombre: sucursal.nombre ?? "Sucursal",
         requiredPlanNombre: "Empresarial",
         restrictedFeature: "sucursales",
       },
@@ -587,12 +610,12 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
       ...perfilUsuario,
       nombre:
         perfilUsuario.nombre ||
-        limpiar((accesoSucursal as any).nombre) ||
+        limpiar(accesoSucursal.nombre) ||
         email.split("@")[0],
-      cargo: perfilUsuario.cargo || limpiar((accesoSucursal as any).cargo) || null,
+      cargo: perfilUsuario.cargo || limpiar(accesoSucursal.cargo) || null,
       avatar_url:
         perfilUsuario.avatar_url ||
-        limpiar((accesoSucursal as any).avatar_url) ||
+        limpiar(accesoSucursal.avatar_url) ||
         null,
     },
     negocio: {
@@ -604,9 +627,9 @@ export const resolveDashboardAccess = cache(async (): Promise<DashboardAccessRes
     ...plan,
     scope: "sucursal",
     rol,
-    sucursalId: (accesoSucursal as any).sucursal_id,
-    sucursalNombre: (sucursal as any).nombre ?? "Sucursal",
-    empleadoId: (accesoSucursal as any).empleado_id ?? null,
+    sucursalId: accesoSucursal.sucursal_id,
+    sucursalNombre: sucursal.nombre ?? "Sucursal",
+    empleadoId: accesoSucursal.empleado_id ?? null,
     ...permisos,
   };
 });
@@ -629,7 +652,11 @@ export async function requireDashboardAccess() {
   return access;
 }
 
-export function aplicarFiltroSucursal<T extends { eq: Function }>(
+type QueryConFiltro<T> = {
+  eq: (columna: string, valor: string) => T;
+};
+
+export function aplicarFiltroSucursal<T extends QueryConFiltro<T>>(
   query: T,
   access: Awaited<ReturnType<typeof requireDashboardAccess>>,
   columna = "sucursal_id"

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import { CalendarCheck2, MapPin, Phone, Sparkles } from "lucide-react";
 import { AgendaMeLogo } from "@/components/brand/agendame-logo";
 import { ReservaPublicaForm } from "@/components/reservas/reserva-publica-form";
@@ -12,6 +13,26 @@ type RouteProps = {
 };
 
 type Relacion<T> = T | T[] | null;
+
+type PlanRelacion = {
+  clave: string;
+  nombre: string;
+};
+
+type SuscripcionConPlan = {
+  planes_saas: Relacion<PlanRelacion>;
+};
+
+type EmpleadoServicioRow = {
+  servicio_id: string;
+  empleados: Relacion<{
+    id: string;
+    nombre: string;
+    estado: string;
+    negocio_id: string;
+    sucursal_id: string | null;
+  }>;
+};
 
 function obtenerObjeto<T>(valor: Relacion<T>): T | null {
   if (!valor) return null;
@@ -51,7 +72,8 @@ export default async function ReservarPage({ params }: RouteProps) {
     .limit(1)
     .maybeSingle();
 
-  const plan = obtenerObjeto((suscripcion as any)?.planes_saas ?? null);
+  const suscripcionConPlan = suscripcion as SuscripcionConPlan | null;
+  const plan = obtenerObjeto(suscripcionConPlan?.planes_saas ?? null);
   const esEmpresarial = nivelPlan(plan?.clave ?? "gratis") >= 3;
 
   await supabase.rpc("obtener_o_crear_sucursal_principal", {
@@ -106,16 +128,16 @@ export default async function ReservarPage({ params }: RouteProps) {
   const serviciosDisponibles = new Set<string>();
   const serviciosPorSucursal: Record<string, string[]> = {};
 
-  for (const row of empleadoServicios ?? []) {
-    const empleado = obtenerObjeto((row as any).empleados);
+  for (const row of (empleadoServicios ?? []) as EmpleadoServicioRow[]) {
+    const empleado = obtenerObjeto(row.empleados);
 
     if (!empleado) continue;
-    if ((empleado as any).negocio_id !== negocio.id) continue;
-    if ((empleado as any).estado !== "activo") continue;
-    if (!(empleado as any).sucursal_id) continue;
+    if (empleado.negocio_id !== negocio.id) continue;
+    if (empleado.estado !== "activo") continue;
+    if (!empleado.sucursal_id) continue;
 
-    const servicioId = (row as any).servicio_id as string;
-    const sucursalId = (empleado as any).sucursal_id as string;
+    const servicioId = row.servicio_id;
+    const sucursalId = empleado.sucursal_id;
 
     serviciosDisponibles.add(servicioId);
 
@@ -163,9 +185,13 @@ export default async function ReservarPage({ params }: RouteProps) {
               <div className="absolute inset-0">
                 {negocio.banner_url ? (
                   <>
-                    <img
+                    <Image
                       src={negocio.banner_url}
                       alt={`Portada de ${negocio.nombre}`}
+                      fill
+                      priority
+                      sizes="(min-width: 1024px) calc(100vw - 26rem), 100vw"
+                      unoptimized
                       className="h-full w-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/82 via-slate-950/32 to-slate-950/8" />
@@ -183,9 +209,12 @@ export default async function ReservarPage({ params }: RouteProps) {
 
                 <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end">
                   {negocio.logo_url ? (
-                    <img
+                    <Image
                       src={negocio.logo_url}
                       alt={`Logo de ${negocio.nombre}`}
+                      width={80}
+                      height={80}
+                      unoptimized
                       className="h-20 w-20 rounded-[1.35rem] border-4 border-white/90 bg-white object-cover shadow-2xl shadow-slate-950/30"
                     />
                   ) : (

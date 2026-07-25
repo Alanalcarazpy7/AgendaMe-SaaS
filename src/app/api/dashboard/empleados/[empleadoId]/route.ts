@@ -4,13 +4,9 @@ import { validarCapacidadPlan } from "@/lib/planes/plan-limits";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 type RouteContext = {
-  params:
-    | Promise<{
-        empleadoId: string;
-      }>
-    | {
-        empleadoId: string;
-      };
+  params: Promise<{
+    empleadoId: string;
+  }>;
 };
 
 function limpiar(valor: unknown) {
@@ -52,7 +48,15 @@ function normalizarDia(valor: unknown) {
   return numero;
 }
 
-function normalizarServicios(body: any) {
+type JsonRecord = Record<string, unknown>;
+
+function comoRegistro(valor: unknown): JsonRecord {
+  return typeof valor === "object" && valor !== null
+    ? (valor as JsonRecord)
+    : {};
+}
+
+function normalizarServicios(body: JsonRecord) {
   const raw =
     body.serviciosIds ??
     body.servicioIds ??
@@ -67,9 +71,10 @@ function normalizarServicios(body: any) {
   return Array.from(
     new Set(
       raw
-        .map((item: any) => {
+        .map((item: unknown) => {
           if (typeof item === "string") return item;
-          return item?.id ?? item?.servicio_id ?? item?.value;
+          const registro = comoRegistro(item);
+          return registro.id ?? registro.servicio_id ?? registro.value;
         })
         .map((id: unknown) => limpiar(id))
         .filter(Boolean)
@@ -77,7 +82,7 @@ function normalizarServicios(body: any) {
   );
 }
 
-function normalizarHorarios(body: any) {
+function normalizarHorarios(body: JsonRecord) {
   const raw = body.horarios ?? body.horarios_empleado ?? body.horariosEmpleado;
 
   if (!raw) return null;
@@ -85,27 +90,30 @@ function normalizarHorarios(body: any) {
   const lista = Array.isArray(raw) ? raw : Object.values(raw);
 
   const horarios = lista
-    .map((item: any) => {
-      const diaSemana = normalizarDia(item.dia_semana ?? item.diaSemana ?? item.dia);
+    .map((item: unknown) => {
+      const registro = comoRegistro(item);
+      const diaSemana = normalizarDia(
+        registro.dia_semana ?? registro.diaSemana ?? registro.dia
+      );
 
       if (diaSemana === null) return null;
 
-      const activo = normalizarBoolean(item.activo);
+      const activo = normalizarBoolean(registro.activo);
 
       const horaInicio = normalizarTime(
-        item.hora_inicio ?? item.horaInicio ?? item.inicio
+        registro.hora_inicio ?? registro.horaInicio ?? registro.inicio
       );
 
       const horaFin = normalizarTime(
-        item.hora_fin ?? item.horaFin ?? item.fin
+        registro.hora_fin ?? registro.horaFin ?? registro.fin
       );
 
       const descansoInicio = normalizarTime(
-        item.descanso_inicio ?? item.descansoInicio
+        registro.descanso_inicio ?? registro.descansoInicio
       );
 
       const descansoFin = normalizarTime(
-        item.descanso_fin ?? item.descansoFin
+        registro.descanso_fin ?? registro.descansoFin
       );
 
       return {
@@ -166,7 +174,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
-    const body = await request.json();
+    const body = comoRegistro(await request.json());
     const supabase = createServiceRoleClient();
 
     const { data: empleadoActual, error: empleadoActualError } = await supabase

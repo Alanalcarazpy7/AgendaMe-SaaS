@@ -145,7 +145,11 @@ export function ExportarPanel({
   }
 
   useEffect(() => {
-    cargarVistaPrevia();
+    const task = window.setTimeout(() => {
+      void cargarVistaPrevia();
+    }, 0);
+
+    return () => window.clearTimeout(task);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tipo, desde, hasta, sucursalId]);
 

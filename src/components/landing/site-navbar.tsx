@@ -117,13 +117,13 @@ export function SiteNavbar() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <a
+          <Link
             href="/#contacto"
             className="hidden h-10 items-center justify-center gap-2 rounded-xl bg-[var(--whatsapp)] px-4 text-sm font-semibold text-white shadow-sm shadow-[var(--whatsapp)]/30 transition-[background-color,box-shadow,transform] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:bg-[color-mix(in_srgb,var(--whatsapp)_88%,black)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:inline-flex"
           >
             <WhatsAppIcon className="h-4 w-4" />
             WhatsApp
-          </a>
+          </Link>
 
           <Link
             href="/auth/login"
@@ -192,14 +192,14 @@ export function SiteNavbar() {
             </nav>
 
             <div className="space-y-3 border-t p-4">
-              <a
+              <Link
                 href="/#contacto"
                 onClick={() => setOpen(false)}
                 className="flex h-12 items-center justify-center gap-2 rounded-xl bg-[var(--whatsapp)] text-sm font-semibold text-white shadow-sm shadow-[var(--whatsapp)]/30 transition hover:bg-[color-mix(in_srgb,var(--whatsapp)_88%,black)]"
               >
                 <WhatsAppIcon className="h-4 w-4" />
                 Hablar por WhatsApp
-              </a>
+              </Link>
               <Link
                 href="/auth/login"
                 onClick={() => setOpen(false)}

@@ -2,7 +2,6 @@
 import { ExportarPanel } from "@/components/exportar/exportar-panel";
 import { PremiumFeaturePage } from "@/components/premium/premium-feature-page";
 import { requireDashboardAccess } from "@/lib/dashboard/access-context";
-import { requirePermission } from "@/lib/dashboard/scope-helpers";
 import { nivelPlan } from "@/lib/planes/plan-access";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 

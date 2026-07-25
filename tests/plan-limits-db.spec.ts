@@ -17,10 +17,15 @@ import {
 
 test.describe.configure({ mode: "serial" });
 
-function errorDebeSerLimite(error: any) {
+function errorDebeSerLimite(error: unknown) {
   expect(error, "Se esperaba error de límite, pero no hubo error").toBeTruthy();
 
-  const message = String(error?.message ?? "");
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" && error !== null && "message" in error
+        ? String(error.message)
+        : "";
 
   expect(message).toMatch(/l[ií]mite|plan|alcanz[oó]|cupo|crear/i);
 }

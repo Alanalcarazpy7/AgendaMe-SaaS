@@ -10,7 +10,7 @@ async function cleanTransientE2EData(businessIds: string[]) {
     .from("citas")
     .update({ estado: "cancelada" })
     .in("negocio_id", businessIds)
-    .neq("estado", "cancelada");
+    .in("estado", ["pendiente", "confirmada"]);
   if (citasResult.error) throw new Error(citasResult.error.message);
 }
 

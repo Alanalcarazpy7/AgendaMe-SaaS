@@ -30,7 +30,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const supabase = createServiceRoleClient() as any;
+    const supabase = createServiceRoleClient();
 
     const { error } = await supabase.auth.admin.updateUserById(access.user.id, {
       password,

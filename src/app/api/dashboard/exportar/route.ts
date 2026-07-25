@@ -12,6 +12,63 @@ type ExportData = {
   filas: Array<Array<string | number | null>>;
 };
 
+type DashboardAccess = Extract<
+  Awaited<ReturnType<typeof resolveDashboardAccess>>,
+  { ok: true }
+>;
+
+type NombreRelacion = {
+  nombre: string;
+};
+
+type CitaExportRow = {
+  fecha: string;
+  hora_inicio: string | null;
+  hora_fin: string | null;
+  estado: string;
+  precio: number | string | null;
+  origen: string | null;
+  sucursales: Relacion<NombreRelacion>;
+  clientes: Relacion<{
+    nombre_completo: string;
+    telefono: string | null;
+    email: string | null;
+  }>;
+  servicios: Relacion<NombreRelacion & { precio: number | string | null }>;
+  empleados: Relacion<NombreRelacion>;
+};
+
+type ClienteExportRow = {
+  nombre_completo: string;
+  telefono: string | null;
+  email: string | null;
+  estado: string;
+  created_at: string;
+};
+
+type ClienteSucursalExportRow = {
+  clientes: Relacion<ClienteExportRow>;
+  sucursales: Relacion<NombreRelacion>;
+};
+
+type EmpleadoExportRow = {
+  nombre: string;
+  email: string | null;
+  telefono: string | null;
+  estado: string;
+  created_at: string;
+  sucursales: Relacion<NombreRelacion>;
+};
+
+type ServicioExportRow = {
+  nombre: string;
+  descripcion: string | null;
+  duracion_minutos: number;
+  precio: number | string | null;
+  estado: string;
+  created_at: string;
+};
+
 function obtenerObjeto<T>(valor: Relacion<T>): T | null {
   if (!valor) return null;
   return Array.isArray(valor) ? valor[0] ?? null : valor;
@@ -26,8 +83,8 @@ function nombreArchivo(base: string) {
   return `${base}-agendame-${fecha}.xlsx`;
 }
 
-function precioCita(cita: any) {
-  const servicio = obtenerObjeto(cita.servicios) as any;
+function precioCita(cita: CitaExportRow) {
+  const servicio = obtenerObjeto(cita.servicios);
   const precioCitaValor = Number(cita.precio ?? 0);
   const precioServicioValor = Number(servicio?.precio ?? 0);
 
@@ -39,7 +96,7 @@ async function validarSucursalFiltro({
   negocioId,
   sucursalId,
 }: {
-  supabase: any;
+  supabase: ReturnType<typeof createServiceRoleClient>;
   negocioId: string;
   sucursalId: string;
 }) {
@@ -65,16 +122,16 @@ async function obtenerDatosExportacion({
   hasta,
   sucursalFiltro,
 }: {
-  access: any;
+  access: DashboardAccess;
   tipo: string;
   desde: string;
   hasta: string;
   sucursalFiltro: string | null;
 }): Promise<ExportData> {
-  const supabase = createServiceRoleClient() as any;
+  const supabase = createServiceRoleClient();
 
   if (tipo === "citas") {
-    let query: any = supabase
+    let query = supabase
       .from("citas")
       .select(
         `
@@ -128,11 +185,11 @@ async function obtenerDatosExportacion({
         "Servicio",
         "Empleado",
       ],
-      filas: (data ?? []).map((cita: any) => {
-        const cliente = obtenerObjeto(cita.clientes) as any;
-        const servicio = obtenerObjeto(cita.servicios) as any;
-        const empleado = obtenerObjeto(cita.empleados) as any;
-        const sucursal = obtenerObjeto(cita.sucursales) as any;
+      filas: ((data ?? []) as CitaExportRow[]).map((cita) => {
+        const cliente = obtenerObjeto(cita.clientes);
+        const servicio = obtenerObjeto(cita.servicios);
+        const empleado = obtenerObjeto(cita.empleados);
+        const sucursal = obtenerObjeto(cita.sucursales);
 
         return [
           cita.fecha,
@@ -179,9 +236,9 @@ async function obtenerDatosExportacion({
       return {
         titulo: "Clientes",
         columnas: ["Nombre", "Teléfono", "Email", "Estado", "Sucursal", "Creado"],
-        filas: (data ?? []).map((row: any) => {
-          const cliente = obtenerObjeto(row.clientes) as any;
-          const sucursal = obtenerObjeto(row.sucursales) as any;
+        filas: ((data ?? []) as ClienteSucursalExportRow[]).map((row) => {
+          const cliente = obtenerObjeto(row.clientes);
+          const sucursal = obtenerObjeto(row.sucursales);
 
           return [
             cliente?.nombre_completo ?? "",
@@ -206,7 +263,7 @@ async function obtenerDatosExportacion({
     return {
       titulo: "Clientes",
       columnas: ["Nombre", "Teléfono", "Email", "Estado", "Creado"],
-      filas: (data ?? []).map((cliente: any) => [
+      filas: ((data ?? []) as ClienteExportRow[]).map((cliente) => [
         cliente.nombre_completo,
         cliente.telefono,
         cliente.email,
@@ -217,7 +274,7 @@ async function obtenerDatosExportacion({
   }
 
   if (tipo === "empleados") {
-    let query: any = supabase
+    let query = supabase
       .from("empleados")
       .select(
         `
@@ -242,8 +299,8 @@ async function obtenerDatosExportacion({
     return {
       titulo: "Empleados",
       columnas: ["Nombre", "Email", "Teléfono", "Estado", "Sucursal", "Creado"],
-      filas: (data ?? []).map((empleado: any) => {
-        const sucursal = obtenerObjeto(empleado.sucursales) as any;
+      filas: ((data ?? []) as EmpleadoExportRow[]).map((empleado) => {
+        const sucursal = obtenerObjeto(empleado.sucursales);
 
         return [
           empleado.nombre,
@@ -280,7 +337,7 @@ async function obtenerDatosExportacion({
         "Estado",
         "Creado",
       ],
-      filas: (data ?? []).map((servicio: any) => [
+      filas: ((data ?? []) as ServicioExportRow[]).map((servicio) => [
         servicio.nombre,
         servicio.descripcion,
         servicio.duracion_minutos,
@@ -394,7 +451,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const supabase = createServiceRoleClient() as any;
+    const supabase = createServiceRoleClient();
     const { searchParams } = new URL(request.url);
 
     const tipo = limpiar(searchParams.get("tipo") ?? "citas");

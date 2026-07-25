@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { toast } from "sonner";
 import {
   CheckCircle2,
@@ -65,7 +66,11 @@ export function ServiciosImagenesPanel() {
   }
 
   useEffect(() => {
-    cargarServicios();
+    const task = window.setTimeout(() => {
+      void cargarServicios();
+    }, 0);
+
+    return () => window.clearTimeout(task);
   }, []);
 
   async function subirImagen(servicioId: string, file: File | null) {
@@ -254,11 +259,14 @@ export function ServiciosImagenesPanel() {
                 >
                   <div className="relative aspect-[16/9] bg-muted">
                     {servicio.imagen_url ? (
-                      <img
-                        src={servicio.imagen_url}
-                        alt={servicio.nombre}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                      />
+                      <Image
+                          src={servicio.imagen_url}
+                          alt={servicio.nombre}
+                          fill
+                          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                          unoptimized
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                        />
                     ) : (
                       <div className="flex h-full w-full flex-col items-center justify-center text-muted-foreground">
                         <ImagePlus className="h-9 w-9" />

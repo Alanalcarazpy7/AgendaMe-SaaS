@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = createServiceRoleClient() as any;
+    const supabase = createServiceRoleClient();
 
     const ext = extensionPorMime(file.type);
     const path = `${access.user.id}/avatar-${Date.now()}.${ext}`;

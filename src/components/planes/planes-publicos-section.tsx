@@ -6,9 +6,13 @@ import type { PlanPublico } from "@/lib/planes/planes-shared";
 
 export type PlanesPublicosSectionProps = {
   planes: PlanPublico[];
+  mostrarEnlaceCompleto?: boolean;
 };
 
-export function PlanesPublicosSection({ planes }: PlanesPublicosSectionProps) {
+export function PlanesPublicosSection({
+  planes,
+  mostrarEnlaceCompleto = true,
+}: PlanesPublicosSectionProps) {
   return (
     <section id="planes-resumen" className="relative overflow-hidden bg-muted/40 px-4 py-20 sm:px-6">
       <div className="ag-bg-blobs-soft absolute inset-0 -z-10" />
@@ -34,17 +38,19 @@ export function PlanesPublicosSection({ planes }: PlanesPublicosSectionProps) {
           <PlanPricingCards planes={planes} />
         </Reveal>
 
-        <Reveal delay={160}>
-          <div className="mt-10 text-center">
-            <Link
-              href="/planes"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-primary transition hover:text-primary/80"
-            >
-              Ver planes completos y comparativa
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-        </Reveal>
+        {mostrarEnlaceCompleto ? (
+          <Reveal delay={160}>
+            <div className="mt-10 text-center">
+              <Link
+                href="/planes"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-primary transition hover:text-primary/80"
+              >
+                Ver planes completos y comparativa
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </Reveal>
+        ) : null}
       </div>
     </section>
   );

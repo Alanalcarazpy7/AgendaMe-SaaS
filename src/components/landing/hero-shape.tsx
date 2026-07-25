@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export function HeroShape() {
   return (
     <div
@@ -12,9 +14,11 @@ export function HeroShape() {
       "
       aria-hidden="true"
     >
-      <img
+      <Image
         src="/landing/hero-wave-bg1.svg"
         alt=""
+        fill
+        unoptimized
         draggable={false}
         className="
           h-full

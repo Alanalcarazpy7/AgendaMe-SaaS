@@ -1,5 +1,7 @@
 ﻿import type { HTMLAttributes } from "react";
 
+import Image from "next/image";
+
 type LogoVariant = "full" | "icon";
 type LogoTheme = "light" | "dark" | "auto";
 type LogoSize = "sm" | "md" | "lg" | "xl";
@@ -44,9 +46,13 @@ function LogoImage({
   className?: string;
 }) {
   return (
-    <img
+    <Image
       src={getLogoAsset(variant, mode)}
       alt="AgendaMe"
+      width={variant === "icon" ? 160 : 520}
+      height={160}
+      unoptimized
+      loading="eager"
       className={cn(
         "block h-full w-auto select-none object-contain",
         variant === "icon" && "aspect-square",
