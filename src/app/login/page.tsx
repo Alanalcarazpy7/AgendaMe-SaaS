@@ -12,11 +12,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const authErrorMessage =
     params.estado === "confirmacion_error"
       ? params.mensaje ??
-        "No pudimos confirmar el enlace. Inicia sesion o solicita uno nuevo."
+        "No pudimos confirmar el enlace. Iniciá sesión o solicitá uno nuevo."
       : null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--primary)_16%,transparent),transparent_34%),linear-gradient(180deg,var(--background),var(--muted))] px-4 py-10">
+    <main className="relative isolate flex min-h-[100dvh] items-center justify-center overflow-x-hidden p-3 sm:p-5 lg:p-6">
+      <div className="ag-private-bg pointer-events-none absolute inset-0 -z-10" />
       <AuthForm mode="login" authErrorMessage={authErrorMessage} />
     </main>
   );

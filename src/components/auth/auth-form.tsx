@@ -1,42 +1,60 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { AuthError } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   AlertCircle,
   ArrowRight,
+  Check,
   CheckCircle2,
-  Clock3,
+  Circle,
+  Eye,
+  EyeOff,
+  LoaderCircle,
+  LogIn,
   LockKeyhole,
   Mail,
+  UserPlus,
   UserRound,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+
+import { AuthProductPanel } from "@/components/auth/auth-product-panel";
+import { AgendaMeLogo } from "@/components/brand/agendame-logo";
+import { GoogleIcon } from "@/components/landing/social-icons";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 type AuthFormProps = {
   mode: "login" | "registro";
   authErrorMessage?: string | null;
 };
 
+type AuthField = "nombre" | "email" | "password" | "confirmarPassword";
+
+type ValidationError = {
+  field: AuthField;
+  message: string;
+};
+
 function traducirErrorLogin(error: AuthError) {
   const mensaje = error.message.toLowerCase();
 
   if (error.code === "invalid_credentials" || mensaje.includes("invalid login credentials")) {
-    return "El correo o la contrasena no coinciden. Revisa los datos e intenta de nuevo.";
+    return "El correo o la contraseña no coinciden. Revisá los datos e intentá de nuevo.";
   }
 
   if (error.code === "email_not_confirmed" || mensaje.includes("email not confirmed")) {
-    return "Todavia falta confirmar tu correo. Abri el enlace que te enviamos para activar la cuenta.";
+    return "Todavía falta confirmar tu correo. Abrí el enlace que te enviamos para activar la cuenta.";
   }
 
   if (error.code === "user_banned" || mensaje.includes("banned")) {
-    return "Esta cuenta esta bloqueada. Contacta al soporte si crees que es un error.";
+    return "Esta cuenta está bloqueada. Contactá al soporte si creés que es un error.";
   }
 
   if (
@@ -44,14 +62,14 @@ function traducirErrorLogin(error: AuthError) {
     error.code === "over_email_send_rate_limit" ||
     mensaje.includes("rate limit")
   ) {
-    return "Hay demasiados intentos seguidos. Espera unos minutos y volve a probar.";
+    return "Hay demasiados intentos seguidos. Esperá unos minutos y volvé a probar.";
   }
 
   if (mensaje.includes("failed to fetch") || mensaje.includes("network")) {
-    return "No pudimos conectar con el servidor. Revisa tu conexion a internet.";
+    return "No pudimos conectar con el servidor. Revisá tu conexión a internet.";
   }
 
-  return "No pudimos iniciar sesion. Revisa tus datos e intenta de nuevo.";
+  return "No pudimos iniciar sesión. Revisá tus datos e intentá de nuevo.";
 }
 
 function traducirErrorRegistro(error: AuthError) {
@@ -62,11 +80,11 @@ function traducirErrorRegistro(error: AuthError) {
     mensaje.includes("already registered") ||
     mensaje.includes("already exists")
   ) {
-    return "Ya existe una cuenta con ese correo. Inicia sesion con esa cuenta.";
+    return "Ya existe una cuenta con ese correo. Iniciá sesión con esa cuenta.";
   }
 
   if (error.code === "weak_password" || mensaje.includes("password")) {
-    return "La contrasena es muy corta. Usa al menos 6 caracteres.";
+    return "La contraseña no cumple con la política de seguridad. Revisá los requisitos e intentá de nuevo.";
   }
 
   if (
@@ -74,11 +92,11 @@ function traducirErrorRegistro(error: AuthError) {
     mensaje.includes("invalid format") ||
     mensaje.includes("invalid email")
   ) {
-    return "El correo ingresado no es valido.";
+    return "El correo ingresado no es válido.";
   }
 
   if (error.code === "signup_disabled") {
-    return "El registro de nuevas cuentas esta deshabilitado por ahora.";
+    return "El registro de nuevas cuentas está deshabilitado por ahora.";
   }
 
   if (
@@ -86,54 +104,210 @@ function traducirErrorRegistro(error: AuthError) {
     error.code === "over_email_send_rate_limit" ||
     mensaje.includes("rate limit")
   ) {
-    return "Hay demasiados intentos seguidos. Espera unos minutos y volve a probar.";
+    return "Hay demasiados intentos seguidos. Esperá unos minutos y volvé a probar.";
   }
 
   if (mensaje.includes("failed to fetch") || mensaje.includes("network")) {
-    return "No pudimos conectar con el servidor. Revisa tu conexion a internet.";
+    return "No pudimos conectar con el servidor. Revisá tu conexión a internet.";
   }
 
-  return "No pudimos crear tu cuenta. Revisa tus datos e intenta de nuevo.";
+  return "No pudimos crear tu cuenta. Revisá tus datos e intentá de nuevo.";
+}
+
+function AuthFieldShell({
+  invalid,
+  valid = false,
+  children,
+}: {
+  invalid: boolean;
+  valid?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "group/auth-field flex h-11 items-center gap-3 rounded-md border-2 bg-background px-3 shadow-sm transition-[border-color,box-shadow,background-color]",
+        "focus-within:border-primary focus-within:ring-3 focus-within:ring-primary/15",
+        invalid
+          ? "border-destructive ring-3 ring-destructive/15"
+          : valid
+            ? "border-emerald-500/60"
+            : "border-border hover:border-primary/45",
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+function PasswordToggle({
+  visible,
+  onToggle,
+}: {
+  visible: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
+      aria-pressed={visible}
+      className={cn(
+        "grid size-8 shrink-0 place-items-center rounded-md outline-none transition-[background-color,color,box-shadow]",
+        "hover:bg-primary/10 hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/40",
+        visible ? "bg-primary/10 text-primary" : "text-muted-foreground",
+      )}
+    >
+      {visible ? (
+        <EyeOff className="size-4" aria-hidden="true" />
+      ) : (
+        <Eye className="size-4" aria-hidden="true" />
+      )}
+    </button>
+  );
+}
+
+const PASSWORD_REQUIREMENTS = [
+  {
+    key: "length",
+    label: "8 caracteres",
+    test: (password: string) => password.length >= 8,
+  },
+  {
+    key: "uppercase",
+    label: "Una mayúscula",
+    test: (password: string) => /[A-ZÁÉÍÓÚÑ]/.test(password),
+  },
+  {
+    key: "lowercase",
+    label: "Una minúscula",
+    test: (password: string) => /[a-záéíóúñ]/.test(password),
+  },
+  {
+    key: "number",
+    label: "Un número",
+    test: (password: string) => /\d/.test(password),
+  },
+] as const;
+
+function PasswordRequirements({ password }: { password: string }) {
+  return (
+    <div
+      aria-label="Requisitos de la contraseña"
+      className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] leading-4"
+    >
+      {PASSWORD_REQUIREMENTS.map((requirement) => {
+        const complete = requirement.test(password);
+
+        return (
+          <p
+            key={requirement.key}
+            className={cn(
+              "flex items-center gap-1.5 transition-colors",
+              complete
+                ? "font-medium text-emerald-600 dark:text-emerald-400"
+                : "text-muted-foreground",
+            )}
+          >
+            {complete ? (
+              <span className="grid size-3.5 shrink-0 place-items-center rounded-full bg-emerald-500 text-white">
+                <Check className="size-2.5" strokeWidth={3} aria-hidden="true" />
+              </span>
+            ) : (
+              <Circle className="size-3.5 shrink-0" aria-hidden="true" />
+            )}
+            {requirement.label}
+          </p>
+        );
+      })}
+    </div>
+  );
 }
 
 export function AuthForm({ mode, authErrorMessage = null }: AuthFormProps) {
   const router = useRouter();
   const supabase = createClient();
+  const isRegistro = mode === "registro";
 
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
+  const [confirmarPassword, setConfirmarPassword] = useState("");
+  const [mostrarPassword, setMostrarPassword] = useState(false);
+  const [mostrarConfirmarPassword, setMostrarConfirmarPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorField, setErrorField] = useState<AuthField | null>(null);
+  const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const passwordValida = PASSWORD_REQUIREMENTS.every((requirement) =>
+    requirement.test(password),
+  );
+  const passwordsCoinciden =
+    confirmarPassword.length > 0 && password === confirmarPassword;
 
-  const isRegistro = mode === "registro";
-
-  function validarFormulario() {
+  function validarFormulario(): ValidationError | null {
     if (isRegistro && nombre.trim().length < 2) {
-      return "Ingresa tu nombre completo.";
+      return { field: "nombre", message: "Ingresá tu nombre completo." };
     }
 
-    const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-
     if (!email.trim()) {
-      return "Ingresa tu correo electronico.";
+      return { field: "email", message: "Ingresá tu correo electrónico." };
     }
 
     if (!emailValido) {
-      return "El correo ingresado no es valido.";
+      return { field: "email", message: "El correo ingresado no es válido." };
     }
 
     if (!password) {
-      return "Ingresa tu contrasena.";
+      return { field: "password", message: "Ingresá tu contraseña." };
     }
 
-    if (isRegistro && password.length < 6) {
-      return "La contrasena debe tener al menos 6 caracteres.";
+    if (isRegistro && password.length < 8) {
+      return {
+        field: "password",
+        message: "La contraseña debe tener al menos 8 caracteres.",
+      };
+    }
+
+    if (isRegistro && !/[A-ZÁÉÍÓÚÑ]/.test(password)) {
+      return {
+        field: "password",
+        message: "La contraseña debe incluir al menos una letra mayúscula.",
+      };
+    }
+
+    if (isRegistro && !/[a-záéíóúñ]/.test(password)) {
+      return {
+        field: "password",
+        message: "La contraseña debe incluir al menos una letra minúscula.",
+      };
+    }
+
+    if (isRegistro && !/\d/.test(password)) {
+      return {
+        field: "password",
+        message: "La contraseña debe incluir al menos un número.",
+      };
+    }
+
+    if (isRegistro && password !== confirmarPassword) {
+      return {
+        field: "confirmarPassword",
+        message: "Las contraseñas no coinciden.",
+      };
     }
 
     return null;
+  }
+
+  function clearFieldError(field: AuthField) {
+    if (errorField === field) {
+      setError(null);
+      setErrorField(null);
+    }
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -142,13 +316,15 @@ export function AuthForm({ mode, authErrorMessage = null }: AuthFormProps) {
     const errorValidacion = validarFormulario();
 
     if (errorValidacion) {
-      setError(errorValidacion);
+      setError(errorValidacion.message);
+      setErrorField(errorValidacion.field);
       setMensaje(null);
       return;
     }
 
     setLoading(true);
     setError(null);
+    setErrorField(null);
     setMensaje(null);
 
     try {
@@ -161,7 +337,7 @@ export function AuthForm({ mode, authErrorMessage = null }: AuthFormProps) {
               nombre: nombre.trim(),
             },
             emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
-              "/auth/redirect?confirmado=1"
+              "/auth/redirect?confirmado=1",
             )}`,
           },
         });
@@ -172,7 +348,7 @@ export function AuthForm({ mode, authErrorMessage = null }: AuthFormProps) {
         }
 
         setMensaje(
-          "Te enviamos un correo para activar tu cuenta. Abri el enlace y despues vas a configurar tu negocio con el plan gratis."
+          "Te enviamos un correo para activar tu cuenta. Abrí el enlace y después vas a configurar tu negocio con el plan gratis.",
         );
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -189,178 +365,394 @@ export function AuthForm({ mode, authErrorMessage = null }: AuthFormProps) {
         router.refresh();
       }
     } catch {
-      setError("Ocurrio un error inesperado. Intenta de nuevo.");
+      setError("Ocurrió un error inesperado. Intentá de nuevo.");
     } finally {
       setLoading(false);
     }
   }
 
+  async function handleGoogleSignIn() {
+    setLoadingGoogle(true);
+    setError(null);
+    setErrorField(null);
+    setMensaje(null);
+
+    try {
+      const { error: googleError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
+            "/auth/redirect",
+          )}`,
+        },
+      });
+
+      if (googleError) {
+        setError("No pudimos conectar con Google. Intentá de nuevo o usá tu correo.");
+        setLoadingGoogle(false);
+      }
+    } catch {
+      setError("No pudimos conectar con Google. Revisá tu conexión e intentá de nuevo.");
+      setLoadingGoogle(false);
+    }
+  }
+
   return (
-    <section className="grid w-full max-w-5xl overflow-hidden rounded-[2rem] border border-border/70 bg-card/90 shadow-[0_24px_70px_rgb(15_23_42/0.12)] ring-1 ring-white/60 backdrop-blur-xl dark:bg-card/80 dark:shadow-black/30 dark:ring-white/5 lg:grid-cols-[0.92fr_1.08fr]">
-      <aside className="relative hidden min-h-[34rem] overflow-hidden bg-[radial-gradient(circle_at_20%_15%,rgb(34_211_238/0.28),transparent_32%),linear-gradient(145deg,#07111f,#0f766e_55%,#0b1120)] p-8 text-white lg:block">
-        <div className="absolute inset-x-8 bottom-8 rounded-[1.5rem] border border-white/15 bg-white/10 p-5 shadow-2xl shadow-black/20 backdrop-blur-xl">
-          <p className="inline-flex items-center gap-2 rounded-full bg-white/12 px-3 py-1 text-xs font-semibold text-cyan-50">
-            <Clock3 className="h-3.5 w-3.5" />
-            AgendaMe
-          </p>
-          <h2 className="mt-5 max-w-sm text-3xl font-bold leading-tight tracking-tight">
-            Tu agenda online empieza con una cuenta verificada.
-          </h2>
-          <div className="mt-6 grid gap-3 text-sm text-cyan-50/85">
-            <p className="flex items-start gap-3">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" />
-              Confirmas el correo para proteger el acceso.
-            </p>
-            <p className="flex items-start gap-3">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" />
-              Configuras tu negocio y quedas en el plan gratis.
-            </p>
-            <p className="flex items-start gap-3">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" />
-              Luego podes activar funciones premium desde planes.
-            </p>
-          </div>
-        </div>
-      </aside>
-
-      <div className="p-5 sm:p-8">
-        <div className="mb-7">
-          <p className="inline-flex items-center gap-2 rounded-2xl border bg-muted/50 px-3 py-1.5 text-xs font-semibold text-muted-foreground">
-            {isRegistro ? (
-              <UserRound className="h-3.5 w-3.5 text-primary" />
-            ) : (
-              <LockKeyhole className="h-3.5 w-3.5 text-primary" />
-            )}
-            {isRegistro ? "Nuevo negocio" : "Acceso seguro"}
-          </p>
-          <h1 className="mt-4 text-3xl font-bold tracking-tight text-balance">
-            {isRegistro ? "Crea tu cuenta" : "Inicia sesion"}
-          </h1>
-          <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-            {isRegistro
-              ? "Despues de confirmar tu correo, vas a crear tu negocio y AgendaMe activara el plan gratis."
-              : "Entra con el correo de tu negocio. Si sos usuario nuevo, primero confirma el correo que recibiste."}
-          </p>
-        </div>
-
-        {authErrorMessage && (
-          <Alert
-            variant="destructive"
-            className="mb-4 border-destructive/25 bg-destructive/10"
-          >
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="font-medium text-destructive">
-              {authErrorMessage}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-          {isRegistro && (
-            <div className="space-y-2">
-              <Label htmlFor="nombre">Nombre</Label>
-              <div className="flex h-11 items-center gap-2 rounded-2xl border border-border/80 bg-background/70 px-3 focus-within:border-primary/60 focus-within:ring-3 focus-within:ring-primary/15">
-                <UserRound className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="nombre"
-                  type="text"
-                  value={nombre}
-                  onChange={(event) => setNombre(event.target.value)}
-                  placeholder="Ej: Alan Silva"
-                  className="h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-                />
-              </div>
-            </div>
+    <section className="mx-auto grid w-full max-w-[68rem] overflow-hidden rounded-xl border-2 border-white bg-card shadow-[0_32px_90px_rgb(15_23_42/0.24),0_4px_18px_rgb(37_99_235/0.12)] ring-1 ring-primary/15 dark:border-slate-700 dark:shadow-black/50 lg:h-[min(44rem,calc(100dvh-4rem))] lg:min-h-[40rem] lg:grid-cols-[minmax(26rem,0.95fr)_minmax(0,1.05fr)]">
+      <div className="flex min-w-0 bg-card">
+        <div
+          className={cn(
+            "mx-auto flex w-full max-w-[29rem] flex-col justify-center px-5 sm:px-8 sm:py-7 lg:px-9 lg:py-8 [@media(max-height:820px)]:py-4 [@media(max-height:740px)]:py-2",
+            isRegistro ? "py-5" : "py-7",
           )}
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Correo electronico</Label>
-            <div className="flex h-11 items-center gap-2 rounded-2xl border border-border/80 bg-background/70 px-3 focus-within:border-primary/60 focus-within:ring-3 focus-within:ring-primary/15">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="correo@ejemplo.com"
-                className="h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Contrasena</Label>
-            <div className="flex h-11 items-center gap-2 rounded-2xl border border-border/80 bg-background/70 px-3 focus-within:border-primary/60 focus-within:ring-3 focus-within:ring-primary/15">
-              <LockKeyhole className="h-4 w-4 text-muted-foreground" />
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder={isRegistro ? "Minimo 6 caracteres" : "Tu contrasena"}
-                className="h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-              />
-            </div>
-            {isRegistro && (
-              <p className="text-xs text-muted-foreground">
-                Usa una contrasena que puedas recordar. No la compartas con empleados.
-              </p>
+        >
+          <Link
+            href="/"
+            aria-label="Volver al inicio de AgendaMe"
+            className={cn(
+              "w-fit rounded-md outline-none transition-opacity hover:opacity-80 focus-visible:ring-3 focus-visible:ring-ring/50",
+              isRegistro
+                ? "mb-3 [@media(max-height:820px)]:mb-2"
+                : "mb-5",
             )}
-          </div>
+          >
+            <AgendaMeLogo
+              size="lg"
+              className="h-11 sm:h-14 [@media(max-height:740px)]:h-10"
+            />
+          </Link>
 
-          {error && (
+          <nav
+            aria-label="Elegir acceso o registro"
+            className={cn(
+              "grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted/70 p-1 shadow-inner",
+              isRegistro
+                ? "mb-3 [@media(max-height:820px)]:mb-2"
+                : "mb-5",
+            )}
+          >
+            <Link
+              href="/login"
+              aria-current={!isRegistro ? "page" : undefined}
+              className={cn(
+                "flex h-8 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-semibold outline-none transition-[background-color,color,box-shadow,transform] sm:h-9 sm:px-3 sm:text-sm [@media(max-height:740px)]:h-8 [@media(max-height:740px)]:text-xs",
+                "focus-visible:ring-3 focus-visible:ring-ring/40",
+                !isRegistro
+                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/25 ring-1 ring-primary active:scale-[0.98]"
+                  : "text-muted-foreground hover:bg-card/60 hover:text-foreground",
+              )}
+            >
+              <LogIn className="size-3.5 sm:size-4" aria-hidden="true" />
+              Iniciar sesión
+            </Link>
+            <Link
+              href="/auth/registro"
+              aria-current={isRegistro ? "page" : undefined}
+              className={cn(
+                "flex h-8 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-semibold outline-none transition-[background-color,color,box-shadow,transform] sm:h-9 sm:px-3 sm:text-sm [@media(max-height:740px)]:h-8 [@media(max-height:740px)]:text-xs",
+                "focus-visible:ring-3 focus-visible:ring-ring/40",
+                isRegistro
+                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/25 ring-1 ring-primary active:scale-[0.98]"
+                  : "text-muted-foreground hover:bg-card/60 hover:text-foreground",
+              )}
+            >
+              <UserPlus className="size-3.5 sm:size-4" aria-hidden="true" />
+              Crear cuenta
+            </Link>
+          </nav>
+
+          <header
+            className={
+              isRegistro
+                ? "mb-3 [@media(max-height:820px)]:mb-2"
+                : "mb-5"
+            }
+          >
+            <h1 className="text-3xl font-bold leading-tight text-balance sm:text-[2rem] [@media(max-height:740px)]:text-[1.75rem]">
+              {isRegistro ? "Creá tu cuenta" : "Bienvenido de nuevo"}
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              {isRegistro
+                ? "Organizá las reservas de tu negocio con AgendaMe."
+                : "Ingresá con los datos asociados a tu negocio."}
+            </p>
+          </header>
+
+          {authErrorMessage && (
             <Alert
               variant="destructive"
-              className="border-destructive/25 bg-destructive/10"
+              role="alert"
+              className="mb-3 rounded-md border-destructive/30 bg-destructive/10"
             >
-              <AlertCircle className="h-4 w-4" />
+              <AlertCircle className="size-4" aria-hidden="true" />
               <AlertDescription className="font-medium text-destructive">
-                {error}
+                {authErrorMessage}
               </AlertDescription>
             </Alert>
           )}
 
-          {mensaje && (
-            <Alert className="border-emerald-500/25 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200">
-              <CheckCircle2 className="h-4 w-4" />
-              <AlertDescription className="font-medium text-emerald-800 dark:text-emerald-200">
-                {mensaje}
-              </AlertDescription>
-            </Alert>
-          )}
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-3 [@media(max-height:740px)]:space-y-2.5"
+            noValidate
+          >
+            {isRegistro && (
+              <div className="space-y-1.5">
+                <Label htmlFor="nombre">Nombre completo</Label>
+                <AuthFieldShell
+                  invalid={errorField === "nombre"}
+                  valid={nombre.trim().length >= 2}
+                >
+                  <UserRound
+                    className="size-4 shrink-0 text-muted-foreground transition-colors group-focus-within/auth-field:text-primary"
+                    aria-hidden="true"
+                  />
+                  <Input
+                    id="nombre"
+                    name="name"
+                    type="text"
+                    value={nombre}
+                    onChange={(event) => {
+                      setNombre(event.target.value);
+                      clearFieldError("nombre");
+                    }}
+                    placeholder="Ej.: Alan Silva"
+                    autoComplete="name"
+                    autoCapitalize="words"
+                    required
+                    aria-invalid={errorField === "nombre"}
+                    aria-describedby={errorField === "nombre" ? "auth-form-error" : undefined}
+                    className="h-10 rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                  />
+                  {nombre.trim().length >= 2 && (
+                    <CheckCircle2
+                      className="size-4 shrink-0 text-emerald-500"
+                      aria-label="Nombre válido"
+                    />
+                  )}
+                </AuthFieldShell>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Correo electrónico</Label>
+              <AuthFieldShell
+                invalid={errorField === "email"}
+                valid={email.length > 0 && emailValido}
+              >
+                <Mail
+                  className="size-4 shrink-0 text-muted-foreground transition-colors group-focus-within/auth-field:text-primary"
+                  aria-hidden="true"
+                />
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  inputMode="email"
+                  value={email}
+                  onChange={(event) => {
+                    setEmail(event.target.value);
+                    clearFieldError("email");
+                  }}
+                  placeholder="correo@ejemplo.com"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  required
+                  aria-invalid={errorField === "email"}
+                  aria-describedby={errorField === "email" ? "auth-form-error" : undefined}
+                  className="h-10 rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                />
+                {email.length > 0 && emailValido && (
+                  <CheckCircle2
+                    className="size-4 shrink-0 text-emerald-500"
+                    aria-label="Correo válido"
+                  />
+                )}
+              </AuthFieldShell>
+            </div>
+
+            <div className={cn("grid gap-3", isRegistro && "sm:grid-cols-2")}>
+              <div className="min-w-0 space-y-1.5">
+                <Label htmlFor="password">Contraseña</Label>
+                <AuthFieldShell
+                  invalid={errorField === "password"}
+                  valid={isRegistro && passwordValida}
+                >
+                  <LockKeyhole
+                    className="size-4 shrink-0 text-muted-foreground transition-colors group-focus-within/auth-field:text-primary"
+                    aria-hidden="true"
+                  />
+                  <Input
+                    id="password"
+                    name="password"
+                    type={mostrarPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(event) => {
+                      setPassword(event.target.value);
+                      clearFieldError("password");
+                    }}
+                    placeholder="Tu contraseña"
+                    autoComplete={isRegistro ? "new-password" : "current-password"}
+                    minLength={isRegistro ? 8 : undefined}
+                    required
+                    aria-invalid={errorField === "password"}
+                    aria-describedby={errorField === "password" ? "auth-form-error" : undefined}
+                    className="h-10 rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                  />
+                  <PasswordToggle
+                    visible={mostrarPassword}
+                    onToggle={() => setMostrarPassword((visible) => !visible)}
+                  />
+                </AuthFieldShell>
+              </div>
+
+              {isRegistro && (
+                <div className="min-w-0 space-y-1.5">
+                  <Label htmlFor="confirmar-password">Repetir contraseña</Label>
+                  <AuthFieldShell
+                    invalid={errorField === "confirmarPassword"}
+                    valid={passwordsCoinciden}
+                  >
+                    <LockKeyhole
+                      className="size-4 shrink-0 text-muted-foreground transition-colors group-focus-within/auth-field:text-primary"
+                      aria-hidden="true"
+                    />
+                    <Input
+                      id="confirmar-password"
+                      name="confirm-password"
+                      type={mostrarConfirmarPassword ? "text" : "password"}
+                      value={confirmarPassword}
+                      onChange={(event) => {
+                        setConfirmarPassword(event.target.value);
+                        clearFieldError("confirmarPassword");
+                      }}
+                      placeholder="Repetila"
+                      autoComplete="new-password"
+                      minLength={8}
+                      required
+                      aria-invalid={errorField === "confirmarPassword"}
+                      aria-describedby={
+                        errorField === "confirmarPassword" ? "auth-form-error" : undefined
+                      }
+                      className="h-10 rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                    />
+                    {passwordsCoinciden && (
+                      <CheckCircle2
+                        className="size-4 shrink-0 text-emerald-500"
+                        aria-label="Las contraseñas coinciden"
+                      />
+                    )}
+                    <PasswordToggle
+                      visible={mostrarConfirmarPassword}
+                      onToggle={() =>
+                        setMostrarConfirmarPassword((visible) => !visible)
+                      }
+                    />
+                  </AuthFieldShell>
+                </div>
+              )}
+            </div>
+
+            {isRegistro && <PasswordRequirements password={password} />}
+
+            {error && (
+              <Alert
+                id="auth-form-error"
+                variant="destructive"
+                role="alert"
+                className="rounded-md border-destructive/30 bg-destructive/10 py-2.5"
+              >
+                <AlertCircle className="size-4" aria-hidden="true" />
+                <AlertDescription className="font-medium text-destructive">
+                  {error}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {mensaje && (
+              <Alert
+                role="status"
+                aria-live="polite"
+                className="rounded-md border-emerald-500/30 bg-emerald-500/10 py-2.5 text-emerald-900 dark:text-emerald-200"
+              >
+                <CheckCircle2 className="size-4" aria-hidden="true" />
+                <AlertDescription className="font-medium text-emerald-800 dark:text-emerald-200">
+                  {mensaje}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <Button
+              type="submit"
+              className="h-11 w-full rounded-md text-sm font-bold shadow-md shadow-primary/20"
+              disabled={loading || loadingGoogle}
+            >
+              {loading ? (
+                <>
+                  <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+                  Procesando
+                </>
+              ) : (
+                <>
+                  {isRegistro ? "Crear cuenta" : "Iniciar sesión"}
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </>
+              )}
+            </Button>
+          </form>
+
+          <div
+            className="my-3 flex items-center gap-3 [@media(max-height:740px)]:my-2"
+            aria-hidden="true"
+          >
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs font-semibold text-muted-foreground">o</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
 
           <Button
-            type="submit"
-            className="h-11 w-full rounded-2xl text-sm font-bold"
-            disabled={loading}
+            type="button"
+            variant="outline"
+            onClick={handleGoogleSignIn}
+            disabled={loading || loadingGoogle}
+            className="h-11 w-full rounded-md border-2 text-sm font-bold shadow-sm [@media(max-height:740px)]:h-10"
           >
-            {loading
-              ? "Procesando..."
-              : isRegistro
-                ? "Crear cuenta"
-                : "Iniciar sesion"}
-            {!loading && <ArrowRight className="h-4 w-4" />}
+            {loadingGoogle ? (
+              <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <GoogleIcon className="size-4" />
+            )}
+            {loadingGoogle ? "Conectando con Google" : "Continuar con Google"}
           </Button>
-        </form>
 
-        <div className="mt-5 rounded-2xl bg-muted/50 p-4 text-center text-sm text-muted-foreground">
-          {isRegistro ? (
-            <>
-              Ya tenes cuenta?{" "}
-              <Link href="/login" className="font-semibold text-primary hover:underline">
-                Iniciar sesion
+          {isRegistro && (
+            <p className="mt-3 pb-3 text-center text-[11px] leading-4 text-muted-foreground [@media(max-height:820px)]:mt-2">
+              Al crear tu cuenta aceptás los{" "}
+              <Link
+                href="/terminos"
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-foreground underline underline-offset-2 hover:text-primary"
+              >
+                Términos de Servicio
+              </Link>{" "}
+              y la{" "}
+              <Link
+                href="/privacidad"
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-foreground underline underline-offset-2 hover:text-primary"
+              >
+                Política de Privacidad
               </Link>
-            </>
-          ) : (
-            <>
-              No tenes cuenta?{" "}
-              <Link href="/registro" className="font-semibold text-primary hover:underline">
-                Crear cuenta
-              </Link>
-            </>
+              .
+            </p>
           )}
         </div>
       </div>
+
+      <AuthProductPanel mode={mode} />
     </section>
   );
 }

@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+﻿import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -19,8 +19,17 @@ export const metadata: Metadata = {
   icons: {
     icon: "/brand/icon-agendame.svg",
     shortcut: "/brand/icon-agendame.svg",
-    apple: "/brand/icon-agendame.svg",
+    apple: "/icons/apple-touch-icon.png",
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "AgendaMe",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0b1120",
 };
 
 // Se ejecuta de forma sincrónica antes del primer paint (script bloqueante
@@ -44,6 +53,17 @@ const TEMA_INIT_SCRIPT = `
 })();
 `;
 
+function ThemeInitScript() {
+  return (
+    <script
+      id="agendame-theme-init"
+      type={typeof window === "undefined" ? "text/javascript" : "text/plain"}
+      suppressHydrationWarning
+      dangerouslySetInnerHTML={{ __html: TEMA_INIT_SCRIPT }}
+    />
+  );
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -63,12 +83,9 @@ export default function RootLayout({
       )}
     >
       <head>
-        <script
-          id="agendame-theme-init"
-          dangerouslySetInnerHTML={{ __html: TEMA_INIT_SCRIPT }}
-        />
+        <ThemeInitScript />
       </head>
-      <body className="flex min-h-full flex-col">
+      <body suppressHydrationWarning className="flex min-h-full flex-col">
         {children}
         <Toaster richColors closeButton position="top-right" />
         <MonitoringProviders />

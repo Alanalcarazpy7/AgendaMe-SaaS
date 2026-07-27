@@ -42,6 +42,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
           userAvatarUrl={restricted.user.avatar_url}
           userCargo={restricted.user.cargo}
           userColor={restricted.user.color_acento}
+          negocioId={restricted.negocio.id}
           negocioNombre={restricted.negocio.nombre}
           negocioLogoUrl={restricted.negocio.logo_url ?? null}
           planClave={restricted.planClave}
@@ -66,6 +67,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
           userAvatarUrl={inactiveBranch.user.avatar_url}
           userCargo={inactiveBranch.user.cargo}
           userColor={inactiveBranch.user.color_acento}
+          negocioId={inactiveBranch.negocio.id}
           negocioNombre={inactiveBranch.negocio.nombre}
           negocioLogoUrl={inactiveBranch.negocio.logo_url ?? null}
           planClave={inactiveBranch.planClave}
@@ -97,6 +99,7 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
         userAvatarUrl={blocked.user.avatar_url}
         userCargo={blocked.user.cargo}
         userColor={blocked.user.color_acento}
+        negocioId={blocked.negocio.id}
         negocioNombre={blocked.negocio.nombre}
         negocioLogoUrl={blocked.negocio.logo_url ?? null}
         planClave={blocked.planClave}
@@ -123,12 +126,14 @@ export default async function DashboardLayout({ children }: DashboardLayoutProps
       userAvatarUrl={access.user.avatar_url}
       userCargo={access.user.cargo}
       userColor={access.user.color_acento}
+      negocioId={access.negocio.id}
       negocioNombre={access.negocio.nombre}
       negocioLogoUrl={access.negocio.logo_url ?? null}
       planClave={access.planClave}
       accessRole={access.rol}
       accessScope={access.scope}
       scopeLabel={scopeLabel}
+      tourHabilitado={access.puedeVerTodo || access.rol === "gerente_sucursal"}
     >
       {access.puedeGestionarPlanes ? <DashboardVencimientoBanner negocioId={access.negocio.id} /> : null}
       {access.puedeVerTodo ? (

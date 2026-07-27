@@ -5,10 +5,12 @@ import type {
   DashboardAccessRole,
   DashboardAccessScope,
 } from "@/lib/dashboard/access-context";
+import { DashboardMobileBottomNav } from "@/components/dashboard/dashboard-mobile-bottom-nav";
 import { DashboardMobileMenu } from "@/components/dashboard/dashboard-mobile-menu";
 import { DashboardPreferencesApplier } from "@/components/dashboard/dashboard-preferences-applier";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
 import { DashboardUserContextCard } from "@/components/dashboard/dashboard-user-context-card";
+import { SidebarTour } from "@/components/dashboard/sidebar-tour";
 
 type DashboardShellProps = {
   children: ReactNode;
@@ -19,12 +21,14 @@ type DashboardShellProps = {
   userAvatarUrl?: string | null;
   userCargo?: string | null;
   userColor?: string | null;
+  negocioId: string;
   negocioNombre: string;
   negocioLogoUrl?: string | null;
   planClave: string;
   accessRole: DashboardAccessRole;
   accessScope: DashboardAccessScope;
   scopeLabel: string;
+  tourHabilitado?: boolean;
 };
 
 export function DashboardShell({
@@ -36,14 +40,19 @@ export function DashboardShell({
   userAvatarUrl,
   userCargo,
   userColor,
+  negocioId,
   negocioNombre,
   negocioLogoUrl,
   planClave,
   accessRole,
   accessScope,
   scopeLabel,
+  tourHabilitado = false,
 }: DashboardShellProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
+  const [collapsedAntesDelTour, setCollapsedAntesDelTour] = useState(false);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -53,12 +62,46 @@ export function DashboardShell({
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
+  useEffect(() => {
+    if (!tourHabilitado) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      const visto = window.localStorage.getItem(`agendame-tour-visto-${negocioId}`);
+
+      if (!visto) {
+        abrirTour();
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tourHabilitado, negocioId]);
+
   function toggleSidebar() {
     setCollapsed((current) => {
       const next = !current;
       window.localStorage.setItem("agendame-sidebar", next ? "compact" : "expanded");
       return next;
     });
+  }
+
+  function abrirTour() {
+    const esEscritorio = window.matchMedia("(min-width: 1024px)").matches;
+
+    if (esEscritorio) {
+      setCollapsedAntesDelTour(collapsed);
+      setCollapsed(false);
+    }
+
+    setTourOpen(true);
+  }
+
+  function cerrarTour() {
+    window.localStorage.setItem(`agendame-tour-visto-${negocioId}`, "1");
+    setCollapsed(collapsedAntesDelTour);
+    setMobileMenuOpen(false);
+
+    setTourOpen(false);
   }
 
   const shellStyle = {
@@ -81,6 +124,7 @@ export function DashboardShell({
         <DashboardSidebar
           collapsed={collapsed}
           onToggleCollapsed={toggleSidebar}
+          onOpenTour={tourHabilitado ? abrirTour : undefined}
           userEmail={userEmail}
           userName={userName}
           userAvatarUrl={userAvatarUrl}
@@ -94,7 +138,23 @@ export function DashboardShell({
         />
       </div>
 
+      {tourHabilitado && (
+        <SidebarTour
+          open={tourOpen}
+          onClose={cerrarTour}
+          onSetDrawerOpen={setMobileMenuOpen}
+          negocioNombre={negocioNombre}
+          accessRole={accessRole}
+          accessScope={accessScope}
+          planClave={planClave}
+        />
+      )}
+
       <DashboardMobileMenu
+        open={mobileMenuOpen}
+        onOpenChange={setMobileMenuOpen}
+        onOpenTour={tourHabilitado ? abrirTour : undefined}
+        sinAnimacion={tourOpen}
         userEmail={userEmail}
         userName={userName}
         userAvatarUrl={userAvatarUrl}
@@ -107,10 +167,17 @@ export function DashboardShell({
         scopeLabel={scopeLabel}
       />
 
+      <DashboardMobileBottomNav
+        accessRole={accessRole}
+        accessScope={accessScope}
+        planClave={planClave}
+        onOpenMenu={() => setMobileMenuOpen(true)}
+      />
+
       <main className="relative z-10 lg:pl-[var(--dashboard-sidebar-width)] lg:transition-[padding] lg:duration-300 lg:ease-[var(--ease-out)]">
         <div
           data-testid="dashboard-main-content"
-          className="mx-auto w-full max-w-[1540px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7"
+          className="mx-auto w-full max-w-[1540px] px-4 py-5 pb-24 sm:px-6 lg:px-8 lg:py-7 lg:pb-7"
         >
           <DashboardUserContextCard
             userName={userName}

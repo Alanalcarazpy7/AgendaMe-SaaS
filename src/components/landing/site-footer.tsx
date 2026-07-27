@@ -46,6 +46,8 @@ export function SiteFooter() {
                 <Link href="/#contacto" className="w-fit transition hover:translate-x-0.5 hover:text-white">Contacto</Link>
                 <Link href="/auth/login" className="w-fit transition hover:translate-x-0.5 hover:text-white">Iniciar sesión</Link>
                 <Link href="/auth/registro" className="w-fit transition hover:translate-x-0.5 hover:text-white">Crear cuenta</Link>
+                <Link href="/terminos" className="w-fit transition hover:translate-x-0.5 hover:text-white">Términos de Servicio</Link>
+                <Link href="/privacidad" className="w-fit transition hover:translate-x-0.5 hover:text-white">Política de Privacidad</Link>
               </div>
             </div>
 

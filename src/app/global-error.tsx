@@ -17,8 +17,11 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <html lang="es">
-      <body className="grid min-h-screen place-items-center bg-background px-5 text-foreground">
+    <html lang="es" suppressHydrationWarning>
+      <body
+        suppressHydrationWarning
+        className="grid min-h-screen place-items-center bg-background px-5 text-foreground"
+      >
         <main className="w-full max-w-lg rounded-lg border bg-card p-6 shadow-xl sm:p-8">
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
             <AlertTriangle className="h-6 w-6" aria-hidden="true" />

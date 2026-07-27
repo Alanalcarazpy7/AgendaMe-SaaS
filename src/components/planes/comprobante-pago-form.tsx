@@ -136,7 +136,10 @@ export function ComprobantePagoForm({ planes, planActualId, pagos }: Props) {
               <p className="text-xs font-black uppercase tracking-[0.16em] text-primary">Pagos y comprobantes</p>
               <h2 className="mt-2 text-2xl font-black tracking-tight">Enviar comprobante</h2>
               <p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">
-                Subi la captura o PDF de tu transferencia. Queda pendiente hasta que AgendaMe lo revise.
+                Usá este formulario para <strong className="text-foreground">renovar tu plan actual</strong> antes de
+                que venza, o para <strong className="text-foreground">pasarte a otro plan</strong>. Elegí el plan,
+                subí la captura o PDF de tu transferencia y quedará pendiente hasta que AgendaMe lo revise y active
+                el cambio.
               </p>
             </div>
             <div className="hidden rounded-2xl bg-primary/10 p-3 text-primary ring-1 ring-primary/15 sm:block">

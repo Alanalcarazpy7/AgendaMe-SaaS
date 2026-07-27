@@ -1,34 +1,22 @@
 ﻿"use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  BarChart3,
-  Bell,
-  BriefcaseBusiness,
-  Building2,
-  CalendarCheck2,
-  CalendarClock,
-  Download,
-  Home,
-  LayoutDashboard,
-  Menu,
-  Settings,
-  Store,
-  UserCircle2,
-  Users,
-  X,
-} from "lucide-react";
+import { Compass, UserCircle2, X } from "lucide-react";
 import type {
   DashboardAccessRole,
   DashboardAccessScope,
 } from "@/lib/dashboard/access-context";
 import { AgendaMeIcon, AgendaMeLogo } from "@/components/brand/agendame-logo";
 import { SignOutButton } from "@/components/dashboard/sign-out-button";
+import { getVisibleNavItems } from "@/components/dashboard/dashboard-sidebar";
 
 type Props = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onOpenTour?: () => void;
+  sinAnimacion?: boolean;
   userEmail?: string;
   userName?: string;
   userAvatarUrl?: string | null;
@@ -67,152 +55,26 @@ function iniciales(nombre?: string, email?: string) {
   return base.slice(0, 2).toUpperCase();
 }
 
-function canSee(
-  item:
-    | "inicio"
-    | "reservas"
-    | "citas"
-    | "clientes"
-    | "empleados"
-    | "servicios"
-    | "reportes"
-    | "exportar"
-    | "recordatorios"
-    | "sucursales"
-    | "planes"
-    | "configuracion",
-  rol: DashboardAccessRole,
-  scope: DashboardAccessScope,
-  planClave: string
-) {
-  const global = scope === "global";
-  const empresarial = planClave === "empresarial";
-  const profesional = planClave === "profesional" || empresarial;
-  const basico = planClave === "basico" || profesional;
-
-  if (item === "inicio") return true;
-
-  if (global) {
-    if (item === "reportes") return basico;
-    if (item === "exportar") return profesional;
-    if (item === "recordatorios") return profesional;
-    if (item === "sucursales") return empresarial;
-    return true;
-  }
-
-  if (rol === "gerente_sucursal") {
-    return [
-      "inicio",
-      "reservas",
-      "citas",
-      "clientes",
-      "empleados",
-      "reportes",
-      "exportar",
-      "recordatorios",
-    ].includes(item);
-  }
-
-  if (rol === "recepcionista_sucursal") {
-    return ["inicio", "reservas", "citas", "clientes", "recordatorios"].includes(item);
-  }
-
-  if (rol === "empleado_sucursal") {
-    return ["inicio", "citas"].includes(item);
-  }
-
-  return false;
-}
-
 export function DashboardMobileMenu({
   userEmail,
   userName,
+  userAvatarUrl,
+  userColor,
   negocioNombre,
   negocioLogoUrl,
   planClave,
   accessRole,
   accessScope,
   scopeLabel,
+  open,
+  onOpenChange,
+  onOpenTour,
+  sinAnimacion = false,
 }: Props) {
-  const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
   const nombreVisible = userName || userEmail?.split("@")[0] || "Usuario";
-
-  const navItems = [
-    {
-      key: "inicio" as const,
-      label: "Inicio",
-      href: "/dashboard",
-      icon: Home,
-    },
-    {
-      key: "reservas" as const,
-      label: "Reservas",
-      href: "/dashboard/reservas",
-      icon: CalendarClock,
-    },
-    {
-      key: "citas" as const,
-      label: "Citas",
-      href: "/dashboard/citas",
-      icon: CalendarCheck2,
-    },
-    {
-      key: "clientes" as const,
-      label: "Clientes",
-      href: "/dashboard/clientes",
-      icon: Users,
-    },
-    {
-      key: "empleados" as const,
-      label: "Empleados",
-      href: "/dashboard/empleados",
-      icon: BriefcaseBusiness,
-    },
-    {
-      key: "servicios" as const,
-      label: "Servicios",
-      href: "/dashboard/servicios",
-      icon: Store,
-    },
-    {
-      key: "reportes" as const,
-      label: "Reportes",
-      href: "/dashboard/reportes",
-      icon: BarChart3,
-    },
-    {
-      key: "exportar" as const,
-      label: "Exportar",
-      href: "/dashboard/exportar",
-      icon: Download,
-    },
-    {
-      key: "recordatorios" as const,
-      label: "Recordatorios",
-      href: "/dashboard/recordatorios",
-      icon: Bell,
-    },
-    {
-      key: "sucursales" as const,
-      label: "Sucursales",
-      href: "/dashboard/sucursales",
-      icon: Building2,
-    },
-    {
-      key: "planes" as const,
-      label: "Planes",
-      href: "/dashboard/planes",
-      icon: LayoutDashboard,
-    },
-    {
-      key: "configuracion" as const,
-      label: "Configuración",
-      href: "/dashboard/configuracion",
-      icon: Settings,
-    },
-  ].filter((item) => canSee(item.key, accessRole, accessScope, planClave));
+  const navItems = getVisibleNavItems(accessRole, accessScope, planClave);
 
   return (
     <>
@@ -244,14 +106,29 @@ export function DashboardMobileMenu({
             </div>
           </Link>
 
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border bg-card shadow-sm outline-none transition-[background-color,box-shadow,color] duration-200 ease-[var(--ease-out)] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            aria-label="Abrir menú"
+          <Link
+            href="/dashboard/mi-cuenta"
+            aria-label="Mi cuenta"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-card shadow-sm outline-none transition-[background-color,box-shadow,color] duration-200 ease-[var(--ease-out)] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            <Menu className="h-5 w-5" />
-          </button>
+            {userAvatarUrl ? (
+              <Image
+                src={userAvatarUrl}
+                alt={nombreVisible}
+                width={40}
+                height={40}
+                unoptimized
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span
+                className="flex h-full w-full items-center justify-center text-xs font-bold text-white"
+                style={{ backgroundColor: userColor ?? "var(--primary)" }}
+              >
+                {iniciales(nombreVisible, userEmail)}
+              </span>
+            )}
+          </Link>
         </div>
       </header>
 
@@ -260,11 +137,15 @@ export function DashboardMobileMenu({
           <button
             type="button"
             className="ag-dashboard-overlay absolute inset-0"
-            onClick={() => setOpen(false)}
+            style={sinAnimacion ? { transition: "none" } : undefined}
+            onClick={() => onOpenChange(false)}
             aria-label="Cerrar menú"
           />
 
-          <aside className="ag-dashboard-drawer absolute right-0 top-0 flex h-full w-[88%] max-w-sm flex-col border-l bg-background shadow-2xl shadow-slate-950/25 dark:shadow-black/50">
+          <aside
+            className="ag-dashboard-drawer absolute right-0 top-0 flex h-full w-[88%] max-w-sm flex-col border-l bg-background shadow-2xl shadow-slate-950/25 dark:shadow-black/50"
+            style={sinAnimacion ? { transition: "none" } : undefined}
+          >
             <div className="flex items-center justify-between border-b p-4">
               <div>
                 <AgendaMeLogo size="sm" />
@@ -273,7 +154,7 @@ export function DashboardMobileMenu({
 
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={() => onOpenChange(false)}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl border bg-card outline-none transition-[background-color,box-shadow,color] duration-200 ease-[var(--ease-out)] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 aria-label="Cerrar menú"
               >
@@ -284,7 +165,7 @@ export function DashboardMobileMenu({
             <div className="border-b p-4">
               <Link
                 href="/dashboard/mi-cuenta"
-                onClick={() => setOpen(false)}
+                onClick={() => onOpenChange(false)}
                 className={`flex items-center gap-3 rounded-2xl border p-3 outline-none transition-[background-color,box-shadow,color] duration-200 ease-[var(--ease-out)] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                   pathname === "/dashboard/mi-cuenta" ? "bg-accent shadow-sm" : "bg-card"
                 }`}
@@ -326,7 +207,8 @@ export function DashboardMobileMenu({
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() => setOpen(false)}
+                    data-tour-id={`drawer-${item.key}`}
+                    onClick={() => onOpenChange(false)}
                     className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium outline-none transition-[background-color,color,box-shadow] duration-200 ease-[var(--ease-out)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                       active
                         ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
@@ -340,7 +222,17 @@ export function DashboardMobileMenu({
               })}
             </nav>
 
-            <div className="border-t p-4">
+            <div className="space-y-2 border-t p-4">
+              {onOpenTour && (
+                <button
+                  type="button"
+                  onClick={onOpenTour}
+                  className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border bg-card text-sm font-semibold shadow-sm outline-none transition-[background-color,box-shadow,color] duration-200 ease-[var(--ease-out)] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  <Compass className="h-4 w-4" />
+                  Ver recorrido
+                </button>
+              )}
               <SignOutButton />
             </div>
           </aside>

@@ -12,6 +12,7 @@ import {
   CalendarClock,
   ChevronLeft,
   ChevronRight,
+  Compass,
   Crown,
   Download,
   Home,
@@ -28,10 +29,12 @@ import type {
 } from "@/lib/dashboard/access-context";
 import { AgendaMeIcon, AgendaMeLogo } from "@/components/brand/agendame-logo";
 import { SignOutButton } from "@/components/dashboard/sign-out-button";
+import { Button } from "@/components/ui/button";
 
 type Props = {
   collapsed?: boolean;
   onToggleCollapsed?: () => void;
+  onOpenTour?: () => void;
   userEmail?: string;
   userName?: string;
   userAvatarUrl?: string | null;
@@ -44,7 +47,7 @@ type Props = {
   scopeLabel: string;
 };
 
-type NavKey =
+export type NavKey =
   | "inicio"
   | "reservas"
   | "citas"
@@ -80,7 +83,7 @@ function iniciales(nombre?: string, email?: string) {
   return base.slice(0, 2).toUpperCase();
 }
 
-function canSee(
+export function canSee(
   item: NavKey,
   rol: DashboardAccessRole,
   scope: DashboardAccessScope,
@@ -125,9 +128,33 @@ function canSee(
   return false;
 }
 
+export const NAV_ITEMS = [
+  { key: "inicio" as const, label: "Inicio", href: "/dashboard", icon: Home, group: "Agenda" },
+  { key: "reservas" as const, label: "Reservas", href: "/dashboard/reservas", icon: CalendarClock, group: "Agenda" },
+  { key: "citas" as const, label: "Citas", href: "/dashboard/citas", icon: CalendarCheck2, group: "Agenda" },
+  { key: "clientes" as const, label: "Clientes", href: "/dashboard/clientes", icon: Users, group: "Gestión" },
+  { key: "empleados" as const, label: "Empleados", href: "/dashboard/empleados", icon: BriefcaseBusiness, group: "Gestión" },
+  { key: "servicios" as const, label: "Servicios", href: "/dashboard/servicios", icon: Store, group: "Gestión" },
+  { key: "reportes" as const, label: "Reportes", href: "/dashboard/reportes", icon: BarChart3, group: "Crecimiento" },
+  { key: "exportar" as const, label: "Exportar", href: "/dashboard/exportar", icon: Download, group: "Crecimiento" },
+  { key: "recordatorios" as const, label: "Recordatorios", href: "/dashboard/recordatorios", icon: Bell, group: "Crecimiento" },
+  { key: "sucursales" as const, label: "Sucursales", href: "/dashboard/sucursales", icon: Building2, group: "Sistema" },
+  { key: "planes" as const, label: "Planes", href: "/dashboard/planes", icon: LayoutDashboard, group: "Sistema" },
+  { key: "configuracion" as const, label: "Configuración", href: "/dashboard/configuracion", icon: Settings, group: "Sistema" },
+];
+
+export function getVisibleNavItems(
+  rol: DashboardAccessRole,
+  scope: DashboardAccessScope,
+  planClave: string
+) {
+  return NAV_ITEMS.filter((item) => canSee(item.key, rol, scope, planClave));
+}
+
 export function DashboardSidebar({
   collapsed = false,
   onToggleCollapsed,
+  onOpenTour,
   userEmail,
   userName,
   userAvatarUrl,
@@ -143,20 +170,7 @@ export function DashboardSidebar({
   const nombreVisible = userName || userEmail?.split("@")[0] || "Usuario";
   const compactLabel = collapsed ? "Expandir menú" : "Colapsar menú";
 
-  const navItems = [
-    { key: "inicio" as const, label: "Inicio", href: "/dashboard", icon: Home, group: "Agenda" },
-    { key: "reservas" as const, label: "Reservas", href: "/dashboard/reservas", icon: CalendarClock, group: "Agenda" },
-    { key: "citas" as const, label: "Citas", href: "/dashboard/citas", icon: CalendarCheck2, group: "Agenda" },
-    { key: "clientes" as const, label: "Clientes", href: "/dashboard/clientes", icon: Users, group: "Gestión" },
-    { key: "empleados" as const, label: "Empleados", href: "/dashboard/empleados", icon: BriefcaseBusiness, group: "Gestión" },
-    { key: "servicios" as const, label: "Servicios", href: "/dashboard/servicios", icon: Store, group: "Gestión" },
-    { key: "reportes" as const, label: "Reportes", href: "/dashboard/reportes", icon: BarChart3, group: "Crecimiento" },
-    { key: "exportar" as const, label: "Exportar", href: "/dashboard/exportar", icon: Download, group: "Crecimiento" },
-    { key: "recordatorios" as const, label: "Recordatorios", href: "/dashboard/recordatorios", icon: Bell, group: "Crecimiento" },
-    { key: "sucursales" as const, label: "Sucursales", href: "/dashboard/sucursales", icon: Building2, group: "Sistema" },
-    { key: "planes" as const, label: "Planes", href: "/dashboard/planes", icon: LayoutDashboard, group: "Sistema" },
-    { key: "configuracion" as const, label: "Configuración", href: "/dashboard/configuracion", icon: Settings, group: "Sistema" },
-  ].filter((item) => canSee(item.key, accessRole, accessScope, planClave));
+  const navItems = getVisibleNavItems(accessRole, accessScope, planClave);
 
   const grouped = navItems.reduce<Record<string, typeof navItems>>((acc, item) => {
     acc[item.group] = acc[item.group] ?? [];
@@ -168,11 +182,11 @@ export function DashboardSidebar({
 
   return (
     <aside className="flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-sidebar-border/80 bg-sidebar/95 text-sidebar-foreground shadow-[22px_0_70px_rgb(15_23_42/0.10)] ring-1 ring-white/60 backdrop-blur-xl transition-[border-color,box-shadow] duration-300 dark:bg-sidebar/90 dark:shadow-[20px_0_70px_rgb(0_0_0/0.38)] dark:ring-white/5">
-      <div className="relative border-b border-sidebar-border/70 p-4">
-        <div className="flex items-center justify-between gap-2">
+      <div className={`relative border-b border-sidebar-border/70 ${collapsed ? "p-3" : "p-4"}`}>
+        <div className={collapsed ? "flex flex-col items-center gap-2" : "flex items-center justify-between gap-2"}>
           <Link
             href="/dashboard"
-            className="inline-flex min-w-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
+            className="inline-flex shrink-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
             aria-label="Ir al inicio de AgendaMe"
           >
             {collapsed ? <AgendaMeIcon size="sm" /> : <AgendaMeLogo size="sm" />}
@@ -192,19 +206,21 @@ export function DashboardSidebar({
         <Link
           href="/dashboard"
           title={negocioNombre}
-          className={`mt-5 flex items-center gap-3 rounded-2xl border border-sidebar-border/70 bg-sidebar-accent/40 p-2.5 shadow-sm outline-none transition-[background-color,box-shadow] duration-200 ease-[var(--ease-out)] hover:bg-sidebar-accent/70 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
-            collapsed ? "justify-center" : ""
+          className={`flex items-center gap-3 rounded-2xl border border-sidebar-border/70 bg-sidebar-accent/40 shadow-sm outline-none transition-[background-color,box-shadow] duration-200 ease-[var(--ease-out)] hover:bg-sidebar-accent/70 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
+            collapsed ? "mt-2 justify-center p-2" : "mt-5 p-2.5"
           }`}
         >
           {negocioLogoUrl ? (
-            <Image
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-sidebar-border bg-white shadow-sm">
+              <Image
                 src={negocioLogoUrl}
                 alt={negocioNombre}
                 width={40}
                 height={40}
                 unoptimized
-                className="h-10 w-10 rounded-2xl border border-sidebar-border object-cover shadow-sm"
+                className="h-full w-full object-contain p-1"
               />
+            </span>
           ) : (
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sidebar-primary text-xs font-bold text-sidebar-primary-foreground shadow-sm shadow-sidebar-primary/20">
               {iniciales(negocioNombre)}
@@ -222,7 +238,7 @@ export function DashboardSidebar({
         </Link>
       </div>
 
-      <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+      <nav className={`flex-1 overflow-y-auto px-3 ${collapsed ? "space-y-2 py-3" : "space-y-5 py-4"}`}>
         {Object.entries(grouped).map(([group, items]) => (
           <div key={group}>
             {!collapsed && (
@@ -243,10 +259,11 @@ export function DashboardSidebar({
                   <Link
                     key={item.href}
                     href={item.href}
+                    data-tour-id={item.key}
                     title={collapsed ? item.label : undefined}
                     aria-label={collapsed ? item.label : undefined}
-                    className={`group relative flex min-h-11 items-center rounded-2xl text-sm font-medium outline-none transition-[background-color,color,box-shadow,transform] duration-200 ease-[var(--ease-out)] focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
-                      collapsed ? "justify-center px-0" : "gap-3 px-3"
+                    className={`group relative flex items-center rounded-2xl text-sm font-medium outline-none transition-[background-color,color,box-shadow,transform] duration-200 ease-[var(--ease-out)] focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
+                      collapsed ? "h-10 justify-center px-0" : "min-h-11 gap-3 px-3"
                     } ${
                       active
                         ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/20"
@@ -270,35 +287,45 @@ export function DashboardSidebar({
         <Link
           href="/dashboard/planes"
           title={showUpgrade ? "Actualizar plan" : "Plan activo"}
-          className={`mb-3 block overflow-hidden rounded-2xl border outline-none transition-[box-shadow,transform,border-color] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
+          className={`mb-2.5 flex items-center overflow-hidden rounded-2xl border outline-none transition-[box-shadow,transform,border-color] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
             showUpgrade
-              ? "border-cyan-300/50 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary)_94%,#0b1120),color-mix(in_srgb,var(--ring)_72%,#0b1120))] text-white shadow-xl shadow-cyan-950/20"
+              ? "border-cyan-300/50 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary)_94%,#0b1120),color-mix(in_srgb,var(--ring)_72%,#0b1120))] text-white shadow-md shadow-cyan-950/20"
               : "border-sidebar-border bg-sidebar-accent/50"
-          } ${collapsed ? "p-2.5" : "p-4"}`}
+          } ${collapsed ? "justify-center p-2" : "gap-3 p-2.5"}`}
         >
-          {collapsed ? (
-            <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${showUpgrade ? "bg-white/15" : "bg-sidebar"}`}>
-              <Crown className={`h-4 w-4 ${showUpgrade ? "text-white" : "text-primary"}`} />
-            </div>
-          ) : (
-            <div className="relative">
-              {showUpgrade && (
-                <Sparkles className="absolute right-0 top-0 h-5 w-5 text-cyan-100" />
-              )}
-              <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${showUpgrade ? "bg-white/15 text-white" : "bg-sidebar text-primary"}`}>
-                <Crown className="h-5 w-5" />
-              </div>
-              <p className="mt-3 text-sm font-bold">
+          <div className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${showUpgrade ? "bg-white/15" : "bg-sidebar text-primary"}`}>
+            <Crown className={`h-4 w-4 ${showUpgrade ? "text-white" : "text-primary"}`} />
+            {showUpgrade && (
+              <Sparkles className="absolute -right-1 -top-1 h-3 w-3 text-cyan-100" />
+            )}
+          </div>
+
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-bold">
                 {showUpgrade ? "Mejorá tu plan" : "Plan empresarial"}
               </p>
-              <p className={`mt-1 text-xs ${showUpgrade ? "text-cyan-50/90" : "text-muted-foreground"}`}>
-                {showUpgrade
-                  ? "Más citas, reportes y herramientas para crecer."
-                  : "Funciones avanzadas activas para tu negocio."}
+              <p className={`truncate text-[11px] ${showUpgrade ? "text-cyan-50/90" : "text-muted-foreground"}`}>
+                {showUpgrade ? "Más capacidad y herramientas" : "Funciones avanzadas activas"}
               </p>
             </div>
           )}
         </Link>
+
+        {onOpenTour && (
+          <Button
+            type="button"
+            variant="outline"
+            size={collapsed ? "icon" : "default"}
+            className={collapsed ? "mb-3 w-full" : "mb-3 w-full justify-start"}
+            onClick={onOpenTour}
+            title="Ver recorrido"
+            aria-label="Ver recorrido guiado"
+          >
+            <Compass className={collapsed ? "h-4 w-4" : "mr-2 h-4 w-4"} />
+            {!collapsed && "Ver recorrido"}
+          </Button>
+        )}
 
         <Link
           href="/dashboard/mi-cuenta"

@@ -6,9 +6,11 @@ import {
   BellRing,
   CalendarDays,
   CheckCircle2,
+  Circle,
   Clock3,
   Crown,
   ExternalLink,
+  Sparkles,
   Store,
   Users,
 } from "lucide-react";
@@ -146,6 +148,76 @@ function QuickLink({ href, children }: { href: string; children: React.ReactNode
   );
 }
 
+type PasoOnboarding = {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  hecho: boolean;
+  href: string;
+  externo?: boolean;
+  icon: typeof CalendarDays;
+};
+
+function OnboardingChecklist({ pasos }: { pasos: PasoOnboarding[] }) {
+  const completados = pasos.filter((paso) => paso.hecho).length;
+  const total = pasos.length;
+
+  if (total === 0 || completados === total) return null;
+
+  return (
+    <section className="rounded-[1.75rem] border border-primary/20 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary)_7%,transparent),transparent)] p-5 shadow-[0_18px_55px_rgb(15_23_42/0.07)] ring-1 ring-white/60 dark:bg-card/80 dark:shadow-black/25 dark:ring-white/5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-muted-foreground">Primeros pasos</p>
+          <h2 className="mt-1 text-2xl font-bold tracking-tight text-balance">
+            Dejá tu agenda lista para recibir clientes
+          </h2>
+        </div>
+        <span className="inline-flex h-9 shrink-0 items-center rounded-full border border-primary/25 bg-primary/10 px-3 text-sm font-bold text-primary">
+          {completados} de {total}
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+        {pasos.map((paso) => {
+          const Icon = paso.icon;
+
+          if (paso.hecho) {
+            return (
+              <div
+                key={paso.id}
+                className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background/50 px-4 py-3 opacity-70"
+              >
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
+                <p className="truncate text-sm font-semibold text-muted-foreground line-through decoration-muted-foreground/50">
+                  {paso.titulo}
+                </p>
+              </div>
+            );
+          }
+
+          return (
+            <Link
+              key={paso.id}
+              href={paso.href}
+              target={paso.externo ? "_blank" : undefined}
+              rel={paso.externo ? "noreferrer" : undefined}
+              className="group flex items-center gap-3 rounded-2xl border border-border/80 bg-background/70 px-4 py-3 transition-[background-color,border-color,transform] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:border-primary/25 hover:bg-accent"
+            >
+              <Circle className="h-5 w-5 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">{paso.titulo}</p>
+                <p className="truncate text-xs text-muted-foreground">{paso.descripcion}</p>
+              </div>
+              <Icon className="h-4 w-4 shrink-0 text-primary opacity-0 transition-opacity group-hover:opacity-100" />
+            </Link>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default async function DashboardPage() {
   const access = await requireDashboardAccess();
   const supabase = createServiceRoleClient();
@@ -215,6 +287,10 @@ export default async function DashboardPage() {
     { count: clientesCount },
     { data: proximas },
     { count: sucursalesCount },
+    { count: horariosActivosCount },
+    { count: serviciosActivosCount },
+    { count: empleadosActivosCount },
+    { count: citasTotalCount },
   ] = await Promise.all([
     citasHoyQuery,
     pendientesQuery,
@@ -227,6 +303,33 @@ export default async function DashboardPage() {
           .eq("negocio_id", access.negocio.id)
           .eq("estado", "activo")
       : Promise.resolve({ count: 1 } as { count: number }),
+    access.puedeVerTodo
+      ? supabase
+          .from("horarios_negocio")
+          .select("id", { count: "exact", head: true })
+          .eq("negocio_id", access.negocio.id)
+          .eq("activo", true)
+      : Promise.resolve({ count: 0 } as { count: number }),
+    access.puedeVerTodo
+      ? supabase
+          .from("servicios")
+          .select("id", { count: "exact", head: true })
+          .eq("negocio_id", access.negocio.id)
+          .eq("estado", "activo")
+      : Promise.resolve({ count: 0 } as { count: number }),
+    access.puedeVerTodo
+      ? supabase
+          .from("empleados")
+          .select("id", { count: "exact", head: true })
+          .eq("negocio_id", access.negocio.id)
+          .eq("estado", "activo")
+      : Promise.resolve({ count: 0 } as { count: number }),
+    access.puedeVerTodo
+      ? supabase
+          .from("citas")
+          .select("id", { count: "exact", head: true })
+          .eq("negocio_id", access.negocio.id)
+      : Promise.resolve({ count: 0 } as { count: number }),
   ]);
 
   const proximasCitas = (proximas ?? []) as ProximaCita[];
@@ -244,6 +347,44 @@ export default async function DashboardPage() {
   const planUsage = access.puedeVerTodo
     ? await obtenerUsoPlanDashboard(access.negocio.id)
     : null;
+
+  const pasosOnboarding: PasoOnboarding[] = access.puedeVerTodo
+    ? [
+        {
+          id: "horarios",
+          titulo: "Configurá tus horarios de atención",
+          descripcion: "Definí los días y horas en que tu negocio recibe reservas.",
+          hecho: (horariosActivosCount ?? 0) > 0,
+          href: "/dashboard/configuracion",
+          icon: Clock3,
+        },
+        {
+          id: "servicios",
+          titulo: "Creá tu primer servicio",
+          descripcion: "Agregá lo que ofrecés, con duración y precio.",
+          hecho: (serviciosActivosCount ?? 0) > 0,
+          href: "/dashboard/servicios",
+          icon: Sparkles,
+        },
+        {
+          id: "empleados",
+          titulo: "Agregá a tu equipo",
+          descripcion: "Sumá a las personas que atienden las citas.",
+          hecho: (empleadosActivosCount ?? 0) > 0,
+          href: "/dashboard/empleados",
+          icon: Users,
+        },
+        {
+          id: "primera-cita",
+          titulo: "Compartí tu link y recibí tu primera cita",
+          descripcion: "Copiá el link público y enviaselo a tus clientes.",
+          hecho: (citasTotalCount ?? 0) > 0,
+          href: `/reservar/${access.negocio.slug}`,
+          externo: true,
+          icon: ExternalLink,
+        },
+      ]
+    : [];
 
   return (
     <div className="mx-auto max-w-7xl space-y-5">
@@ -278,6 +419,8 @@ export default async function DashboardPage() {
           )}
         </div>
       </section>
+
+      <OnboardingChecklist pasos={pasosOnboarding} />
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard

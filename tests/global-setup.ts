@@ -15,6 +15,7 @@ async function cleanTransientE2EData(businessIds: string[]) {
 }
 
 export default async function globalSetup(config: FullConfig) {
+  if (process.env.PLAYWRIGHT_SKIP_AUTH_SETUP === "1") return;
   if (!hasE2EFixtures()) return;
 
   const fixtures = loadE2EFixtures();
@@ -43,8 +44,8 @@ export default async function globalSetup(config: FullConfig) {
 
       console.log(`Creando sesión E2E: ${account.email}`);
       await page.goto("/login", { waitUntil: "networkidle" });
-      const emailInput = page.getByLabel(/Correo electronico/i);
-      const passwordInput = page.getByLabel(/Contrasena/i);
+      const emailInput = page.getByLabel(/^Correo electr[oó]nico$/i);
+      const passwordInput = page.getByLabel(/^Contrase[nñ]a$/i);
 
       await emailInput.fill(account.email);
       await passwordInput.fill(account.password);
@@ -55,7 +56,7 @@ export default async function globalSetup(config: FullConfig) {
 
       await expect(emailInput).toHaveValue(account.email);
       await expect(passwordInput).toHaveValue(account.password);
-      await page.getByRole("button", { name: /Iniciar sesion/i }).click();
+      await page.getByRole("button", { name: /Iniciar sesi[oó]n/i }).click();
       await page.waitForTimeout(1_000);
 
       if (page.url().includes("/login")) {

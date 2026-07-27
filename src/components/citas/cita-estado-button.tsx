@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 type CitaEstadoButtonProps = {
@@ -28,7 +29,7 @@ export function CitaEstadoButton({
     setLoading(true);
 
     try {
-      await fetch(`/api/dashboard/citas/${citaId}`, {
+      const response = await fetch(`/api/dashboard/citas/${citaId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -38,7 +39,17 @@ export function CitaEstadoButton({
         }),
       });
 
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        toast.error(data.error ?? "No se pudo actualizar el estado de la cita.");
+        return;
+      }
+
+      toast.success("Estado actualizado correctamente");
       router.refresh();
+    } catch {
+      toast.error("Ocurrió un error inesperado. Intentá de nuevo.");
     } finally {
       setLoading(false);
     }
