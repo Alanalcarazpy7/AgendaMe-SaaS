@@ -2,7 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Camera, KeyRound, Loader2, Save, ShieldCheck } from "lucide-react";
+import {
+  Camera,
+  KeyRound,
+  Loader2,
+  Palette,
+  Save,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 
 type Perfil = {
   usuario_id: string;
@@ -74,6 +82,9 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
   const [loadingPassword, setLoadingPassword] = useState(false);
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
+  const [seccion, setSeccion] = useState<
+    "perfil" | "preferencias" | "seguridad"
+  >("perfil");
 
   useEffect(() => {
     const root = document.documentElement;
@@ -205,30 +216,44 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
-      <section className="rounded-3xl border bg-background p-5 shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">Configuración individual</p>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight">Mi cuenta</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Editá solo los datos de tu usuario. No modifica la configuración global del negocio.
-            </p>
-          </div>
+    <div className="space-y-5">
+      <nav
+        aria-label="Secciones de mi cuenta"
+        className="flex overflow-x-auto border-b border-border/70"
+      >
+        {[
+          { id: "perfil", label: "Perfil", icon: UserRound },
+          { id: "preferencias", label: "Apariencia", icon: Palette },
+          { id: "seguridad", label: "Seguridad", icon: ShieldCheck },
+        ].map((item) => {
+          const Icon = item.icon;
+          const active = seccion === item.id;
 
-          <div className="rounded-2xl border bg-muted/20 px-4 py-3 text-sm">
-            <p className="font-bold">{rolLabel(contexto.rol)}</p>
-            <p className="text-xs text-muted-foreground">
-              {contexto.scope === "global"
-                ? "Todas las sucursales"
-                : contexto.sucursalNombre ?? "Sucursal"}
-            </p>
-          </div>
-        </div>
-      </section>
+          return (
+            <button
+              key={item.id}
+              type="button"
+              aria-current={active ? "page" : undefined}
+              onClick={() =>
+                setSeccion(
+                  item.id as "perfil" | "preferencias" | "seguridad",
+                )
+              }
+              className={`inline-flex min-h-12 shrink-0 items-center gap-2 border-b-2 px-3.5 text-sm font-semibold outline-none transition focus-visible:ring-3 focus-visible:ring-ring/40 ${
+                active
+                  ? "border-primary bg-primary/5 text-foreground"
+                  : "border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              }`}
+            >
+              <Icon className="size-4" />
+              {item.label}
+            </button>
+          );
+        })}
+      </nav>
 
-      <section className="grid gap-5 lg:grid-cols-[280px_1fr]">
-        <aside className="rounded-3xl border bg-background p-5 shadow-sm">
+      <section className="grid gap-4 lg:grid-cols-[260px_1fr]">
+        <aside className="rounded-lg border bg-card p-4 shadow-sm">
           <div className="flex flex-col items-center text-center">
             {avatarUrl ? (
               <Image
@@ -237,11 +262,11 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
                   width={112}
                   height={112}
                   unoptimized
-                  className="h-28 w-28 rounded-full border object-cover shadow-sm"
+                  className="h-24 w-24 rounded-lg border object-cover shadow-sm"
                 />
             ) : (
               <div
-                className="flex h-28 w-28 items-center justify-center rounded-full text-3xl font-bold text-white shadow-sm"
+                className="flex h-24 w-24 items-center justify-center rounded-lg text-2xl font-bold text-white shadow-sm"
                 style={{ backgroundColor: colorAcento }}
               >
                 {iniciales(nombre, contexto.email)}
@@ -267,7 +292,7 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={loadingAvatar}
-              className="mt-4 inline-flex h-10 items-center justify-center rounded-xl border px-4 text-sm font-semibold transition hover:bg-muted disabled:opacity-60"
+              className="mt-4 inline-flex h-9 items-center justify-center rounded-md border px-3 text-sm font-semibold transition hover:bg-muted active:scale-[0.98] disabled:opacity-60"
             >
               {loadingAvatar ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -276,12 +301,28 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
               )}
               Cambiar avatar
             </button>
+
+            <div className="mt-5 w-full border-t pt-4 text-left text-xs">
+              <p className="font-semibold">{rolLabel(contexto.rol)}</p>
+              <p className="mt-1 text-muted-foreground">
+                {contexto.scope === "global"
+                  ? "Todas las sucursales"
+                  : contexto.sucursalNombre ?? "Sucursal"}
+              </p>
+              <p className="mt-1 truncate text-muted-foreground">
+                {contexto.negocioNombre}
+              </p>
+            </div>
           </div>
         </aside>
 
-        <div className="space-y-5">
-          <section className="rounded-3xl border bg-background p-5 shadow-sm">
+        <div>
+          {seccion === "perfil" ? (
+          <section className="rounded-lg border bg-card p-4 shadow-sm sm:p-5">
             <h2 className="text-lg font-bold">Datos personales</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Información visible dentro del equipo.
+            </p>
 
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
@@ -290,7 +331,7 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
                   id="perfil-nombre"
                   value={nombre}
                   onChange={(event) => setNombre(event.target.value)}
-                  className="mt-2 h-11 w-full rounded-xl border bg-background px-3 text-sm"
+                  className="mt-2 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-3 focus:ring-primary/15"
                   placeholder="Ej: Juan Pérez"
                 />
               </div>
@@ -301,7 +342,7 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
                   id="perfil-telefono"
                   value={telefono}
                   onChange={(event) => setTelefono(event.target.value)}
-                  className="mt-2 h-11 w-full rounded-xl border bg-background px-3 text-sm"
+                  className="mt-2 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-3 focus:ring-primary/15"
                   placeholder="Ej: 0981 000 000"
                 />
               </div>
@@ -312,15 +353,33 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
                   id="perfil-cargo"
                   value={cargo}
                   onChange={(event) => setCargo(event.target.value)}
-                  className="mt-2 h-11 w-full rounded-xl border bg-background px-3 text-sm"
+                  className="mt-2 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-3 focus:ring-primary/15"
                   placeholder="Ej: Recepcionista, Gerente, Barbero"
                 />
               </div>
             </div>
+            <button
+              type="button"
+              onClick={guardarPerfil}
+              disabled={loadingPerfil}
+              className="mt-5 inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60"
+            >
+              {loadingPerfil ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              Guardar perfil
+            </button>
           </section>
+          ) : null}
 
-          <section className="rounded-3xl border bg-background p-5 shadow-sm">
-            <h2 className="text-lg font-bold">Preferencias</h2>
+          {seccion === "preferencias" ? (
+          <section className="rounded-lg border bg-card p-4 shadow-sm sm:p-5">
+            <h2 className="text-lg font-bold">Apariencia y avisos</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Personalizá cómo se ve y se comporta tu panel.
+            </p>
 
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <div>
@@ -331,7 +390,7 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
                   onChange={(event) =>
                     setTema(event.target.value as "sistema" | "claro" | "oscuro")
                   }
-                  className="mt-2 h-11 w-full rounded-xl border bg-background px-3 text-sm"
+                  className="mt-2 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-3 focus:ring-primary/15"
                 >
                   <option value="sistema">Sistema</option>
                   <option value="claro">Claro</option>
@@ -346,11 +405,11 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
                   type="color"
                   value={colorAcento}
                   onChange={(event) => setColorAcento(event.target.value)}
-                  className="mt-2 h-11 w-full rounded-xl border bg-background px-3"
+                  className="mt-2 h-10 w-full rounded-md border bg-background px-2"
                 />
               </div>
 
-              <label className="md:col-span-2 flex items-center gap-3 rounded-2xl border bg-muted/20 p-4 text-sm font-medium">
+              <label className="md:col-span-2 flex items-center gap-3 rounded-lg border bg-muted/20 p-3 text-sm font-medium">
                 <input
                   type="checkbox"
                   checked={recibirNotificaciones}
@@ -365,7 +424,7 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
               type="button"
               onClick={guardarPerfil}
               disabled={loadingPerfil}
-              className="mt-5 inline-flex h-11 items-center justify-center rounded-xl bg-foreground px-5 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60"
+              className="mt-5 inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60"
             >
               {loadingPerfil ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -375,12 +434,14 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
               Guardar cambios
             </button>
           </section>
+          ) : null}
 
-          <section className="rounded-3xl border bg-background p-5 shadow-sm">
+          {seccion === "seguridad" ? (
+          <section className="rounded-lg border bg-card p-4 shadow-sm sm:p-5">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <ShieldCheck className="h-5 w-5" />
                   </div>
                   <div>
@@ -393,15 +454,16 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
                 </p>
               </div>
 
-              <div className="rounded-2xl border bg-muted/30 px-4 py-3 text-xs font-medium text-muted-foreground">
-                Minimo 8 caracteres
+              <div className="rounded-md border bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
+                Mínimo 8 caracteres
               </div>
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border bg-muted/20 p-3">
-                <label className="text-sm font-semibold">Nueva contraseña</label>
+              <div>
+                <label htmlFor="cuenta-password" className="text-sm font-semibold">Nueva contraseña</label>
                 <input
+                  id="cuenta-password"
                   type="password"
                   name="agendame_password_new"
                   autoComplete="new-password"
@@ -412,15 +474,16 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
                   onFocus={() => setPasswordFieldsUnlocked(true)}
                   onMouseDown={() => setPasswordFieldsUnlocked(true)}
                   onChange={(event) => setPassword(event.target.value)}
-                  className="mt-2 h-11 w-full rounded-xl border bg-background px-3 text-sm"
-                  placeholder="Escribi la nueva contraseña"
+                  className="mt-2 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-3 focus:ring-primary/15"
+                  placeholder="Escribí la nueva contraseña"
                   spellCheck={false}
                 />
               </div>
 
-              <div className="rounded-2xl border bg-muted/20 p-3">
-                <label className="text-sm font-semibold">Confirmar contraseña</label>
+              <div>
+                <label htmlFor="cuenta-password-confirmar" className="text-sm font-semibold">Confirmar contraseña</label>
                 <input
+                  id="cuenta-password-confirmar"
                   type="password"
                   name="agendame_password_confirm"
                   autoComplete="new-password"
@@ -431,8 +494,8 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
                   onFocus={() => setPasswordFieldsUnlocked(true)}
                   onMouseDown={() => setPasswordFieldsUnlocked(true)}
                   onChange={(event) => setConfirmPassword(event.target.value)}
-                  className="mt-2 h-11 w-full rounded-xl border bg-background px-3 text-sm"
-                  placeholder="Repeti la nueva contraseña"
+                  className="mt-2 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-3 focus:ring-primary/15"
+                  placeholder="Repetí la nueva contraseña"
                   spellCheck={false}
                 />
               </div>
@@ -442,7 +505,7 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
               type="button"
               onClick={cambiarPassword}
               disabled={loadingPassword}
-              className="mt-5 inline-flex h-11 items-center justify-center rounded-xl border px-5 text-sm font-semibold transition hover:bg-muted disabled:opacity-60"
+              className="mt-5 inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm font-semibold transition hover:bg-muted active:scale-[0.98] disabled:opacity-60"
             >
               {loadingPassword ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -452,6 +515,7 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
               Cambiar contraseña
             </button>
           </section>
+          ) : null}
         </div>
       </section>
 

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Loader2, Save, UserRoundCog } from "lucide-react";
+import { toast } from "sonner";
 
 type Sucursal = {
   id: string;
@@ -74,7 +75,12 @@ export function SucursalEmpleadosPanel({
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error ?? "No se pudo asignar el empleado a la sucursal.");
+        const message =
+          data.error ?? "No se pudo asignar el empleado a la sucursal.";
+        setError(message);
+        toast.error("No se pudo guardar la asignación", {
+          description: message,
+        });
         return;
       }
 
@@ -90,29 +96,34 @@ export function SucursalEmpleadosPanel({
       );
 
       setSuccess("Empleado asignado correctamente.");
+      toast.success("Sucursal del empleado actualizada");
     } catch {
       setError("No se pudo asignar el empleado a la sucursal.");
+      toast.error("No se pudo guardar la asignación");
     } finally {
       setLoadingId("");
     }
   }
 
   return (
-    <section className="rounded-3xl border bg-background p-5 shadow-sm">
-      <div>
-        <p className="text-sm text-muted-foreground">
-          Sucursal del empleado
-        </p>
+    <section className="rounded-lg border bg-card p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-primary">
+            Distribución del equipo
+          </p>
 
-        <h2 className="mt-1 text-2xl font-bold">
-          Asignar sucursal a empleados
-        </h2>
+          <h2 className="mt-1 text-lg font-bold">Sucursal de trabajo</h2>
 
-        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-          Seleccioná empleados ya creados en la sección Empleados y asignales una
-          sucursal. Para que aparezcan en la reserva pública, también deben tener
-          servicios y horarios configurados.
-        </p>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+            Asigná cada empleado a una sede activa. Sus servicios y horarios se
+            siguen administrando desde la pestaña Equipo.
+          </p>
+        </div>
+
+        <span className="w-fit rounded-md bg-muted px-2.5 py-1.5 text-xs font-semibold text-muted-foreground">
+          {items.length} empleado{items.length === 1 ? "" : "s"}
+        </span>
       </div>
 
       {error && (
@@ -136,7 +147,7 @@ export function SucursalEmpleadosPanel({
           Todavía no hay empleados creados en la sección Empleados.
         </p>
       ) : (
-        <div className="mt-5 overflow-hidden rounded-3xl border">
+        <div className="mt-5 overflow-hidden rounded-lg border">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[820px] text-sm">
               <thead className="bg-muted/40 text-left">
@@ -158,7 +169,7 @@ export function SucursalEmpleadosPanel({
                     <tr key={empleado.id} className="border-t align-top">
                       <td className="px-4 py-4">
                         <div className="flex gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-muted">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
                             <UserRoundCog className="h-5 w-5" />
                           </div>
 
@@ -173,10 +184,10 @@ export function SucursalEmpleadosPanel({
 
                       <td className="px-4 py-4">
                         <span
-                          className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                          className={`rounded-md border px-2.5 py-1 text-xs font-semibold ${
                             empleado.estado === "activo"
-                              ? "border-green-200 bg-green-50 text-green-700"
-                              : "border-red-200 bg-red-50 text-red-700"
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300"
+                              : "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300"
                           }`}
                         >
                           {empleado.estado ?? "activo"}
@@ -191,7 +202,7 @@ export function SucursalEmpleadosPanel({
                         <select
                           id={selectId}
                           defaultValue={empleado.sucursal_id ?? sucursalesActivas[0]?.id ?? ""}
-                          className="h-10 w-full rounded-xl border bg-background px-3"
+                          className="h-10 w-full rounded-md border bg-background px-3 outline-none focus:border-primary focus:ring-3 focus:ring-primary/15"
                           disabled={disabled}
                         >
                           {sucursalesActivas.map((sucursal) => (
@@ -221,7 +232,7 @@ export function SucursalEmpleadosPanel({
 
                               asignarSucursal(empleado.id, sucursalId);
                             }}
-                            className="inline-flex h-10 items-center justify-center rounded-xl bg-foreground px-4 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60"
+                            className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60"
                           >
                             {disabled ? (
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

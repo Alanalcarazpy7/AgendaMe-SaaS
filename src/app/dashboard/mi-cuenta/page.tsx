@@ -1,5 +1,7 @@
 ﻿import { MiCuentaForm } from "@/components/dashboard/mi-cuenta-form";
 import { requireDashboardAccess } from "@/lib/dashboard/access-context";
+import { UserRound } from "lucide-react";
+import { DashboardModuleHeader } from "@/components/dashboard/dashboard-module-header";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 export const dynamic = "force-dynamic";
@@ -48,16 +50,25 @@ export default async function MiCuentaPage() {
     };
 
   return (
-    <MiCuentaForm
-      perfil={perfil}
-      contexto={{
-        negocioNombre: access.negocio.nombre,
-        planClave: access.planClave,
-        rol: access.rol,
-        scope: access.scope,
-        sucursalNombre: access.sucursalNombre,
-        email: access.user.email,
-      }}
-    />
+    <div className="mx-auto max-w-6xl space-y-5">
+      <DashboardModuleHeader
+        eyebrow="Preferencias personales"
+        title="Mi cuenta"
+        description="Actualizá tu perfil, la apariencia del panel y la seguridad de tu acceso. Estos cambios no modifican los datos generales del negocio."
+        icon={<UserRound className="size-5" />}
+      />
+
+      <MiCuentaForm
+        perfil={perfil}
+        contexto={{
+          negocioNombre: access.negocio.nombre,
+          planClave: access.planClave,
+          rol: access.rol,
+          scope: access.scope,
+          sucursalNombre: access.sucursalNombre,
+          email: access.user.email,
+        }}
+      />
+    </div>
   );
 }

@@ -1,5 +1,8 @@
 ﻿import { redirect } from "next/navigation";
 import { PremiumFeaturePage } from "@/components/premium/premium-feature-page";
+import { Building2, UsersRound } from "lucide-react";
+import { DashboardModuleHeader } from "@/components/dashboard/dashboard-module-header";
+import { DashboardWorkspaceTabs } from "@/components/dashboard/dashboard-workspace-tabs";
 import { SucursalUsuariosPanel } from "@/components/sucursales/sucursal-usuarios-panel";
 import { SucursalesPanel } from "@/components/sucursales/sucursales-panel";
 import { requireDashboardAccess } from "@/lib/dashboard/access-context";
@@ -107,49 +110,63 @@ export default async function SucursalesPage() {
   if (accesosError) throw new Error(accesosError.message);
   if (invitacionesError) throw new Error(invitacionesError.message);
   if (empleadosError) throw new Error(empleadosError.message);
+  const sucursalesActivas = (sucursales ?? []).filter(
+    (sucursal) => sucursal.estado !== "inactivo",
+  ).length;
 
   return (
-    <div className="space-y-5">
-      <section className="rounded-3xl border bg-background p-5 shadow-sm">
-        <p className="text-sm text-muted-foreground">Plan Empresarial</p>
-
-        <h1 className="mt-1 text-3xl font-bold tracking-tight">
-          Sucursales y accesos
-        </h1>
-
-        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-          Gestioná las ubicaciones del negocio y creá invitaciones para usuarios
-          con acceso limitado al dashboard de cada sucursal.
-        </p>
-
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <div className="rounded-2xl border bg-muted/20 p-4 text-sm">
-            <p className="font-bold">Sucursales</p>
-            <p className="mt-1 text-muted-foreground">
-              Creá y administrá las ubicaciones del negocio.
-            </p>
+    <div className="mx-auto max-w-7xl space-y-5">
+      <DashboardModuleHeader
+        eyebrow="Operación empresarial"
+        title="Sucursales"
+        description="Administrá las sedes del negocio y decidí quién puede entrar al dashboard de cada una. La sucursal principal permanece siempre protegida."
+        icon={<Building2 className="size-5" />}
+        aside={
+          <div className="flex items-center gap-3 rounded-lg border bg-card px-3.5 py-2.5 shadow-sm">
+            <UsersRound className="size-4 text-primary" />
+            <div>
+              <p className="text-xs text-muted-foreground">Accesos activos</p>
+              <p className="text-sm font-bold tabular-nums">
+                {(accesos ?? []).length}
+              </p>
+            </div>
           </div>
-
-          <div className="rounded-2xl border bg-muted/20 p-4 text-sm">
-            <p className="font-bold">Usuarios con acceso</p>
-            <p className="mt-1 text-muted-foreground">
-              Reciben un link, crean su contraseña y entran al dashboard de su sucursal.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <SucursalesPanel
-        sucursales={sucursales ?? []}
-        initialSucursales={sucursales ?? []}
+        }
       />
 
-      <SucursalUsuariosPanel
-        sucursales={sucursales ?? []}
-        initialSucursales={sucursales ?? []}
-        accesos={accesos ?? []}
-        invitaciones={invitaciones ?? []}
-        empleados={empleados ?? []}
+      <DashboardWorkspaceTabs
+        ariaLabel="Gestión de sucursales"
+        tabs={[
+          {
+            id: "ubicaciones",
+            label: "Ubicaciones",
+            count: sucursalesActivas,
+            description:
+              "Creá nuevas sedes, actualizá sus datos o pausá una sucursal secundaria.",
+            content: (
+              <SucursalesPanel
+                sucursales={sucursales ?? []}
+                initialSucursales={sucursales ?? []}
+              />
+            ),
+          },
+          {
+            id: "accesos",
+            label: "Usuarios y accesos",
+            count: (accesos ?? []).length + (invitaciones ?? []).length,
+            description:
+              "Invitá usuarios y limitá su acceso a una sucursal y un rol.",
+            content: (
+              <SucursalUsuariosPanel
+                sucursales={sucursales ?? []}
+                initialSucursales={sucursales ?? []}
+                accesos={accesos ?? []}
+                invitaciones={invitaciones ?? []}
+                empleados={empleados ?? []}
+              />
+            ),
+          },
+        ]}
       />
     </div>
   );

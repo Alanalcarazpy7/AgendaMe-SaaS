@@ -161,7 +161,7 @@ export function HorariosNegocioForm({
   }
 
   return (
-    <Card>
+    <Card className="rounded-lg bg-card shadow-sm">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Clock className="h-5 w-5" />
@@ -171,7 +171,7 @@ export function HorariosNegocioForm({
 
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="overflow-hidden rounded-2xl border">
+          <div className="overflow-hidden rounded-lg border">
             <div className="divide-y">
               {diasSemana.map((dia) => {
                 const horario = horarios.find(

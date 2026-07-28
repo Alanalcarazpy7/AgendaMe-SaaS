@@ -1,5 +1,8 @@
 ﻿import { EmpleadosPanel } from "@/components/empleados/empleados-panel";
 import { SucursalEmpleadosPanel } from "@/components/sucursales/sucursal-empleados-panel";
+import { UsersRound } from "lucide-react";
+import { DashboardModuleHeader } from "@/components/dashboard/dashboard-module-header";
+import { DashboardWorkspaceTabs } from "@/components/dashboard/dashboard-workspace-tabs";
 import { requireDashboardAccess } from "@/lib/dashboard/access-context";
 import { applySucursalScope, requirePermission } from "@/lib/dashboard/scope-helpers";
 import { nivelPlan } from "@/lib/planes/plan-access";
@@ -110,48 +113,81 @@ export default async function EmpleadosPage() {
       horarios_empleado: empleado.horarios_empleado ?? [],
     };
   });
+  const empleadosActivos = empleadosNormalizados.filter(
+    (empleado) => empleado.estado === "activo",
+  ).length;
 
   return (
-    <div className="space-y-5">
-      <section className="rounded-3xl border bg-card p-5 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
-        <p className="text-sm text-muted-foreground">Empleados de agenda</p>
-
-        <h1 className="mt-1 text-3xl font-bold tracking-tight">
-          Empleados que atienden citas
-        </h1>
-
-        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-          Estos empleados se usan para la agenda, horarios, servicios,
-          disponibilidad y reportes. Crear un empleado acá no le da acceso
-          automático al sistema.
-        </p>
-
-        {mostrarAsignacionSucursal ? (
-          <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/10 p-4 text-sm text-primary">
-            <strong>Plan Empresarial:</strong> además de crear empleados, podés
-            asignarlos a una sucursal desde esta misma vista.
+    <div className="mx-auto max-w-7xl space-y-5">
+      <DashboardModuleHeader
+        eyebrow="Equipo y disponibilidad"
+        title="Empleados"
+        description="Organizá quién atiende, qué servicios realiza y en qué horarios está disponible. Crear un empleado de agenda no le concede acceso al sistema."
+        icon={<UsersRound className="size-5" />}
+        aside={
+          <div className="grid grid-cols-2 overflow-hidden rounded-lg border bg-card text-sm shadow-sm">
+            <div className="min-w-24 px-3 py-2.5">
+              <p className="text-xs text-muted-foreground">Activos</p>
+              <p className="mt-0.5 text-lg font-bold tabular-nums">
+                {empleadosActivos}
+              </p>
+            </div>
+            <div className="min-w-24 border-l px-3 py-2.5">
+              <p className="text-xs text-muted-foreground">Total</p>
+              <p className="mt-0.5 text-lg font-bold tabular-nums">
+                {empleadosNormalizados.length}
+              </p>
+            </div>
           </div>
-        ) : (
-          <div className="mt-4 rounded-2xl border bg-muted/50 p-4 text-sm text-muted-foreground">
-            En planes no empresariales, los empleados se asignan automáticamente
-            a la sucursal principal interna del negocio.
-          </div>
-        )}
-      </section>
-
-      {mostrarAsignacionSucursal && (
-        <SucursalEmpleadosPanel
-          sucursales={sucursales}
-          initialSucursales={sucursales}
-          empleados={empleadosNormalizados}
-          initialEmpleados={empleadosNormalizados}
-        />
-      )}
-
-      <EmpleadosPanel
-        empleados={empleadosNormalizados}
-        servicios={servicios ?? []}
+        }
       />
+
+      <DashboardWorkspaceTabs
+        ariaLabel="Gestión de empleados"
+        tabs={[
+          {
+            id: "equipo",
+            label: "Equipo",
+            count: empleadosNormalizados.length,
+            description:
+              "Editá los datos, servicios y horarios de cada persona.",
+            content: (
+              <EmpleadosPanel
+                empleados={empleadosNormalizados}
+                servicios={servicios ?? []}
+              />
+            ),
+          },
+          ...(mostrarAsignacionSucursal
+            ? [
+                {
+                  id: "sucursales",
+                  label: "Asignación por sucursal",
+                  count: sucursales.filter(
+                    (sucursal) => sucursal.estado !== "inactivo",
+                  ).length,
+                  description:
+                    "Definí en qué sede trabaja cada integrante del equipo.",
+                  content: (
+                    <SucursalEmpleadosPanel
+                      sucursales={sucursales}
+                      initialSucursales={sucursales}
+                      empleados={empleadosNormalizados}
+                      initialEmpleados={empleadosNormalizados}
+                    />
+                  ),
+                },
+              ]
+            : []),
+        ]}
+      />
+
+      {!mostrarAsignacionSucursal ? (
+        <p className="border-l-2 border-primary/40 pl-3 text-xs leading-5 text-muted-foreground">
+          En tu plan, el equipo trabaja con la sucursal principal del negocio.
+          La asignación entre varias sedes está disponible en el Plan Empresarial.
+        </p>
+      ) : null}
     </div>
   );
 }

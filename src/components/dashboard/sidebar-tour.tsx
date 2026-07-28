@@ -148,7 +148,7 @@ export function SidebarTour({
     if (alto && Math.abs(alto - alturaCard) > 2) {
       setAlturaCard(alto);
     }
-  });
+  }, [alturaCard, esMovil, open, paso]);
 
   useEffect(() => {
     function detectar() {
@@ -310,9 +310,10 @@ export function SidebarTour({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, actual.targetId, actual.requiereDrawer, esMovil]);
 
-  useEffect(() => {
-    if (open) setPaso(0);
-  }, [open]);
+  function cerrarTour() {
+    setPaso(0);
+    onClose();
+  }
 
   if (!open) return null;
 
@@ -323,7 +324,7 @@ export function SidebarTour({
       <button
         type="button"
         aria-label="Cerrar recorrido"
-        onClick={onClose}
+        onClick={cerrarTour}
         className="absolute inset-0 bg-transparent"
       />
 
@@ -378,7 +379,7 @@ export function SidebarTour({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={cerrarTour}
             aria-label="Cerrar recorrido"
             className="rounded-lg p-1 text-muted-foreground transition hover:bg-accent hover:text-foreground"
           >
@@ -411,7 +412,9 @@ export function SidebarTour({
             <Button
               size="sm"
               className="flex-1"
-              onClick={() => (esUltimo ? onClose() : setPaso((p) => p + 1))}
+              onClick={() =>
+                esUltimo ? cerrarTour() : setPaso((p) => p + 1)
+              }
             >
               {esUltimo ? "Empezar" : "Siguiente"}
               {!esUltimo && <ArrowRight className="h-4 w-4" />}
@@ -419,7 +422,7 @@ export function SidebarTour({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={cerrarTour}
             className="w-full text-center text-xs font-semibold text-muted-foreground transition hover:text-foreground"
           >
             Omitir recorrido

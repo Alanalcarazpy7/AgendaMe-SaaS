@@ -9,6 +9,7 @@ import {
   MessageCircle,
   ShieldCheck,
   Trash2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -132,6 +133,7 @@ export function SucursalUsuariosPanel({
     url: string;
   } | null>(null);
   const [vinculando, setVinculando] = useState<Record<string, string>>({});
+  const [mostrarInvitacion, setMostrarInvitacion] = useState(false);
 
   const sucursalesActivas = useMemo(
     () => sucursalesSafe.filter((sucursal) => sucursal.estado !== "inactivo"),
@@ -294,6 +296,7 @@ export function SucursalUsuariosPanel({
       if (!payload?.fromActive) {
         setEmail("");
         setEmpleadoId("");
+        setMostrarInvitacion(false);
       }
 
       toast.success("Invitación creada", {
@@ -465,19 +468,31 @@ export function SucursalUsuariosPanel({
   }
 
   return (
-    <section className="rounded-3xl border bg-background p-5 shadow-sm">
-      <div>
-        <p className="text-sm text-muted-foreground">Accesos empresariales</p>
+    <section>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-lg font-bold">Accesos al dashboard</h2>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+            Cada persona usa su propio correo y contraseña. Su rol limita lo que
+            puede ver y modificar dentro de la sucursal asignada.
+          </p>
+        </div>
 
-        <h2 className="mt-1 text-2xl font-bold">
-          Usuarios con acceso al dashboard
-        </h2>
-
-        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-          Invitá personas para que creen su propia contraseña y entren al dashboard
-          de una sucursal. Los usuarios activos ya aceptaron la invitación o ya
-          tienen una cuenta lista.
-        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setMostrarInvitacion((actual) => !actual);
+            setError("");
+          }}
+          className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98]"
+        >
+          {mostrarInvitacion ? (
+            <X className="mr-2 h-4 w-4" />
+          ) : (
+            <MailPlus className="mr-2 h-4 w-4" />
+          )}
+          {mostrarInvitacion ? "Cerrar" : "Invitar usuario"}
+        </button>
       </div>
 
       {error && (
@@ -517,24 +532,31 @@ export function SucursalUsuariosPanel({
         </div>
       )}
 
-      <div className="mt-5 grid gap-3 rounded-3xl border bg-muted/20 p-4 lg:grid-cols-[1.2fr_1fr_1fr_auto]">
+      {mostrarInvitacion ? (
+      <div className="mt-4 grid gap-3 rounded-lg border border-primary/20 bg-primary/[0.04] p-4 lg:grid-cols-[1.2fr_1fr_1fr_auto]">
         <div>
-          <label className="text-sm font-medium">Correo</label>
+          <label htmlFor="invitacion-correo" className="text-sm font-medium">
+            Correo
+          </label>
           <input
+            id="invitacion-correo"
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="mt-2 h-11 w-full rounded-xl border bg-background px-3"
+            className="mt-2 h-10 w-full rounded-md border bg-background px-3 outline-none focus:border-primary focus:ring-3 focus:ring-primary/15"
             placeholder="usuario@empresa.com"
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">Sucursal</label>
+          <label htmlFor="invitacion-sucursal" className="text-sm font-medium">
+            Sucursal
+          </label>
           <select
+            id="invitacion-sucursal"
             value={sucursalId}
             onChange={(event) => setSucursalId(event.target.value)}
-            className="mt-2 h-11 w-full rounded-xl border bg-background px-3"
+            className="mt-2 h-10 w-full rounded-md border bg-background px-3 outline-none focus:border-primary focus:ring-3 focus:ring-primary/15"
           >
             {sucursalesActivas.map((sucursal) => (
               <option key={sucursal.id} value={sucursal.id}>
@@ -545,11 +567,14 @@ export function SucursalUsuariosPanel({
         </div>
 
         <div>
-          <label className="text-sm font-medium">Rol</label>
+          <label htmlFor="invitacion-rol" className="text-sm font-medium">
+            Rol
+          </label>
           <select
+            id="invitacion-rol"
             value={rol}
             onChange={(event) => setRol(event.target.value)}
-            className="mt-2 h-11 w-full rounded-xl border bg-background px-3"
+            className="mt-2 h-10 w-full rounded-md border bg-background px-3 outline-none focus:border-primary focus:ring-3 focus:ring-primary/15"
           >
             {ROLES.map((item) => (
               <option key={item.value} value={item.value}>
@@ -561,13 +586,17 @@ export function SucursalUsuariosPanel({
 
         {esRolPersonal && (
           <div className="lg:col-span-4">
-            <label className="text-sm font-medium">
+            <label
+              htmlFor="invitacion-empleado"
+              className="text-sm font-medium"
+            >
               ¿A qué empleado de la plantilla corresponde?
             </label>
             <select
+              id="invitacion-empleado"
               value={empleadoId}
               onChange={(event) => setEmpleadoId(event.target.value)}
-              className="mt-2 h-11 w-full rounded-xl border bg-background px-3"
+              className="mt-2 h-10 w-full rounded-md border bg-background px-3 outline-none focus:border-primary focus:ring-3 focus:ring-primary/15"
             >
               <option value="">Elegí un empleado</option>
               {empleadosDeSucursal.map((empleadoItem) => (
@@ -590,7 +619,7 @@ export function SucursalUsuariosPanel({
             type="button"
             onClick={() => crearInvitacion()}
             disabled={loading === "crear" || (esRolPersonal && !empleadoId)}
-            className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-foreground px-4 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60"
+            className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
           >
             {loading === "crear" ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -601,19 +630,25 @@ export function SucursalUsuariosPanel({
           </button>
         </div>
       </div>
+      ) : null}
 
-      <div className="mt-5 grid gap-3 md:grid-cols-3">
-        {ROLES.map((item) => (
-          <div key={item.value} className="rounded-2xl border bg-muted/20 p-4">
-            <p className="font-bold">{item.label}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {item.description}
-            </p>
-          </div>
-        ))}
-      </div>
+      <details className="mt-4 rounded-lg border bg-muted/20 px-4 py-3 text-sm">
+        <summary className="cursor-pointer font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring/40">
+          Qué puede hacer cada rol
+        </summary>
+        <div className="mt-3 grid gap-3 border-t pt-3 md:grid-cols-3">
+          {ROLES.map((item) => (
+            <div key={item.value}>
+              <p className="font-semibold">{item.label}</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                {item.description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </details>
 
-      <div className="mt-6 rounded-3xl border bg-muted/10 p-4">
+      <div className="mt-5 rounded-lg border bg-card p-4 shadow-sm">
         <h3 className="text-lg font-bold">Invitaciones pendientes</h3>
         <p className="mt-1 text-sm text-muted-foreground">
           Estos usuarios todavía no crearon su contraseña. Podés copiar un nuevo
@@ -683,7 +718,7 @@ export function SucursalUsuariosPanel({
         )}
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-3xl border">
+      <div className="mt-5 overflow-hidden rounded-lg border bg-card shadow-sm">
         <div className="border-b bg-muted/20 p-4">
           <h3 className="text-lg font-bold">Usuarios activos</h3>
           <p className="mt-1 text-sm text-muted-foreground">

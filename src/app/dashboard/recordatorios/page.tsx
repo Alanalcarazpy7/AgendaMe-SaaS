@@ -1,5 +1,7 @@
 ﻿import { redirect } from "next/navigation";
 import { PremiumFeaturePage } from "@/components/premium/premium-feature-page";
+import { BellRing } from "lucide-react";
+import { DashboardModuleHeader } from "@/components/dashboard/dashboard-module-header";
 import { RecordatoriosPanel } from "@/components/recordatorios/recordatorios-panel";
 import { requireDashboardAccess } from "@/lib/dashboard/access-context";
 import { requirePermission, applySucursalScope } from "@/lib/dashboard/scope-helpers";
@@ -164,11 +166,30 @@ if (!access.puedeUsarRecordatorios) {
   }
 
   return (
-    <RecordatoriosPanel
-      citas={citas}
-      scope={access.scope}
-      sucursalNombre={access.sucursalNombre}
-      sucursales={Array.from(sucursalesMap.values())}
-    />
+    <div className="mx-auto max-w-7xl space-y-5">
+      <DashboardModuleHeader
+        eyebrow="Seguimiento manual"
+        title="Recordatorios"
+        description="Prepará y enviá mensajes por WhatsApp para confirmar las próximas citas. El envío se abre en tu WhatsApp y no utiliza una API paga."
+        icon={<BellRing className="size-5" />}
+        aside={
+          access.scope === "sucursal" ? (
+            <div className="rounded-lg border bg-card px-3.5 py-2.5 text-sm shadow-sm">
+              <p className="text-xs text-muted-foreground">Vista actual</p>
+              <p className="mt-0.5 font-semibold">
+                {access.sucursalNombre ?? "Sucursal"}
+              </p>
+            </div>
+          ) : undefined
+        }
+      />
+
+      <RecordatoriosPanel
+        citas={citas}
+        scope={access.scope}
+        sucursalNombre={access.sucursalNombre}
+        sucursales={Array.from(sucursalesMap.values())}
+      />
+    </div>
   );
 }

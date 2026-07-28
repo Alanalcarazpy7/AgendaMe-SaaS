@@ -94,7 +94,7 @@ export function IntervaloReservaCard() {
   }
 
   return (
-    <section className="rounded-3xl border bg-background p-6 shadow-sm">
+    <section className="rounded-lg border bg-card p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -110,7 +110,7 @@ export function IntervaloReservaCard() {
         </div>
 
         {success && (
-          <div className="inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-sm font-medium text-green-700">
+          <div className="inline-flex items-center rounded-md bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
             <CheckCircle2 className="mr-2 h-4 w-4" />
             Guardado
           </div>
@@ -137,7 +137,7 @@ export function IntervaloReservaCard() {
           </select>
         </div>
 
-        <div className="rounded-2xl border bg-muted/30 p-4 text-sm text-muted-foreground">
+        <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
           Ejemplo: si elegís <strong>20 minutos</strong>, el cliente verá
           horarios como 08:00, 08:20, 08:40, 09:00. Si un servicio dura 50
           minutos, igual bloqueará 50 minutos reales en la agenda.

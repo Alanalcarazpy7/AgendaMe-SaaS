@@ -21,7 +21,7 @@ const EMPLEADOS_PAGE_SIZE = 20;
 const nombresDias = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
 
 function cardBase(extra = "") {
-  return `rounded-[1.5rem] border border-border/80 bg-card/90 shadow-[0_16px_48px_rgb(15_23_42/0.07)] ring-1 ring-white/60 backdrop-blur-xl dark:bg-card/80 dark:shadow-black/20 dark:ring-white/5 ${extra}`;
+  return `rounded-lg border border-border/80 bg-card shadow-sm shadow-slate-950/5 dark:shadow-black/15 ${extra}`;
 }
 
 function hora(valor: string | null) {
@@ -153,52 +153,39 @@ export function EmpleadosPanel({ empleados, servicios }: EmpleadosPanelProps) {
   return (
     <div className="mx-auto max-w-7xl space-y-5">
       <section className={cardBase("overflow-hidden")}>
-        <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_25rem]">
-          <div className="relative p-5 sm:p-6">
-            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-cyan-500 to-teal-500" />
-
-            <p className="inline-flex items-center gap-2 rounded-2xl border bg-muted/50 px-3 py-1.5 text-xs font-semibold text-muted-foreground">
-              <UsersRound className="h-3.5 w-3.5 text-primary" />
-              Equipo de atencion
+        <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-bold">Directorio del equipo</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Cada empleado puede tener servicios y disponibilidad propios.
             </p>
-
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-balance">Empleados</h1>
-
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Gestiona disponibilidad, contacto y servicios asignados en una vista densa y rapida.
-            </p>
-
-            <div className="mt-5">
-              <EmpleadoDialog variant="crear" servicios={servicios} />
-            </div>
           </div>
-
-          <aside className="border-t border-border/70 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary)_92%,#0b1120),color-mix(in_srgb,var(--ring)_72%,#0b1120))] p-4 text-white xl:border-l xl:border-t-0">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-3">
-                <p className="text-xs text-cyan-50/80">Total</p>
-                <p className="mt-1 text-3xl font-bold">{resumen.total}</p>
-              </div>
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-3">
-                <p className="text-xs text-cyan-50/80">Activos</p>
-                <p className="mt-1 text-3xl font-bold">{resumen.activos}</p>
-              </div>
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-3">
-                <p className="text-xs text-cyan-50/80">Con servicios</p>
-                <p className="mt-1 text-2xl font-bold">{resumen.conServicios}</p>
-              </div>
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-3">
-                <p className="text-xs text-cyan-50/80">Horario propio</p>
-                <p className="mt-1 text-2xl font-bold">{resumen.conHorarioPropio}</p>
-              </div>
-            </div>
-          </aside>
+          <EmpleadoDialog variant="crear" servicios={servicios} />
         </div>
+
+        <dl className="grid grid-cols-2 border-t bg-muted/20 sm:grid-cols-4">
+          {[
+            ["Activos", resumen.activos],
+            ["Inactivos", resumen.inactivos],
+            ["Con servicios", resumen.conServicios],
+            ["Horario propio", resumen.conHorarioPropio],
+          ].map(([label, value], index) => (
+            <div
+              key={label}
+              className={`px-4 py-3 ${index % 2 ? "border-l" : ""} ${
+                index >= 2 ? "border-t sm:border-t-0" : ""
+              } ${index === 2 ? "sm:border-l" : ""}`}
+            >
+              <dt className="text-xs text-muted-foreground">{label}</dt>
+              <dd className="mt-0.5 text-lg font-bold tabular-nums">{value}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
 
-      <section className={cardBase("p-4")}>
+      <section className={cardBase("p-3")}>
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-          <div className="flex min-h-11 items-center gap-2 rounded-2xl border border-border/80 bg-background/70 px-3">
+          <div className="flex min-h-10 items-center gap-2 rounded-md border border-border/80 bg-background px-3">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
             <Input
               value={busqueda}
@@ -206,12 +193,12 @@ export function EmpleadosPanel({ empleados, servicios }: EmpleadosPanelProps) {
                 setBusqueda(event.target.value);
                 setPagina(1);
               }}
-              placeholder="Buscar por nombre, correo, telefono o servicio..."
-              className="h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+              placeholder="Buscar por nombre, correo, teléfono o servicio"
+              className="h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
             />
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {filtros.map((filtro) => {
               const activo = estadoFiltro === filtro.value;
 
@@ -223,16 +210,14 @@ export function EmpleadosPanel({ empleados, servicios }: EmpleadosPanelProps) {
                     setEstadoFiltro(filtro.value);
                     setPagina(1);
                   }}
-                  className={`inline-flex h-10 items-center gap-2 rounded-2xl border px-3 text-sm font-semibold transition-[background-color,color,border-color,box-shadow,transform] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 ${
+                  className={`inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm font-semibold outline-none transition-[background-color,color,border-color] focus-visible:ring-3 focus-visible:ring-ring/40 ${
                     activo
-                      ? "border-primary/40 bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                      : "border-border/80 bg-background/70 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      ? "border-primary/30 bg-primary/10 text-primary"
+                      : "border-border/80 bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   }`}
                 >
                   {filtro.label}
-                  <span className={`rounded-xl px-2 py-0.5 text-xs ${activo ? "bg-white/20" : "bg-muted"}`}>
-                    {filtro.count}
-                  </span>
+                  <span className="text-xs tabular-nums">{filtro.count}</span>
                 </button>
               );
             })}
@@ -244,7 +229,7 @@ export function EmpleadosPanel({ empleados, servicios }: EmpleadosPanelProps) {
                   setEstadoFiltro("todos");
                   setPagina(1);
                 }}
-                className="inline-flex h-10 items-center rounded-2xl border border-border/80 bg-background/70 px-3 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-accent-foreground"
+                className="inline-flex h-9 items-center rounded-md px-3 text-sm font-semibold text-muted-foreground transition hover:bg-accent hover:text-accent-foreground"
               >
                 Limpiar
               </button>

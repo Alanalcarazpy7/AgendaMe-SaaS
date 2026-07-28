@@ -148,7 +148,7 @@ export function BrandingNegocioCard() {
     negocio?.color_primario ?? negocio?.color_acento ?? "#111827";
 
   return (
-    <section className="rounded-3xl border bg-background p-6 shadow-sm">
+    <section>
       <div>
         <div className="flex items-center gap-2">
           <ImagePlus className="h-5 w-5 text-primary" />
@@ -173,8 +173,8 @@ export function BrandingNegocioCard() {
           Cargando personalización...
         </div>
       ) : (
-        <div className="mt-6 grid gap-5 lg:grid-cols-[320px_1fr]">
-          <article className="rounded-3xl border bg-muted/20 p-5">
+        <div className="mt-5 grid gap-4 lg:grid-cols-[300px_1fr]">
+          <article className="rounded-lg border bg-card p-4 shadow-sm">
             <p className="font-semibold">Logo</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Se muestra como identidad principal del negocio.
@@ -188,11 +188,11 @@ export function BrandingNegocioCard() {
                   width={96}
                   height={96}
                   unoptimized
-                  className="h-24 w-24 rounded-3xl border object-cover"
+                  className="h-24 w-24 rounded-lg border object-cover"
                 />
               ) : (
                 <div
-                  className="flex h-24 w-24 items-center justify-center rounded-3xl text-3xl font-bold text-white"
+                  className="flex h-24 w-24 items-center justify-center rounded-lg text-3xl font-bold text-white"
                   style={{ backgroundColor: colorMarca }}
                 >
                   {negocio?.nombre?.slice(0, 1).toUpperCase() ?? "N"}
@@ -245,13 +245,13 @@ export function BrandingNegocioCard() {
             </div>
           </article>
 
-          <article className="rounded-3xl border bg-muted/20 p-5">
+          <article className="rounded-lg border bg-card p-4 shadow-sm">
             <p className="font-semibold">Banner</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Se muestra arriba del formulario público de reservas.
             </p>
 
-            <div className="relative mt-4 h-40 overflow-hidden rounded-3xl border bg-black">
+            <div className="relative mt-4 h-40 overflow-hidden rounded-lg border bg-black">
               {negocio?.banner_url ? (
                 <>
                   <Image

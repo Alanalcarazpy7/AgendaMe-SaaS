@@ -302,54 +302,31 @@ export function RecordatoriosPanel({
   }
 
   return (
-    <div className="space-y-5">
-      <section className="rounded-3xl border bg-background p-5 shadow-sm">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">Plan Profesional</p>
-
-            <h1 className="mt-1 text-3xl font-bold tracking-tight">
-              Recordatorios
-            </h1>
-
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              Gestioná recordatorios manuales por WhatsApp para reducir ausencias y confirmar asistencia.
-            </p>
-
-            {scope === "sucursal" && (
-              <p className="mt-2 inline-flex rounded-full border bg-muted/30 px-3 py-1 text-xs font-medium">
-                Vista de sucursal: {sucursalNombre ?? "Sucursal"}
-              </p>
-            )}
-          </div>
-
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border bg-muted/20 px-4 py-3">
-              <p className="text-xs text-muted-foreground">Filtradas</p>
-              <p className="mt-1 text-2xl font-bold">{resumen.total}</p>
+    <div className="space-y-4">
+      <section className="overflow-hidden rounded-lg border bg-card shadow-sm">
+        <dl className="grid grid-cols-2 sm:grid-cols-4">
+          {[
+            ["Citas filtradas", resumen.total],
+            ["Pendientes", resumen.pendientes],
+            ["Confirmadas", resumen.confirmadas],
+            ["Sin teléfono", resumen.sinTelefono],
+          ].map(([label, value], index) => (
+            <div
+              key={label}
+              className={`px-4 py-3 ${index % 2 ? "border-l" : ""} ${
+                index >= 2 ? "border-t sm:border-t-0" : ""
+              } ${index === 2 ? "sm:border-l" : ""}`}
+            >
+              <dt className="text-xs text-muted-foreground">{label}</dt>
+              <dd className="mt-0.5 text-xl font-bold tabular-nums">{value}</dd>
             </div>
-
-            <div className="rounded-2xl border bg-muted/20 px-4 py-3">
-              <p className="text-xs text-muted-foreground">Pendientes</p>
-              <p className="mt-1 text-2xl font-bold">{resumen.pendientes}</p>
-            </div>
-
-            <div className="rounded-2xl border bg-muted/20 px-4 py-3">
-              <p className="text-xs text-muted-foreground">Confirmadas</p>
-              <p className="mt-1 text-2xl font-bold">{resumen.confirmadas}</p>
-            </div>
-
-            <div className="rounded-2xl border bg-muted/20 px-4 py-3">
-              <p className="text-xs text-muted-foreground">Sin teléfono</p>
-              <p className="mt-1 text-2xl font-bold">{resumen.sinTelefono}</p>
-            </div>
-          </div>
-        </div>
+          ))}
+        </dl>
       </section>
 
-      <section className="rounded-3xl border bg-background p-4 shadow-sm">
+      <section className="rounded-lg border bg-card p-3 shadow-sm">
         <div className="grid gap-3 xl:grid-cols-[1.5fr_repeat(4,minmax(150px,1fr))]">
-          <div className="flex h-11 items-center gap-2 rounded-xl border bg-muted/20 px-3">
+          <div className="flex h-10 items-center gap-2 rounded-md border bg-background px-3">
             <Search className="h-4 w-4 text-muted-foreground" />
             <input
               value={busqueda}
@@ -362,7 +339,7 @@ export function RecordatoriosPanel({
           <select
             value={periodo}
             onChange={(event) => setPeriodo(event.target.value as FiltroPeriodo)}
-            className="h-11 rounded-xl border bg-background px-3 text-sm"
+            className="h-10 rounded-md border bg-background px-3 text-sm"
           >
             <option value="hoy">Hoy</option>
             <option value="manana">Mañana</option>
@@ -372,9 +349,9 @@ export function RecordatoriosPanel({
           <select
             value={estado}
             onChange={(event) => setEstado(event.target.value as FiltroEstado)}
-            className="h-11 rounded-xl border bg-background px-3 text-sm"
+            className="h-10 rounded-md border bg-background px-3 text-sm"
           >
-            <option value="todos">Todos los estados</option>
+            <option value="todos">Cualquier estado</option>
             <option value="pendiente">Pendientes</option>
             <option value="confirmada">Confirmadas</option>
           </select>
@@ -382,9 +359,9 @@ export function RecordatoriosPanel({
           <select
             value={telefonoFiltro}
             onChange={(event) => setTelefonoFiltro(event.target.value as FiltroTelefono)}
-            className="h-11 rounded-xl border bg-background px-3 text-sm"
+            className="h-10 rounded-md border bg-background px-3 text-sm"
           >
-            <option value="todos">Todos los teléfonos</option>
+            <option value="todos">Con o sin teléfono</option>
             <option value="con_telefono">Con teléfono</option>
             <option value="sin_telefono">Sin teléfono</option>
           </select>
@@ -393,9 +370,9 @@ export function RecordatoriosPanel({
             <select
               value={sucursalId}
               onChange={(event) => setSucursalId(event.target.value)}
-              className="h-11 rounded-xl border bg-background px-3 text-sm"
+              className="h-10 rounded-md border bg-background px-3 text-sm"
             >
-              <option value="todas">Todas las sucursales</option>
+              <option value="todas">Todas las sedes</option>
               {sucursales.map((sucursal) => (
                 <option key={sucursal.id} value={sucursal.id}>
                   {sucursal.nombre}
@@ -403,7 +380,7 @@ export function RecordatoriosPanel({
               ))}
             </select>
           ) : (
-            <div className="flex h-11 items-center rounded-xl border bg-muted/20 px-3 text-sm text-muted-foreground">
+            <div className="flex h-10 items-center rounded-md border bg-muted/20 px-3 text-sm text-muted-foreground">
               {sucursalNombre ?? "Sucursal"}
             </div>
           )}
@@ -411,7 +388,7 @@ export function RecordatoriosPanel({
       </section>
 
       {citas.length === 0 ? (
-        <section className="rounded-3xl border bg-background p-8 text-center shadow-sm">
+        <section className="rounded-lg border bg-card p-8 text-center shadow-sm">
           <CheckCircle2 className="mx-auto h-12 w-12 text-green-600" />
           <h2 className="mt-4 text-2xl font-bold">Sin citas próximas</h2>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -419,7 +396,7 @@ export function RecordatoriosPanel({
           </p>
         </section>
       ) : citasFiltradas.length === 0 ? (
-        <section className="rounded-3xl border bg-background p-8 text-center shadow-sm">
+        <section className="rounded-lg border bg-card p-8 text-center shadow-sm">
           <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground" />
           <h2 className="mt-4 text-2xl font-bold">Sin resultados</h2>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -428,8 +405,8 @@ export function RecordatoriosPanel({
         </section>
       ) : (
         agrupadas.map(([fecha, citasDia]) => (
-          <section key={fecha} className="rounded-3xl border bg-background p-5 shadow-sm">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <section key={fecha} className="overflow-hidden rounded-lg border bg-card shadow-sm">
+            <div className="flex flex-col gap-1 border-b bg-muted/20 px-4 py-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="flex items-center gap-2 text-sm text-muted-foreground">
                   <CalendarDays className="h-4 w-4" />
@@ -443,7 +420,7 @@ export function RecordatoriosPanel({
               </p>
             </div>
 
-            <div className="mt-4 grid gap-3">
+            <div className="divide-y">
               {citasDia.map((cita) => {
                 const telefono = telefonoWa(cita.cliente?.telefono);
                 const sinTelefono = !telefono;
@@ -451,7 +428,7 @@ export function RecordatoriosPanel({
                 return (
                   <article
                     key={cita.id}
-                    className="rounded-2xl border bg-muted/10 p-4 transition hover:bg-muted/20"
+                    className="p-4 transition-colors hover:bg-muted/20"
                   >
                     <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-center">
                       <div className="min-w-0">
@@ -460,12 +437,12 @@ export function RecordatoriosPanel({
                             {String(cita.hora_inicio).slice(0, 5)}
                           </p>
 
-                          <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${estadoClass(cita.estado)}`}>
+                          <span className={`rounded-md border px-2 py-1 text-xs font-semibold ${estadoClass(cita.estado)}`}>
                             {estadoLabel(cita.estado)}
                           </span>
 
                           {sinTelefono && (
-                            <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+                            <span className="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
                               <PhoneOff className="mr-1 h-3 w-3" />
                               Sin teléfono
                             </span>
@@ -504,7 +481,7 @@ export function RecordatoriosPanel({
                           type="button"
                           onClick={() => abrirWhatsapp(cita, "recordatorio")}
                           disabled={sinTelefono}
-                          className="inline-flex h-10 items-center justify-center rounded-xl bg-foreground px-3 text-sm font-semibold text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <MessageCircle className="mr-2 h-4 w-4" />
                           Recordar
@@ -514,7 +491,7 @@ export function RecordatoriosPanel({
                           type="button"
                           onClick={() => abrirWhatsapp(cita, "confirmacion")}
                           disabled={sinTelefono}
-                          className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-sm font-semibold transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                          className="inline-flex h-10 items-center justify-center rounded-md border px-3 text-sm font-semibold transition hover:bg-muted active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <Send className="mr-2 h-4 w-4" />
                           Confirmar por WhatsApp
@@ -525,7 +502,7 @@ export function RecordatoriosPanel({
                             type="button"
                             onClick={() => marcarConfirmada(cita)}
                             disabled={accionandoId === cita.id}
-                            className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-sm font-semibold transition hover:bg-muted disabled:opacity-60"
+                            className="inline-flex h-10 items-center justify-center rounded-md border px-3 text-sm font-semibold transition hover:bg-muted active:scale-[0.98] disabled:opacity-60"
                           >
                             <Check className="mr-2 h-4 w-4" />
                             {accionandoId === cita.id ? "Guardando" : "Marcar confirmada"}
@@ -535,7 +512,7 @@ export function RecordatoriosPanel({
                         <button
                           type="button"
                           onClick={() => copiarMensaje(cita, "recordatorio")}
-                          className="inline-flex h-10 items-center justify-center rounded-xl border px-3 text-sm font-semibold transition hover:bg-muted"
+                          className="inline-flex h-10 items-center justify-center rounded-md border px-3 text-sm font-semibold transition hover:bg-muted active:scale-[0.98]"
                         >
                           <Copy className="mr-2 h-4 w-4" />
                           {copiado === `${cita.id}-recordatorio` ? "Copiado" : "Copiar"}

@@ -31,10 +31,10 @@ type Props = {
 
 function estadoBadge(estado?: string) {
   if (estado === "activo") {
-    return "border-green-200 bg-green-50 text-green-700";
+    return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300";
   }
 
-  return "border-red-200 bg-red-50 text-red-700";
+  return "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300";
 }
 
 export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
@@ -48,6 +48,7 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
   const [editTelefono, setEditTelefono] = useState("");
   const [loading, setLoading] = useState("");
   const [error, setError] = useState("");
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
   async function refrescar() {
     const response = await fetch("/api/dashboard/sucursales");
@@ -87,6 +88,7 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
       setNombre("");
       setDireccion("");
       setTelefono("");
+      setMostrarFormulario(false);
 
       toast.success("Sucursal creada correctamente");
       await refrescar();
@@ -203,19 +205,31 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
   }
 
   return (
-    <section className="rounded-3xl border bg-background p-5 shadow-sm">
-      <div>
-        <p className="text-sm text-muted-foreground">Ubicaciones del negocio</p>
+    <section>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-lg font-bold">Ubicaciones del negocio</h2>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+            Cada sede mantiene su propia agenda y accesos. La principal no puede
+            desactivarse.
+          </p>
+        </div>
 
-        <h2 className="mt-1 text-2xl font-bold">
-          Sucursales
-        </h2>
-
-        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-          Creá y administrá las ubicaciones del negocio. Todos los negocios tienen
-          una sucursal principal interna; en el Plan Empresarial podés agregar más
-          sucursales y separar agenda, clientes, reportes y accesos.
-        </p>
+        <button
+          type="button"
+          onClick={() => {
+            setMostrarFormulario((actual) => !actual);
+            setError("");
+          }}
+          className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 active:scale-[0.98]"
+        >
+          {mostrarFormulario ? (
+            <X className="mr-2 h-4 w-4" />
+          ) : (
+            <Plus className="mr-2 h-4 w-4" />
+          )}
+          {mostrarFormulario ? "Cerrar" : "Nueva sucursal"}
+        </button>
       </div>
 
       {error && (
@@ -224,33 +238,37 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
         </p>
       )}
 
-      <div className="mt-5 grid gap-3 rounded-3xl border bg-muted/20 p-4 lg:grid-cols-[1fr_1.2fr_1fr_auto]">
+      {mostrarFormulario ? (
+      <div className="mt-4 grid gap-3 rounded-lg border border-primary/20 bg-primary/[0.04] p-4 lg:grid-cols-[1fr_1.2fr_1fr_auto]">
         <div>
-          <label className="text-sm font-medium">Nombre</label>
+          <label htmlFor="nueva-sucursal-nombre" className="text-sm font-medium">Nombre</label>
           <input
+            id="nueva-sucursal-nombre"
             value={nombre}
             onChange={(event) => setNombre(event.target.value)}
-            className="mt-2 h-11 w-full rounded-xl border bg-background px-3"
+            className="mt-2 h-10 w-full rounded-md border bg-background px-3 outline-none focus:border-primary focus:ring-3 focus:ring-primary/15"
             placeholder="Sucursal Centro"
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">Dirección</label>
+          <label htmlFor="nueva-sucursal-direccion" className="text-sm font-medium">Dirección</label>
           <input
+            id="nueva-sucursal-direccion"
             value={direccion}
             onChange={(event) => setDireccion(event.target.value)}
-            className="mt-2 h-11 w-full rounded-xl border bg-background px-3"
+            className="mt-2 h-10 w-full rounded-md border bg-background px-3 outline-none focus:border-primary focus:ring-3 focus:ring-primary/15"
             placeholder="Dirección de la sucursal"
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium">Teléfono</label>
+          <label htmlFor="nueva-sucursal-telefono" className="text-sm font-medium">Teléfono</label>
           <input
+            id="nueva-sucursal-telefono"
             value={telefono}
             onChange={(event) => setTelefono(event.target.value)}
-            className="mt-2 h-11 w-full rounded-xl border bg-background px-3"
+            className="mt-2 h-10 w-full rounded-md border bg-background px-3 outline-none focus:border-primary focus:ring-3 focus:ring-primary/15"
             placeholder="0981..."
           />
         </div>
@@ -260,7 +278,7 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
             type="button"
             onClick={crearSucursal}
             disabled={loading === "crear"}
-            className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-foreground px-4 text-sm font-semibold text-background transition hover:opacity-90 disabled:opacity-60"
+            className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
           >
             {loading === "crear" ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -271,6 +289,7 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
           </button>
         </div>
       </div>
+      ) : null}
 
       <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {items.length === 0 ? (
@@ -284,11 +303,13 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
             return (
               <article
                 key={sucursal.id}
-                className="rounded-3xl border bg-background p-5 shadow-sm"
+                className={`rounded-lg border bg-card p-4 shadow-sm transition-colors ${
+                  sucursal.es_principal ? "border-primary/30 bg-primary/[0.03]" : ""
+                }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-muted">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
                       <Building2 className="h-5 w-5" />
                     </div>
 
@@ -297,7 +318,7 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
                         <input
                           value={editNombre}
                           onChange={(event) => setEditNombre(event.target.value)}
-                          className="h-10 w-full rounded-xl border bg-background px-3 text-sm font-semibold"
+                          className="h-10 w-full rounded-md border bg-background px-3 text-sm font-semibold"
                         />
                       ) : (
                         <h3 className="truncate text-lg font-bold">
@@ -307,7 +328,7 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
 
                       <div className="mt-2 flex flex-wrap gap-2">
                         <span
-                          className={`rounded-full border px-3 py-1 text-xs font-semibold ${estadoBadge(
+                          className={`rounded-md border px-2.5 py-1 text-xs font-semibold ${estadoBadge(
                             sucursal.estado
                           )}`}
                         >
@@ -315,7 +336,7 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
                         </span>
 
                         {sucursal.es_principal && (
-                          <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                          <span className="inline-flex items-center rounded-md border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
                             <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
                             Principal
                           </span>
@@ -332,7 +353,7 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
                       <input
                         value={editDireccion}
                         onChange={(event) => setEditDireccion(event.target.value)}
-                        className="h-10 w-full rounded-xl border bg-background px-3 text-sm"
+                        className="h-10 w-full rounded-md border bg-background px-3 text-sm"
                         placeholder="Dirección"
                       />
                     ) : (
@@ -346,7 +367,7 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
                       <input
                         value={editTelefono}
                         onChange={(event) => setEditTelefono(event.target.value)}
-                        className="h-10 w-full rounded-xl border bg-background px-3 text-sm"
+                        className="h-10 w-full rounded-md border bg-background px-3 text-sm"
                         placeholder="Teléfono"
                       />
                     ) : (
@@ -362,7 +383,7 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
                         type="button"
                         onClick={() => guardarEdicion(sucursal)}
                         disabled={loading === `${sucursal.id}-guardar`}
-                        className="inline-flex h-10 items-center rounded-xl bg-foreground px-4 text-sm font-semibold text-background disabled:opacity-60"
+                        className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-60"
                       >
                         {loading === `${sucursal.id}-guardar` ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -375,7 +396,7 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
                       <button
                         type="button"
                         onClick={cancelarEdicion}
-                        className="inline-flex h-10 items-center rounded-xl border px-4 text-sm font-semibold hover:bg-muted"
+                        className="inline-flex h-10 items-center rounded-md border px-4 text-sm font-semibold hover:bg-muted"
                       >
                         <X className="mr-2 h-4 w-4" />
                         Cancelar
@@ -386,7 +407,7 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
                       <button
                         type="button"
                         onClick={() => iniciarEdicion(sucursal)}
-                        className="inline-flex h-10 items-center rounded-xl border px-4 text-sm font-semibold hover:bg-muted"
+                        className="inline-flex h-10 items-center rounded-md border px-4 text-sm font-semibold hover:bg-muted"
                       >
                         <Pencil className="mr-2 h-4 w-4" />
                         Editar
@@ -397,7 +418,7 @@ export function SucursalesPanel({ sucursales, initialSucursales }: Props) {
                           type="button"
                           onClick={() => cambiarEstado(sucursal)}
                           disabled={loading === `${sucursal.id}-estado`}
-                          className="inline-flex h-10 items-center rounded-xl border px-4 text-sm font-semibold hover:bg-muted disabled:opacity-60"
+                          className="inline-flex h-10 items-center rounded-md border px-4 text-sm font-semibold hover:bg-muted disabled:opacity-60"
                         >
                           {loading === `${sucursal.id}-estado` && (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
