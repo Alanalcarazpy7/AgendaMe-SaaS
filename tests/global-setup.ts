@@ -6,12 +6,61 @@ import { supabaseAdmin } from "./helpers/supabase-db";
 
 async function cleanTransientE2EData(businessIds: string[]) {
   const supabase = supabaseAdmin();
-  const citasResult = await supabase
+  const pendientesResult = await supabase
     .from("citas")
     .update({ estado: "cancelada" })
     .in("negocio_id", businessIds)
-    .in("estado", ["pendiente", "confirmada"]);
-  if (citasResult.error) throw new Error(citasResult.error.message);
+    .eq("estado", "pendiente");
+  if (pendientesResult.error) throw new Error(pendientesResult.error.message);
+
+  const { data: confirmadas, error: confirmadasError } = await supabase
+    .from("citas")
+    .select("id, fecha, hora_fin")
+    .in("negocio_id", businessIds)
+    .eq("estado", "confirmada");
+  if (confirmadasError) throw new Error(confirmadasError.message);
+
+  const ahora = new Date();
+  const partesFecha = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Asuncion",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(ahora);
+  const fechaActual = `${partesFecha.find((parte) => parte.type === "year")?.value}-${partesFecha.find((parte) => parte.type === "month")?.value}-${partesFecha.find((parte) => parte.type === "day")?.value}`;
+  const horaActual = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Asuncion",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(ahora);
+
+  const finalizadasIds = (confirmadas ?? [])
+    .filter(
+      (cita) =>
+        cita.fecha < fechaActual ||
+        (cita.fecha === fechaActual && cita.hora_fin.slice(0, 5) <= horaActual),
+    )
+    .map((cita) => cita.id);
+  const futurasIds = (confirmadas ?? [])
+    .filter((cita) => !finalizadasIds.includes(cita.id))
+    .map((cita) => cita.id);
+
+  if (finalizadasIds.length) {
+    const finalizadasResult = await supabase
+      .from("citas")
+      .update({ estado: "completada" })
+      .in("id", finalizadasIds);
+    if (finalizadasResult.error) throw new Error(finalizadasResult.error.message);
+  }
+
+  if (futurasIds.length) {
+    const futurasResult = await supabase
+      .from("citas")
+      .update({ estado: "cancelada" })
+      .in("id", futurasIds);
+    if (futurasResult.error) throw new Error(futurasResult.error.message);
+  }
 }
 
 export default async function globalSetup(config: FullConfig) {

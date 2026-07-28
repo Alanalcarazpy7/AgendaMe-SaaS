@@ -1,5 +1,9 @@
 ﻿import { NextResponse } from "next/server";
 import { calcularDisponibilidadReserva } from "@/lib/reservas/disponibilidad";
+import {
+  fechaIsoValida,
+  fechaReservaPasada,
+} from "@/lib/reservas/fecha-reserva";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 type RouteContext = {
@@ -21,6 +25,20 @@ export async function GET(request: Request, context: RouteContext) {
       return NextResponse.json(
         { error: "Faltan datos para consultar disponibilidad." },
         { status: 400 }
+      );
+    }
+
+    if (!fechaIsoValida(fecha)) {
+      return NextResponse.json(
+        { error: "La fecha seleccionada no es válida." },
+        { status: 400 },
+      );
+    }
+
+    if (fechaReservaPasada(fecha)) {
+      return NextResponse.json(
+        { error: "No podés consultar horarios de una fecha pasada." },
+        { status: 400 },
       );
     }
 

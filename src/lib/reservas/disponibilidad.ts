@@ -1,3 +1,4 @@
+import { fechaHoraReservaPasada } from "@/lib/reservas/fecha-reserva";
 import type { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 type SupabaseLike = ReturnType<typeof createServiceRoleClient>;
@@ -310,6 +311,8 @@ export async function calcularDisponibilidadReserva({
       const slotInicio = actual;
       const slotFin = actual + duracion;
       const hora = fromMinutes(slotInicio);
+
+      if (fechaHoraReservaPasada(fecha, hora)) continue;
 
       if (!estaDentro(slotInicio, slotFin, negocioRango)) continue;
 

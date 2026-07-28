@@ -15,6 +15,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { fechaHoraReservaPasada } from "@/lib/reservas/fecha-reserva";
 
 type Relacion<T> = T | T[] | null | undefined;
 
@@ -66,7 +67,12 @@ type Reserva = {
 };
 
 type TiempoReserva = "hoy" | "proximas" | "vencidas";
-type FiltroVista = "todas" | "pendientes" | "confirmadas" | "vencidas";
+type FiltroVista =
+  | "todas"
+  | "pendientes"
+  | "confirmadas"
+  | "completadas"
+  | "vencidas";
 
 type ReservasPendientesPanelProps = {
   reservas?: Reserva[];
@@ -150,6 +156,8 @@ function estadoLabel(estado: string) {
   const labels: Record<string, string> = {
     pendiente: "Pendiente",
     confirmada: "Confirmada",
+    completada: "Completada",
+    no_asistio: "No asistió",
     cancelada: "Cancelada",
   };
 
@@ -213,6 +221,7 @@ export function ReservasPendientesPanel({
       total: items.length,
       pendientes,
       confirmadas: items.filter((reserva) => reserva.estado === "confirmada").length,
+      completadas: items.filter((reserva) => reserva.estado === "completada").length,
       vencidas,
     };
   }, [items, hoy]);
@@ -236,6 +245,7 @@ export function ReservasPendientesPanel({
         filtroVista === "todas" ||
         (filtroVista === "pendientes" && reserva.estado === "pendiente" && !esVencida) ||
         (filtroVista === "confirmadas" && reserva.estado === "confirmada") ||
+        (filtroVista === "completadas" && reserva.estado === "completada") ||
         (filtroVista === "vencidas" && esVencida);
       const coincideBusqueda =
         !query ||
@@ -262,10 +272,14 @@ export function ReservasPendientesPanel({
     { value: "todas", label: "Todas", count: resumen.total },
     { value: "pendientes", label: "Pendientes", count: resumen.pendientes },
     { value: "confirmadas", label: "Confirmadas", count: resumen.confirmadas },
+    { value: "completadas", label: "Completadas", count: resumen.completadas },
     { value: "vencidas", label: "Vencidas", count: resumen.vencidas },
   ];
 
-  async function cambiarEstado(reserva: Reserva, estado: "confirmada" | "cancelada") {
+  async function cambiarEstado(
+    reserva: Reserva,
+    estado: "confirmada" | "completada" | "cancelada",
+  ) {
     try {
       setLoadingId(`${reserva.id}-${estado}`);
       setError("");
@@ -293,16 +307,30 @@ export function ReservasPendientesPanel({
       setItems((prev) =>
         prev.map((item) => (item.id === reserva.id ? { ...item, estado } : item))
       );
-      setFiltroVista(estado === "confirmada" ? "confirmadas" : "todas");
-      setPagina(1);
-      setMensaje(
+      setFiltroVista(
         estado === "confirmada"
-          ? "Reserva confirmada. Ahora esta en la bandeja Confirmadas y se distingue en el calendario."
-          : "Reserva cancelada. La dejamos visible por ahora para que veas el cambio de estado."
+          ? "confirmadas"
+          : estado === "completada"
+            ? "completadas"
+            : "todas",
       );
-      toast.success(
-        estado === "confirmada" ? "Reserva confirmada" : "Reserva cancelada"
-      );
+      setPagina(1);
+      const mensajes = {
+        confirmada:
+          "Reserva confirmada. Ahora está en la bandeja Confirmadas y se distingue en el calendario.",
+        completada:
+          "Servicio completado. La cita queda guardada en Citas como parte del historial.",
+        cancelada:
+          "Reserva cancelada. La dejamos visible por ahora para que veas el cambio de estado.",
+      };
+      const titulos = {
+        confirmada: "Reserva confirmada",
+        completada: "Servicio completado",
+        cancelada: "Reserva cancelada",
+      };
+
+      setMensaje(mensajes[estado]);
+      toast.success(titulos[estado]);
     } catch {
       setError("No se pudo actualizar la reserva.");
       toast.error("No se pudo actualizar la reserva");
@@ -512,16 +540,26 @@ export function ReservasPendientesPanel({
                   const esVencida = reserva.estado === "pendiente" && tiempo === "vencidas";
                   const estaPendiente = reserva.estado === "pendiente";
                   const estaConfirmada = reserva.estado === "confirmada";
+                  const estaCompletada = reserva.estado === "completada";
                   const estaCancelada = reserva.estado === "cancelada";
+                  const puedeCompletar =
+                    estaConfirmada &&
+                    fechaHoraReservaPasada(
+                      reserva.fecha,
+                      horaCorta(reserva.hora_fin),
+                    );
                   const calendarioHref = `/dashboard/citas?fecha=${reserva.fecha}&hora=${horaCorta(reserva.hora_inicio)}&cita=${reserva.id}`;
                   const cargandoConfirmar = loadingId === `${reserva.id}-confirmada`;
+                  const cargandoCompletar = loadingId === `${reserva.id}-completada`;
                   const cargandoCancelar = loadingId === `${reserva.id}-cancelada`;
 
                   return (
                     <tr
                       key={reserva.id}
                       className={`transition-colors hover:bg-muted/35 ${
-                        estaConfirmada
+                        estaCompletada
+                          ? "bg-emerald-500/5"
+                          : estaConfirmada
                           ? "bg-blue-500/5"
                           : esVencida
                             ? "bg-destructive/5"
@@ -565,7 +603,9 @@ export function ReservasPendientesPanel({
                         <div className="flex flex-wrap gap-1.5">
                           <span
                             className={`inline-flex rounded-xl px-2.5 py-1 text-xs font-bold ${
-                              estaConfirmada
+                              estaCompletada
+                                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                                : estaConfirmada
                                 ? "bg-blue-500/10 text-blue-700 dark:text-blue-300"
                                 : estaCancelada
                                   ? "bg-destructive/10 text-destructive"
@@ -610,7 +650,28 @@ export function ReservasPendientesPanel({
                               )}
                             </button>
                           )}
-                          {estaPendiente && (
+                          {estaConfirmada && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                cambiarEstado(reserva, "completada")
+                              }
+                              disabled={Boolean(loadingId) || !puedeCompletar}
+                              className="inline-flex h-9 items-center justify-center rounded-xl bg-emerald-600 px-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-45"
+                              title={
+                                puedeCompletar
+                                  ? "Marcar servicio como completado"
+                                  : "Disponible cuando finalice el horario de la cita"
+                              }
+                            >
+                              {cargandoCompletar ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="h-4 w-4" />
+                              )}
+                            </button>
+                          )}
+                          {(estaPendiente || estaConfirmada) && (
                             <button
                               type="button"
                               onClick={() => cambiarEstado(reserva, "cancelada")}
@@ -625,7 +686,7 @@ export function ReservasPendientesPanel({
                               )}
                             </button>
                           )}
-                          {!estaPendiente && (
+                          {!estaPendiente && !estaConfirmada && (
                             <span className="inline-flex h-9 items-center rounded-xl border bg-muted/40 px-3 text-xs font-bold text-muted-foreground">
                               Gestionada
                             </span>

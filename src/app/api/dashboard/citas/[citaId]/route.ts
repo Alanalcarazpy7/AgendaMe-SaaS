@@ -150,6 +150,16 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
+    if (
+      estado === "completada" &&
+      !["confirmada", "completada"].includes(citaActual.estado)
+    ) {
+      return NextResponse.json(
+        { error: "Primero tenés que confirmar la cita antes de completarla." },
+        { status: 409 },
+      );
+    }
+
     const citaActualCuenta =
       citaActual.estado !== "cancelada" && mesDe(citaActual.fecha) === mesDe(fecha);
     const citaNuevaCuenta = estado !== "cancelada";
@@ -278,6 +288,16 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const horaFin = sumarMinutos(horaInicio, Number(servicio.duracion_minutos ?? 30));
+
+    if (estado === "completada" && !fechaHoraPasada(fecha, horaFin)) {
+      return NextResponse.json(
+        {
+          error:
+            "La cita podrá marcarse como completada cuando haya finalizado su horario.",
+        },
+        { status: 400 },
+      );
+    }
 
     const { data: citasOcupadas, error: ocupadasError } = await supabase
       .from("citas")

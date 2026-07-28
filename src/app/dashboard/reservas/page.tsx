@@ -27,55 +27,65 @@ export default async function ReservasPage() {
   requirePermission(access, "puedeGestionarReservas");
 
   const supabase = createServiceRoleClient();
+  const reservaSelect = `
+    id,
+    negocio_id,
+    sucursal_id,
+    cliente_id,
+    servicio_id,
+    empleado_id,
+    fecha,
+    hora_inicio,
+    hora_fin,
+    estado,
+    precio,
+    notas,
+    origen,
+    seguimiento_token,
+    created_at,
+    clientes (
+      id,
+      nombre_completo,
+      telefono,
+      email
+    ),
+    servicios (
+      id,
+      nombre,
+      duracion_minutos,
+      precio
+    ),
+    empleados (
+      id,
+      nombre,
+      sucursal_id
+    ),
+    sucursales (
+      id,
+      nombre
+    )
+  `;
 
   let reservasQuery = supabase
     .from("citas")
-    .select(
-      `
-      id,
-      negocio_id,
-      sucursal_id,
-      cliente_id,
-      servicio_id,
-      empleado_id,
-      fecha,
-      hora_inicio,
-      hora_fin,
-      estado,
-      precio,
-      notas,
-      origen,
-      seguimiento_token,
-      created_at,
-      clientes (
-        id,
-        nombre_completo,
-        telefono,
-        email
-      ),
-      servicios (
-        id,
-        nombre,
-        duracion_minutos,
-        precio
-      ),
-      empleados (
-        id,
-        nombre,
-        sucursal_id
-      ),
-      sucursales (
-        id,
-        nombre
-      )
-    `
-    )
+    .select(reservaSelect)
     .eq("negocio_id", access.negocio.id)
     .in("estado", ["pendiente", "confirmada"])
     .order("fecha", { ascending: true })
     .order("hora_inicio", { ascending: true });
 
   reservasQuery = applySucursalScope(reservasQuery, access);
+
+  let completadasQuery = supabase
+    .from("citas")
+    .select(reservaSelect)
+    .eq("negocio_id", access.negocio.id)
+    .eq("estado", "completada")
+    .order("fecha", { ascending: false })
+    .order("hora_inicio", { ascending: false })
+    .limit(200);
+
+  completadasQuery = applySucursalScope(completadasQuery, access);
 
   let empleadosQuery = supabase
     .from("empleados")
@@ -118,11 +128,13 @@ export default async function ReservasPage() {
 
   const [
     { data: reservas, error: reservasError },
+    { data: completadas, error: completadasError },
     { data: empleados, error: empleadosError },
     { data: servicios, error: serviciosError },
     { data: clientesRaw, error: clientesError },
   ] = await Promise.all([
     reservasQuery,
+    completadasQuery,
 
     empleadosQuery,
 
@@ -137,6 +149,7 @@ export default async function ReservasPage() {
   ]);
 
   if (reservasError) throw new Error(reservasError.message);
+  if (completadasError) throw new Error(completadasError.message);
   if (empleadosError) throw new Error(empleadosError.message);
   if (serviciosError) throw new Error(serviciosError.message);
   if (clientesError) throw new Error(clientesError.message);
@@ -150,7 +163,7 @@ export default async function ReservasPage() {
 
   return (
     <ReservasPendientesPanel
-      reservas={reservas ?? []}
+      reservas={[...(reservas ?? []), ...(completadas ?? [])]}
       clientes={clientes}
       servicios={servicios ?? []}
       empleados={empleados ?? []}

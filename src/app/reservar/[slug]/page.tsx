@@ -1,6 +1,13 @@
-import { notFound } from "next/navigation";
 import Image from "next/image";
-import { CalendarCheck2, MapPin, Phone, Sparkles } from "lucide-react";
+import { notFound } from "next/navigation";
+import {
+  CalendarCheck2,
+  Clock3,
+  MapPin,
+  Phone,
+  ShieldCheck,
+} from "lucide-react";
+
 import { AgendaMeLogo } from "@/components/brand/agendame-logo";
 import { ReservaPublicaForm } from "@/components/reservas/reserva-publica-form";
 import { nivelPlan } from "@/lib/planes/plan-access";
@@ -46,7 +53,7 @@ export default async function ReservarPage({ params }: RouteProps) {
   const { data: negocio, error: negocioError } = await supabase
     .from("negocios")
     .select(
-      "id, nombre, slug, descripcion, telefono, direccion, logo_url, banner_url, estado"
+      "id, nombre, slug, descripcion, telefono, direccion, logo_url, banner_url, estado",
     )
     .eq("slug", slug)
     .eq("estado", "activo")
@@ -64,7 +71,7 @@ export default async function ReservarPage({ params }: RouteProps) {
         clave,
         nombre
       )
-    `
+    `,
     )
     .eq("negocio_id", negocio.id)
     .eq("estado", "activa")
@@ -91,14 +98,15 @@ export default async function ReservarPage({ params }: RouteProps) {
   if (sucursalesError) throw new Error(sucursalesError.message);
 
   const sucursalesActivas = sucursalesData ?? [];
-
   const sucursales = esEmpresarial
     ? sucursalesActivas
     : sucursalesActivas.slice(0, 1);
 
   const { data: serviciosData, error: serviciosError } = await supabase
     .from("servicios")
-    .select("id, nombre, descripcion, duracion_minutos, precio, color, estado, imagen_url")
+    .select(
+      "id, nombre, descripcion, duracion_minutos, precio, color, estado, imagen_url",
+    )
     .eq("negocio_id", negocio.id)
     .eq("estado", "activo")
     .order("created_at", { ascending: true });
@@ -106,20 +114,16 @@ export default async function ReservarPage({ params }: RouteProps) {
   if (serviciosError) throw new Error(serviciosError.message);
 
   const { data: empleadoServicios, error: empleadoServiciosError } =
-    await supabase
-      .from("empleado_servicios")
-      .select(
-        `
-        servicio_id,
-        empleados (
-          id,
-          nombre,
-          estado,
-          negocio_id,
-          sucursal_id
-        )
-      `
-      );
+    await supabase.from("empleado_servicios").select(`
+      servicio_id,
+      empleados (
+        id,
+        nombre,
+        estado,
+        negocio_id,
+        sucursal_id
+      )
+    `);
 
   if (empleadoServiciosError) {
     throw new Error(empleadoServiciosError.message);
@@ -151,131 +155,121 @@ export default async function ReservarPage({ params }: RouteProps) {
   }
 
   const servicios = (serviciosData ?? []).filter((servicio) =>
-    serviciosDisponibles.has(servicio.id)
+    serviciosDisponibles.has(servicio.id),
   );
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-background text-foreground">
+    <main className="relative min-h-dvh overflow-x-hidden bg-background text-foreground">
       <div className="pointer-events-none fixed inset-0 z-0 ag-public-booking-bg" />
 
-      <section className="relative z-10">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+      <header className="relative z-20 border-b border-border/70 bg-background/88 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="rounded-2xl border bg-card/90 px-3 py-2 shadow-sm ring-1 ring-white/60 backdrop-blur-xl dark:bg-card/80 dark:ring-white/5">
-              <AgendaMeLogo size="sm" />
-            </span>
-
-            <div className="min-w-0">
-              <p className="truncate text-sm font-bold">{negocio.nombre}</p>
-              <p className="truncate text-xs text-muted-foreground">Reservas online</p>
-            </div>
+            <AgendaMeLogo size="sm" />
+            <span className="hidden h-5 w-px bg-border sm:block" />
+            <p className="hidden truncate text-sm font-semibold text-muted-foreground sm:block">
+              Reserva online
+            </p>
           </div>
 
-          <div className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex">
-            <CalendarCheck2 className="h-4 w-4 text-primary" />
-            Confirmación según disponibilidad
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <ShieldCheck className="size-4 text-primary" aria-hidden="true" />
+            <span className="hidden sm:inline">
+              Tus datos se usan solo para esta reserva
+            </span>
+            <span className="sm:hidden">Reserva segura</span>
           </div>
         </div>
-      </section>
+      </header>
 
-      <section className="relative z-10 px-4 pb-8 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl overflow-hidden rounded-[2rem] border border-border/80 bg-card/90 shadow-[0_28px_90px_rgb(15_23_42/0.10)] ring-1 ring-white/70 backdrop-blur-xl dark:bg-card/80 dark:shadow-black/30 dark:ring-white/5">
-          <div className="grid lg:grid-cols-[minmax(0,1fr)_26rem]">
-            <div className="relative flex min-h-[26rem] flex-col justify-end p-6 sm:p-8 lg:p-10">
-              <div className="absolute inset-0">
-                {negocio.banner_url ? (
-                  <>
-                    <Image
-                      src={negocio.banner_url}
-                      alt={`Portada de ${negocio.nombre}`}
-                      fill
-                      priority
-                      sizes="(min-width: 1024px) calc(100vw - 26rem), 100vw"
-                      unoptimized
-                      className="h-full w-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/82 via-slate-950/32 to-slate-950/8" />
-                  </>
-                ) : (
-                  <div className="h-full w-full bg-[linear-gradient(135deg,#0f172a,#0b1120_58%,#0e7490)]" />
+      <section className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-5 pt-4 sm:px-6 sm:pt-6">
+        <div className="relative min-h-[16rem] overflow-hidden rounded-lg border border-white/15 bg-slate-950 shadow-[0_24px_70px_rgb(15_23_42/0.20)] sm:min-h-[18rem]">
+          {negocio.banner_url ? (
+            <Image
+              src={negocio.banner_url}
+              alt={`Portada de ${negocio.nombre}`}
+              fill
+              priority
+              sizes="(min-width: 1152px) 1152px, 100vw"
+              unoptimized
+              className="object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 ag-bg-dots bg-slate-900" />
+          )}
+
+          <div className="absolute inset-0 bg-slate-950/58" />
+          <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-slate-950 via-slate-950/72 to-transparent" />
+
+          <div className="relative flex min-h-[16rem] flex-col justify-between p-5 text-white sm:min-h-[18rem] sm:p-7">
+            <div className="flex items-center justify-between gap-3">
+              <span className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-slate-950/48 px-3 py-2 text-xs font-semibold backdrop-blur-md">
+                <CalendarCheck2
+                  className="size-4 text-cyan-300"
+                  aria-hidden="true"
+                />
+                Solicitud sujeta a confirmación
+              </span>
+
+              {negocio.telefono && (
+                <a
+                  href={`tel:${negocio.telefono}`}
+                  className="hidden items-center gap-2 rounded-md border border-white/20 bg-slate-950/48 px-3 py-2 text-xs font-semibold outline-none backdrop-blur-md transition-colors hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white/70 sm:inline-flex"
+                >
+                  <Phone className="size-4" aria-hidden="true" />
+                  {negocio.telefono}
+                </a>
+              )}
+            </div>
+
+            <div className="flex items-end gap-4">
+              {negocio.logo_url ? (
+                <Image
+                  src={negocio.logo_url}
+                  alt={`Logo de ${negocio.nombre}`}
+                  width={72}
+                  height={72}
+                  unoptimized
+                  className="size-16 shrink-0 rounded-lg border-2 border-white bg-white object-cover shadow-xl sm:size-[4.5rem]"
+                />
+              ) : (
+                <div className="grid size-16 shrink-0 place-items-center rounded-lg border-2 border-white bg-white text-2xl font-bold text-slate-950 shadow-xl sm:size-[4.5rem]">
+                  {negocio.nombre.slice(0, 1).toUpperCase()}
+                </div>
+              )}
+
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-cyan-200">
+                  Agenda disponible
+                </p>
+                <h1 className="mt-1 text-3xl font-bold leading-tight text-balance sm:text-4xl">
+                  {negocio.nombre}
+                </h1>
+                {negocio.descripcion && (
+                  <p className="mt-2 line-clamp-2 max-w-2xl text-sm leading-6 text-slate-200">
+                    {negocio.descripcion}
+                  </p>
                 )}
               </div>
-
-              <div className="relative max-w-3xl text-white">
-                <span className="inline-flex items-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-cyan-50 backdrop-blur-xl">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Reserva tu turno en minutos
-                </span>
-
-                <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-end">
-                  {negocio.logo_url ? (
-                    <Image
-                      src={negocio.logo_url}
-                      alt={`Logo de ${negocio.nombre}`}
-                      width={80}
-                      height={80}
-                      unoptimized
-                      className="h-20 w-20 rounded-[1.35rem] border-4 border-white/90 bg-white object-cover shadow-2xl shadow-slate-950/30"
-                    />
-                  ) : (
-                    <div className="flex h-20 w-20 items-center justify-center rounded-[1.35rem] border-4 border-white/90 bg-white text-3xl font-bold text-slate-950 shadow-2xl shadow-slate-950/30">
-                      {negocio.nombre.slice(0, 1).toUpperCase()}
-                    </div>
-                  )}
-
-                  <div className="min-w-0">
-                    <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl">
-                      {negocio.nombre}
-                    </h1>
-                    {negocio.descripcion && (
-                      <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-100/90 sm:text-base">
-                        {negocio.descripcion}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
             </div>
 
-            <aside className="border-t border-border/70 bg-background/72 p-5 dark:bg-white/[0.03] lg:border-l lg:border-t-0">
-              <div className="flex h-full flex-col justify-between gap-5 rounded-[1.5rem] border bg-card/80 p-5 shadow-sm ring-1 ring-white/60 dark:bg-card/70 dark:ring-white/5">
-                <div>
-                  <p className="text-sm font-semibold text-muted-foreground">Información del negocio</p>
-
-                  <div className="mt-5 space-y-3">
-                    {negocio.direccion && (
-                      <div className="flex gap-3 rounded-2xl border bg-muted/35 p-3">
-                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                        <p className="text-sm leading-6">{negocio.direccion}</p>
-                      </div>
-                    )}
-
-                    {negocio.telefono && (
-                      <div className="flex gap-3 rounded-2xl border bg-muted/35 p-3">
-                        <Phone className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                        <p className="text-sm leading-6">{negocio.telefono}</p>
-                      </div>
-                    )}
-
-                    <div className="rounded-2xl border border-cyan-300/40 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary)_92%,#0b1120),color-mix(in_srgb,var(--ring)_72%,#0b1120))] p-4 text-white shadow-lg shadow-cyan-950/15">
-                      <p className="font-bold">Reservá tu turno</p>
-                      <p className="mt-1 text-sm leading-6 text-cyan-50/90">
-                        Elegí servicio, fecha y horario. El negocio revisará tu solicitud.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border bg-muted/30 p-3 text-xs leading-5 text-muted-foreground">
-                  Al enviar la reserva, tus datos se usan solo para gestionar este turno.
-                </div>
-              </div>
-            </aside>
+            <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-t border-white/15 pt-4 text-xs text-slate-200">
+              {negocio.direccion && (
+                <span className="inline-flex items-center gap-2">
+                  <MapPin className="size-4 text-cyan-300" aria-hidden="true" />
+                  {negocio.direccion}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-2">
+                <Clock3 className="size-4 text-cyan-300" aria-hidden="true" />
+                Elegí entre los horarios disponibles
+              </span>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="relative z-10 mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
+      <section className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-10 sm:px-6">
         <ReservaPublicaForm
           negocioSlug={negocio.slug}
           servicios={servicios}
@@ -283,6 +277,13 @@ export default async function ReservarPage({ params }: RouteProps) {
           serviciosPorSucursal={serviciosPorSucursal}
         />
       </section>
+
+      <footer className="relative z-10 border-t border-border/70 bg-background/70">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-5 text-xs text-muted-foreground sm:px-6">
+          <span>Reservas gestionadas con AgendaMe</span>
+          <span>Confirmación según disponibilidad</span>
+        </div>
+      </footer>
     </main>
   );
 }

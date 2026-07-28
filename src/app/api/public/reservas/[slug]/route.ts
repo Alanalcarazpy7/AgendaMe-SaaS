@@ -3,6 +3,10 @@ import {
   calcularDisponibilidadReserva,
   sumarMinutosHora,
 } from "@/lib/reservas/disponibilidad";
+import {
+  fechaHoraReservaPasada,
+  fechaIsoValida,
+} from "@/lib/reservas/fecha-reserva";
 import { validarCapacidadPlan } from "@/lib/planes/plan-limits";
 import {
   checkRateLimit,
@@ -36,6 +40,17 @@ function soloDigitos(valor: string) {
   return valor.replace(/\D/g, "");
 }
 
+function escaparPatronIlike(valor: string) {
+  return valor.replace(/[\\%_]/g, "\\$&");
+}
+
+function esErrorDuplicado(error: { code?: string | null; message?: string | null }) {
+  return (
+    error.code === "23505" ||
+    String(error.message ?? "").toLowerCase().includes("duplicate key")
+  );
+}
+
 function rateLimitResponse(retryAfterSeconds: number) {
   return NextResponse.json(
     {
@@ -62,13 +77,27 @@ export async function POST(request: Request, context: RouteContext) {
     const horaInicio = limpiar(body.horaInicio);
     const clienteNombre = limpiar(body.clienteNombre);
     const clienteTelefono = limpiar(body.clienteTelefono);
-    const clienteEmail = limpiar(body.clienteEmail);
+    const clienteEmail = limpiar(body.clienteEmail).toLowerCase();
     const notas = limpiar(body.notas);
 
     if (!servicioId || !fecha || !horaInicio || !clienteNombre || !clienteTelefono) {
       return NextResponse.json(
         { error: "Completá todos los datos obligatorios." },
         { status: 400 }
+      );
+    }
+
+    if (!fechaIsoValida(fecha)) {
+      return NextResponse.json(
+        { error: "La fecha seleccionada no es válida." },
+        { status: 400 },
+      );
+    }
+
+    if (fechaHoraReservaPasada(fecha, horaInicio)) {
+      return NextResponse.json(
+        { error: "No podés reservar una fecha u horario que ya pasó." },
+        { status: 400 },
       );
     }
 
@@ -158,29 +187,79 @@ export async function POST(request: Request, context: RouteContext) {
 
     let clienteId: string | null = null;
 
-    const { data: clienteExistente, error: clienteBuscarError } = await supabase
+    const clientePorTelefonoQuery = supabase
       .from("clientes")
-      .select("id")
+      .select("id, telefono, email")
       .eq("negocio_id", negocioId)
       .eq("telefono", clienteTelefono)
       .maybeSingle();
 
-    if (clienteBuscarError) {
-      throw new Error(clienteBuscarError.message);
+    const clientePorEmailQuery = clienteEmail
+      ? supabase
+          .from("clientes")
+          .select("id, telefono, email")
+          .eq("negocio_id", negocioId)
+          .ilike("email", escaparPatronIlike(clienteEmail))
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null });
+
+    const [clientePorTelefonoResultado, clientePorEmailResultado] =
+      await Promise.all([clientePorTelefonoQuery, clientePorEmailQuery]);
+
+    if (clientePorTelefonoResultado.error) {
+      throw new Error(clientePorTelefonoResultado.error.message);
     }
+
+    if (clientePorEmailResultado.error) {
+      throw new Error(clientePorEmailResultado.error.message);
+    }
+
+    const clientePorTelefono = clientePorTelefonoResultado.data;
+    const clientePorEmail = clientePorEmailResultado.data;
+
+    if (
+      clientePorTelefono?.id &&
+      clientePorEmail?.id &&
+      clientePorTelefono.id !== clientePorEmail.id
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "El correo y el teléfono ingresados pertenecen a clientes diferentes. Revisá los datos o contactá al negocio.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const clienteExistente = clientePorTelefono ?? clientePorEmail;
 
     if (clienteExistente?.id) {
       clienteId = clienteExistente.id;
 
-      await supabase
+      const { error: clienteActualizarError } = await supabase
         .from("clientes")
         .update({
           nombre_completo: clienteNombre,
-          email: clienteEmail || null,
+          telefono: clienteTelefono,
+          email: clienteEmail || clienteExistente.email || null,
           updated_at: new Date().toISOString(),
         })
         .eq("id", clienteId)
         .eq("negocio_id", negocioId);
+
+      if (clienteActualizarError) {
+        if (esErrorDuplicado(clienteActualizarError)) {
+          return NextResponse.json(
+            {
+              error:
+                "El correo o teléfono ingresado ya pertenece a otro cliente. Revisá los datos o contactá al negocio.",
+            },
+            { status: 409 },
+          );
+        }
+
+        throw new Error(clienteActualizarError.message);
+      }
     } else {
       const capacidadClientes = await validarCapacidadPlan({
         supabase,
@@ -209,6 +288,16 @@ export async function POST(request: Request, context: RouteContext) {
         })
         .select("id")
         .single();
+
+      if (clienteError && esErrorDuplicado(clienteError)) {
+        return NextResponse.json(
+          {
+            error:
+              "Ya existe un cliente con ese correo o teléfono. Volvé a intentar o contactá al negocio.",
+          },
+          { status: 409 },
+        );
+      }
 
       if (clienteError) {
         throw new Error(clienteError.message);
