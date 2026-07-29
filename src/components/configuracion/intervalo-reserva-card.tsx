@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CheckCircle2, Clock3, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,49 +9,19 @@ const OPCIONES_INTERVALO = Array.from({ length: 24 }, (_, index) => {
   return (index + 1) * 5;
 });
 
-export function IntervaloReservaCard() {
-  const [intervalo, setIntervalo] = useState("30");
-  const [loading, setLoading] = useState(true);
+type IntervaloReservaCardProps = {
+  intervaloInicial: number;
+};
+
+export function IntervaloReservaCard({
+  intervaloInicial,
+}: IntervaloReservaCardProps) {
+  const valorInicial = String(intervaloInicial);
+  const [intervalo, setIntervalo] = useState(valorInicial);
+  const [intervaloGuardado, setIntervaloGuardado] = useState(valorInicial);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    let cancelado = false;
-
-    async function cargarConfiguracion() {
-      try {
-        setLoading(true);
-        setError("");
-
-        const response = await fetch("/api/dashboard/negocio/intervalo-reserva");
-        const data = await response.json();
-
-        if (cancelado) return;
-
-        if (!response.ok) {
-          setError(data.error ?? "No se pudo cargar la configuración.");
-          return;
-        }
-
-        setIntervalo(String(data.intervaloReservaMinutos ?? 30));
-      } catch {
-        if (!cancelado) {
-          setError("No se pudo cargar la configuración.");
-        }
-      } finally {
-        if (!cancelado) {
-          setLoading(false);
-        }
-      }
-    }
-
-    cargarConfiguracion();
-
-    return () => {
-      cancelado = true;
-    };
-  }, []);
 
   async function guardar() {
     try {
@@ -79,6 +49,7 @@ export function IntervaloReservaCard() {
       }
 
       setIntervalo(String(data.intervaloReservaMinutos));
+      setIntervaloGuardado(String(data.intervaloReservaMinutos));
       setSuccess("Intervalo actualizado correctamente.");
       toast.success("Intervalo actualizado correctamente");
 
@@ -125,8 +96,11 @@ export function IntervaloReservaCard() {
 
           <select
             value={intervalo}
-            onChange={(event) => setIntervalo(event.target.value)}
-            disabled={loading || saving}
+            onChange={(event) => {
+              setIntervalo(event.target.value);
+              setSuccess("");
+            }}
+            disabled={saving}
             className="mt-1 h-10 w-full rounded-md border bg-background px-3 text-sm shadow-xs outline-none transition focus:border-primary disabled:cursor-not-allowed disabled:opacity-60"
           >
             {OPCIONES_INTERVALO.map((opcion) => (
@@ -154,7 +128,7 @@ export function IntervaloReservaCard() {
         <Button
           type="button"
           onClick={guardar}
-          disabled={loading || saving}
+          disabled={saving || intervalo === intervaloGuardado}
         >
           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Guardar intervalo

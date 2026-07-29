@@ -37,7 +37,8 @@ export default async function ConfiguracionPage() {
         id,
         nombre,
         slug,
-        estado
+        estado,
+        intervalo_reserva_minutos
       )
     `
     )
@@ -105,7 +106,11 @@ export default async function ConfiguracionPage() {
               "Controlá la frecuencia de los turnos y los días de atención.",
             content: (
               <div className="space-y-4">
-                <IntervaloReservaCard />
+                <IntervaloReservaCard
+                  intervaloInicial={Number(
+                    negocio?.intervalo_reserva_minutos ?? 30,
+                  )}
+                />
                 <HorariosNegocioForm horariosIniciales={horarios} />
               </div>
             ),

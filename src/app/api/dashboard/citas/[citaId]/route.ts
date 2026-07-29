@@ -150,12 +150,73 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
+    const cambiaDatosOperativos =
+      clienteId !== citaActual.cliente_id ||
+      servicioId !== citaActual.servicio_id ||
+      empleadoId !== citaActual.empleado_id ||
+      fecha !== citaActual.fecha ||
+      horaInicio !== String(citaActual.hora_inicio).slice(0, 5);
+    const estadosTerminales = ["completada", "no_asistio", "cancelada"];
+
     if (
-      estado === "completada" &&
-      !["confirmada", "completada"].includes(citaActual.estado)
+      estadosTerminales.includes(citaActual.estado) &&
+      (cambiaDatosOperativos || estado !== citaActual.estado)
     ) {
       return NextResponse.json(
-        { error: "Primero tenés que confirmar la cita antes de completarla." },
+        {
+          error:
+            "La reserva ya está cerrada. Podés corregir sus notas, pero no cambiar el horario, la asignación ni el estado histórico.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const transicionesPermitidas: Record<string, string[]> = {
+      pendiente: [
+        "pendiente",
+        "confirmada",
+        "completada",
+        "cancelada",
+        "no_asistio",
+      ],
+      confirmada: ["confirmada", "completada", "cancelada", "no_asistio"],
+      completada: ["completada"],
+      no_asistio: ["no_asistio"],
+      cancelada: ["cancelada"],
+    };
+
+    if (!transicionesPermitidas[citaActual.estado]?.includes(estado)) {
+      return NextResponse.json(
+        { error: "Ese cambio de estado no respeta el flujo de la reserva." },
+        { status: 409 },
+      );
+    }
+
+    if (estadosTerminales.includes(citaActual.estado)) {
+      if (notas !== undefined) {
+        const { error: notasError } = await supabase
+          .from("citas")
+          .update({
+            notas: notas || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", citaId)
+          .eq("negocio_id", access.negocio.id);
+
+        if (notasError) throw new Error(notasError.message);
+      }
+
+      return NextResponse.json({
+        message: "Notas de la reserva actualizadas correctamente.",
+      });
+    }
+
+    if (
+      estado === "completada" &&
+      !["pendiente", "confirmada", "completada"].includes(citaActual.estado)
+    ) {
+      return NextResponse.json(
+        { error: "Esta reserva no puede marcarse como completada." },
         { status: 409 },
       );
     }
@@ -195,6 +256,20 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json(
         { error: "No se puede mover una cita a una fecha u hora pasada." },
         { status: 400 }
+      );
+    }
+
+    if (
+      estado === "cancelada" &&
+      estado !== citaActual.estado &&
+      fechaHoraPasada(fecha, horaInicio)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "La reserva ya empezó. Si fue atendida, cerrala como “Completada”; si no vino, marcala como “No asistió”.",
+        },
+        { status: 409 },
       );
     }
 
@@ -287,7 +362,38 @@ export async function PATCH(request: Request, context: RouteContext) {
         .maybeSingle();
     }
 
-    const horaFin = sumarMinutos(horaInicio, Number(servicio.duracion_minutos ?? 30));
+    const horaFin = sumarMinutos(
+      horaInicio,
+      Number(servicio.duracion_minutos ?? 30),
+    );
+
+    if (
+      estado === "confirmada" &&
+      citaActual.estado === "pendiente" &&
+      fechaHoraPasada(fecha, horaFin)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "El horario ya terminó. Registrá “Completada” si fue atendida o “No asistió” si la persona no vino.",
+        },
+        { status: 409 },
+      );
+    }
+
+    if (
+      estado === "no_asistio" &&
+      estado !== citaActual.estado &&
+      !fechaHoraPasada(fecha, horaFin)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Solo podés marcar “No asistió” después de que termine el horario reservado.",
+        },
+        { status: 400 },
+      );
+    }
 
     if (estado === "completada" && !fechaHoraPasada(fecha, horaFin)) {
       return NextResponse.json(

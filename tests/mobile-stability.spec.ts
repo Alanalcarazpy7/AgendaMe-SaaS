@@ -38,6 +38,12 @@ test.describe("dashboard móvil admin estable", () => {
       await page.goto(ruta, { waitUntil: "domcontentloaded" });
 
       await esperarDashboardValido(page);
+      const omitirRecorrido = page.getByRole("button", {
+        name: /Omitir recorrido/i,
+      });
+      if (await omitirRecorrido.isVisible()) {
+        await omitirRecorrido.click();
+      }
       await esperarSinDesbordeHorizontal(page);
 
       const nombre = ruta.replaceAll("/", "_").replace(/^_/, "") || "dashboard";

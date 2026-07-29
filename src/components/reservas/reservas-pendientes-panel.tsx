@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
+  AlertTriangle,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
@@ -14,65 +15,43 @@ import {
   Search,
   XCircle,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  ReservaEditarDialog,
+  type ClienteReserva as Cliente,
+  type EmpleadoReserva as Empleado,
+  type RelacionReserva as Relacion,
+  type ReservaDashboard as Reserva,
+  type ServicioReserva as Servicio,
+} from "@/components/reservas/reserva-editar-dialog";
 import { fechaHoraReservaPasada } from "@/lib/reservas/fecha-reserva";
 
-type Relacion<T> = T | T[] | null | undefined;
-
-type Cliente = {
-  id: string;
-  nombre_completo: string;
-  telefono?: string | null;
-  email?: string | null;
-};
-
-type Servicio = {
-  id: string;
-  nombre: string;
-  duracion_minutos?: number | null;
-  precio?: number | string | null;
-};
-
-type Empleado = {
-  id: string;
-  nombre: string;
-  sucursal_id?: string | null;
-};
-
-type Sucursal = {
-  id: string;
-  nombre: string;
-};
-
-type Reserva = {
-  id: string;
-  negocio_id?: string;
-  sucursal_id?: string | null;
-  cliente_id: string;
-  servicio_id: string;
-  empleado_id: string;
-  fecha: string;
-  hora_inicio: string;
-  hora_fin: string;
-  estado: string;
-  precio?: number | string | null;
-  notas?: string | null;
-  origen?: string | null;
-  seguimiento_token?: string | null;
-  created_at?: string | null;
-  clientes?: Relacion<Cliente>;
-  servicios?: Relacion<Servicio>;
-  empleados?: Relacion<Empleado>;
-  sucursales?: Relacion<Sucursal>;
-};
-
-type TiempoReserva = "hoy" | "proximas" | "vencidas";
+type TiempoReserva = "hoy" | "proximas" | "registrar_asistencia";
 type FiltroVista =
   | "todas"
   | "pendientes"
   | "confirmadas"
   | "completadas"
-  | "vencidas";
+  | "asistencia"
+  | "no_asistieron"
+  | "canceladas";
+
+type EstadoIrreversible = "completada" | "cancelada" | "no_asistio";
+
+type AccionPendiente = {
+  reserva: Reserva;
+  estado: EstadoIrreversible;
+};
 
 type ReservasPendientesPanelProps = {
   reservas?: Reserva[];
@@ -80,6 +59,7 @@ type ReservasPendientesPanelProps = {
   clientes?: Cliente[];
   servicios?: Servicio[];
   empleados?: Empleado[];
+  puedeEditarClientes?: boolean;
 };
 
 const RESERVAS_PAGE_SIZE = 20;
@@ -146,10 +126,46 @@ function cardBase(extra = "") {
   return `rounded-[1.5rem] border border-border/80 bg-card/90 shadow-[0_16px_48px_rgb(15_23_42/0.07)] ring-1 ring-white/60 backdrop-blur-xl dark:bg-card/80 dark:shadow-black/20 dark:ring-white/5 ${extra}`;
 }
 
-function estadoTiempo(reserva: Reserva, hoy: string): TiempoReserva {
-  if (reserva.fecha < hoy) return "vencidas";
+function estadoTiempo(reserva: Reserva, hoy: string): TiempoReserva | null {
+  if (
+    reserva.estado === "completada" ||
+    reserva.estado === "cancelada" ||
+    reserva.estado === "no_asistio"
+  ) {
+    return null;
+  }
+
+  if (
+    fechaHoraReservaPasada(
+      reserva.fecha,
+      horaCorta(reserva.hora_fin),
+    )
+  ) {
+    return "registrar_asistencia";
+  }
+
   if (reserva.fecha === hoy) return "hoy";
   return "proximas";
+}
+
+function tiempoLabel(tiempo: TiempoReserva) {
+  const labels: Record<TiempoReserva, string> = {
+    hoy: "Hoy",
+    proximas: "Próxima",
+    registrar_asistencia: "Registrar asistencia",
+  };
+
+  return labels[tiempo];
+}
+
+function tiempoClass(tiempo: TiempoReserva) {
+  if (tiempo === "registrar_asistencia") {
+    return "bg-amber-500/10 text-amber-700 dark:text-amber-300";
+  }
+  if (tiempo === "hoy") {
+    return "bg-cyan-500/10 text-cyan-600 dark:text-cyan-300";
+  }
+  return "bg-muted text-muted-foreground";
 }
 
 function estadoLabel(estado: string) {
@@ -164,27 +180,121 @@ function estadoLabel(estado: string) {
   return labels[estado] ?? estado;
 }
 
+function accionLabel(estado: EstadoIrreversible) {
+  const labels: Record<EstadoIrreversible, string> = {
+    completada: "Completada",
+    cancelada: "Cancelada",
+    no_asistio: "No asistió",
+  };
+
+  return labels[estado];
+}
+
+function accionTitulo(estado: EstadoIrreversible) {
+  const labels: Record<EstadoIrreversible, string> = {
+    completada: "Confirmar servicio completado",
+    cancelada: "Confirmar cancelación",
+    no_asistio: "Confirmar que no asistió",
+  };
+
+  return labels[estado];
+}
+
+function accionBoton(estado: EstadoIrreversible) {
+  const labels: Record<EstadoIrreversible, string> = {
+    completada: "Sí, marcar como completada",
+    cancelada: "Sí, cancelar reserva",
+    no_asistio: "Sí, marcar como no asistió",
+  };
+
+  return labels[estado];
+}
+
 export function ReservasPendientesPanel({
   reservas,
   initialReservas,
   clientes = [],
   servicios = [],
   empleados = [],
+  puedeEditarClientes = false,
 }: ReservasPendientesPanelProps) {
-  const [items, setItems] = useState<Reserva[]>(reservas ?? initialReservas ?? []);
+  const reservasEntrantes = reservas ?? initialReservas;
+  const [items, setItems] = useState<Reserva[]>(reservasEntrantes ?? []);
+  const [clientesItems, setClientesItems] = useState<Cliente[]>(clientes);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [accionPendiente, setAccionPendiente] =
+    useState<AccionPendiente | null>(null);
   const [error, setError] = useState("");
-  const [mensaje, setMensaje] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [filtroVista, setFiltroVista] = useState<FiltroVista>("pendientes");
   const [pagina, setPagina] = useState(1);
+  const actualizacionEnCurso = useRef(false);
 
   const hoy = hoyLocal();
+
+  const actualizarReservas = useCallback(async () => {
+    if (actualizacionEnCurso.current) return;
+
+    actualizacionEnCurso.current = true;
+
+    try {
+      const response = await fetch("/api/dashboard/reservas", {
+        cache: "no-store",
+      });
+
+      if (!response.ok) return;
+
+      const data = (await response.json()) as { reservas?: Reserva[] };
+      if (!Array.isArray(data.reservas)) return;
+
+      setItems(data.reservas);
+
+      const clientesActualizados = data.reservas
+        .map((reserva) => obtenerObjeto(reserva.clientes))
+        .filter((cliente): cliente is Cliente => cliente !== null);
+
+      if (clientesActualizados.length > 0) {
+        setClientesItems((actuales) => {
+          const porId = new Map(
+            actuales.map((cliente) => [cliente.id, cliente]),
+          );
+
+          for (const cliente of clientesActualizados) {
+            porId.set(cliente.id, cliente);
+          }
+
+          return Array.from(porId.values());
+        });
+      }
+    } catch {
+      // El refresco es silencioso: la siguiente ejecución vuelve a intentarlo.
+    } finally {
+      actualizacionEnCurso.current = false;
+    }
+  }, []);
+
+  useEffect(() => {
+    const actualizarSiVisible = () => {
+      if (document.visibilityState === "visible") {
+        void actualizarReservas();
+      }
+    };
+    const intervalId = window.setInterval(actualizarSiVisible, 45_000);
+
+    window.addEventListener("focus", actualizarSiVisible);
+    document.addEventListener("visibilitychange", actualizarSiVisible);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", actualizarSiVisible);
+      document.removeEventListener("visibilitychange", actualizarSiVisible);
+    };
+  }, [actualizarReservas]);
 
   function clienteDe(reserva: Reserva) {
     return (
       obtenerObjeto(reserva.clientes) ??
-      clientes.find((cliente) => cliente.id === reserva.cliente_id) ??
+      clientesItems.find((cliente) => cliente.id === reserva.cliente_id) ??
       null
     );
   }
@@ -210,19 +320,32 @@ export function ReservasPendientesPanel({
   }
 
   const resumen = useMemo(() => {
+    const requiereAsistencia = (reserva: Reserva) =>
+      estadoTiempo(reserva, hoy) === "registrar_asistencia";
     const pendientes = items.filter(
-      (reserva) => reserva.estado === "pendiente" && estadoTiempo(reserva, hoy) !== "vencidas"
+      (reserva) => reserva.estado === "pendiente" && !requiereAsistencia(reserva),
     ).length;
-    const vencidas = items.filter(
-      (reserva) => reserva.estado === "pendiente" && estadoTiempo(reserva, hoy) === "vencidas"
+    const asistencia = items.filter(
+      (reserva) =>
+        ["pendiente", "confirmada"].includes(reserva.estado) &&
+        requiereAsistencia(reserva),
     ).length;
 
     return {
       total: items.length,
       pendientes,
-      confirmadas: items.filter((reserva) => reserva.estado === "confirmada").length,
+      confirmadas: items.filter(
+        (reserva) =>
+          reserva.estado === "confirmada" && !requiereAsistencia(reserva),
+      ).length,
       completadas: items.filter((reserva) => reserva.estado === "completada").length,
-      vencidas,
+      asistencia,
+      noAsistieron: items.filter(
+        (reserva) => reserva.estado === "no_asistio",
+      ).length,
+      canceladas: items.filter(
+        (reserva) => reserva.estado === "cancelada",
+      ).length,
     };
   }, [items, hoy]);
 
@@ -240,13 +363,22 @@ export function ReservasPendientesPanel({
       const empleado = empleadoDe(reserva);
       const sucursal = sucursalDe(reserva);
       const tiempo = estadoTiempo(reserva, hoy);
-      const esVencida = reserva.estado === "pendiente" && tiempo === "vencidas";
+      const requiereAsistencia = tiempo === "registrar_asistencia";
       const coincideVista =
         filtroVista === "todas" ||
-        (filtroVista === "pendientes" && reserva.estado === "pendiente" && !esVencida) ||
-        (filtroVista === "confirmadas" && reserva.estado === "confirmada") ||
+        (filtroVista === "pendientes" &&
+          reserva.estado === "pendiente" &&
+          !requiereAsistencia) ||
+        (filtroVista === "confirmadas" &&
+          reserva.estado === "confirmada" &&
+          !requiereAsistencia) ||
         (filtroVista === "completadas" && reserva.estado === "completada") ||
-        (filtroVista === "vencidas" && esVencida);
+        (filtroVista === "asistencia" &&
+          ["pendiente", "confirmada"].includes(reserva.estado) &&
+          requiereAsistencia) ||
+        (filtroVista === "no_asistieron" &&
+          reserva.estado === "no_asistio") ||
+        (filtroVista === "canceladas" && reserva.estado === "cancelada");
       const coincideBusqueda =
         !query ||
         cliente?.nombre_completo.toLowerCase().includes(query) ||
@@ -273,17 +405,22 @@ export function ReservasPendientesPanel({
     { value: "pendientes", label: "Pendientes", count: resumen.pendientes },
     { value: "confirmadas", label: "Confirmadas", count: resumen.confirmadas },
     { value: "completadas", label: "Completadas", count: resumen.completadas },
-    { value: "vencidas", label: "Vencidas", count: resumen.vencidas },
+    { value: "asistencia", label: "Asistencia", count: resumen.asistencia },
+    {
+      value: "no_asistieron",
+      label: "No asistieron",
+      count: resumen.noAsistieron,
+    },
+    { value: "canceladas", label: "Canceladas", count: resumen.canceladas },
   ];
 
   async function cambiarEstado(
     reserva: Reserva,
-    estado: "confirmada" | "completada" | "cancelada",
+    estado: "confirmada" | "completada" | "cancelada" | "no_asistio",
   ) {
     try {
       setLoadingId(`${reserva.id}-${estado}`);
       setError("");
-      setMensaje("");
 
       const response = await fetch(`/api/dashboard/citas/${reserva.id}`, {
         method: "PATCH",
@@ -301,7 +438,7 @@ export function ReservasPendientesPanel({
         toast.error("No se pudo actualizar la reserva", {
           description: message,
         });
-        return;
+        return false;
       }
 
       setItems((prev) =>
@@ -312,31 +449,38 @@ export function ReservasPendientesPanel({
           ? "confirmadas"
           : estado === "completada"
             ? "completadas"
-            : "todas",
+            : estado === "no_asistio"
+              ? "no_asistieron"
+              : "canceladas",
       );
       setPagina(1);
-      const mensajes = {
-        confirmada:
-          "Reserva confirmada. Ahora está en la bandeja Confirmadas y se distingue en el calendario.",
-        completada:
-          "Servicio completado. La cita queda guardada en Citas como parte del historial.",
-        cancelada:
-          "Reserva cancelada. La dejamos visible por ahora para que veas el cambio de estado.",
-      };
       const titulos = {
         confirmada: "Reserva confirmada",
         completada: "Servicio completado",
         cancelada: "Reserva cancelada",
+        no_asistio: "Reserva marcada como no asistida",
       };
 
-      setMensaje(mensajes[estado]);
       toast.success(titulos[estado]);
+      return true;
     } catch {
       setError("No se pudo actualizar la reserva.");
       toast.error("No se pudo actualizar la reserva");
+      return false;
     } finally {
       setLoadingId(null);
     }
+  }
+
+  async function confirmarAccion() {
+    if (!accionPendiente) return;
+
+    const guardado = await cambiarEstado(
+      accionPendiente.reserva,
+      accionPendiente.estado,
+    );
+
+    if (guardado) setAccionPendiente(null);
   }
 
   return (
@@ -356,7 +500,7 @@ export function ReservasPendientesPanel({
             </h1>
 
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Bandeja operativa para revisar pendientes, confirmar solicitudes y separar vencidas sin perder contexto.
+              Revisá solicitudes, confirmá próximas reservas y cerrá las atenciones que ya terminaron.
             </p>
 
             <div className="mt-5">
@@ -381,8 +525,8 @@ export function ReservasPendientesPanel({
                 <p className="mt-1 text-3xl font-bold">{resumen.confirmadas}</p>
               </div>
               <div className="rounded-2xl border border-white/15 bg-white/10 p-3">
-                <p className="text-xs text-cyan-50/80">Vencidas</p>
-                <p className="mt-1 text-2xl font-bold">{resumen.vencidas}</p>
+                <p className="text-xs text-cyan-50/80">Registrar asistencia</p>
+                <p className="mt-1 text-2xl font-bold">{resumen.asistencia}</p>
               </div>
               <div className="rounded-2xl border border-white/15 bg-white/10 p-3">
                 <p className="text-xs text-cyan-50/80">Total visible</p>
@@ -394,7 +538,7 @@ export function ReservasPendientesPanel({
       </section>
 
       <section className={cardBase("p-4")}>
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div className="space-y-3">
           <div className="flex min-h-11 items-center gap-2 rounded-2xl border border-border/80 bg-background/70 px-3">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
             <Input
@@ -453,12 +597,6 @@ export function ReservasPendientesPanel({
       {error && (
         <p className="rounded-2xl border border-destructive/25 bg-destructive/10 p-4 text-sm font-medium text-destructive">
           {error}
-        </p>
-      )}
-
-      {mensaje && (
-        <p className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-          {mensaje}
         </p>
       )}
 
@@ -537,21 +675,28 @@ export function ReservasPendientesPanel({
                   const empleado = empleadoDe(reserva);
                   const sucursal = sucursalDe(reserva);
                   const tiempo = estadoTiempo(reserva, hoy);
-                  const esVencida = reserva.estado === "pendiente" && tiempo === "vencidas";
+                  const requiereAsistencia =
+                    tiempo === "registrar_asistencia";
                   const estaPendiente = reserva.estado === "pendiente";
                   const estaConfirmada = reserva.estado === "confirmada";
                   const estaCompletada = reserva.estado === "completada";
                   const estaCancelada = reserva.estado === "cancelada";
+                  const noAsistio = reserva.estado === "no_asistio";
+                  const inicioPasado = fechaHoraReservaPasada(
+                    reserva.fecha,
+                    horaCorta(reserva.hora_inicio),
+                  );
+                  const horarioFinalizado = fechaHoraReservaPasada(
+                    reserva.fecha,
+                    horaCorta(reserva.hora_fin),
+                  );
                   const puedeCompletar =
-                    estaConfirmada &&
-                    fechaHoraReservaPasada(
-                      reserva.fecha,
-                      horaCorta(reserva.hora_fin),
-                    );
+                    (estaPendiente || estaConfirmada) && horarioFinalizado;
                   const calendarioHref = `/dashboard/citas?fecha=${reserva.fecha}&hora=${horaCorta(reserva.hora_inicio)}&cita=${reserva.id}`;
                   const cargandoConfirmar = loadingId === `${reserva.id}-confirmada`;
                   const cargandoCompletar = loadingId === `${reserva.id}-completada`;
                   const cargandoCancelar = loadingId === `${reserva.id}-cancelada`;
+                  const cargandoAusencia = loadingId === `${reserva.id}-no_asistio`;
 
                   return (
                     <tr
@@ -561,9 +706,9 @@ export function ReservasPendientesPanel({
                           ? "bg-emerald-500/5"
                           : estaConfirmada
                           ? "bg-blue-500/5"
-                          : esVencida
-                            ? "bg-destructive/5"
-                            : estaCancelada
+                          : requiereAsistencia
+                            ? "bg-amber-500/5"
+                            : estaCancelada || noAsistio
                               ? "bg-muted/50 opacity-80"
                               : "bg-card/40"
                       }`}
@@ -607,35 +752,67 @@ export function ReservasPendientesPanel({
                                 ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
                                 : estaConfirmada
                                 ? "bg-blue-500/10 text-blue-700 dark:text-blue-300"
-                                : estaCancelada
+                                : estaCancelada || noAsistio
                                   ? "bg-destructive/10 text-destructive"
                                   : "bg-amber-500/10 text-amber-700 dark:text-amber-300"
                             }`}
                           >
                             {estadoLabel(reserva.estado)}
                           </span>
-                          <span
-                            className={`inline-flex rounded-xl px-2.5 py-1 text-xs font-bold ${
-                              esVencida
-                                ? "bg-destructive/10 text-destructive"
-                                : tiempo === "hoy"
-                                  ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-300"
-                                  : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            {esVencida ? "Vencida" : tiempo === "hoy" ? "Hoy" : "Proxima"}
-                          </span>
+                          {tiempo && (
+                            <span
+                              className={`inline-flex rounded-xl px-2.5 py-1 text-xs font-bold ${tiempoClass(tiempo)}`}
+                            >
+                              {tiempoLabel(tiempo)}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
+                          <ReservaEditarDialog
+                            reserva={reserva}
+                            clienteActual={cliente}
+                            servicioActual={servicio}
+                            empleadoActual={empleado}
+                            clientes={clientesItems}
+                            servicios={servicios}
+                            empleados={empleados}
+                            puedeEditarCliente={puedeEditarClientes}
+                            disabled={Boolean(loadingId)}
+                            onClienteSaved={(actualizado) => {
+                              setClientesItems((prev) =>
+                                prev.map((clienteItem) =>
+                                  clienteItem.id === actualizado.id
+                                    ? actualizado
+                                    : clienteItem,
+                                ),
+                              );
+                              setItems((prev) =>
+                                prev.map((item) =>
+                                  item.cliente_id === actualizado.id
+                                    ? { ...item, clientes: actualizado }
+                                    : item,
+                                ),
+                              );
+                            }}
+                            onSaved={(actualizada) => {
+                              setItems((prev) =>
+                                prev.map((item) =>
+                                  item.id === actualizada.id
+                                    ? actualizada
+                                    : item,
+                                ),
+                              );
+                            }}
+                          />
                           <Link
                             href={calendarioHref}
                             className="inline-flex h-9 items-center justify-center rounded-xl border bg-background/70 px-3 text-sm font-semibold transition hover:bg-accent hover:text-accent-foreground"
                           >
                             <Eye className="h-4 w-4" />
                           </Link>
-                          {estaPendiente && !esVencida && (
+                          {estaPendiente && !horarioFinalizado && (
                             <button
                               type="button"
                               onClick={() => cambiarEstado(reserva, "confirmada")}
@@ -650,19 +827,18 @@ export function ReservasPendientesPanel({
                               )}
                             </button>
                           )}
-                          {estaConfirmada && (
+                          {puedeCompletar && (
                             <button
                               type="button"
                               onClick={() =>
-                                cambiarEstado(reserva, "completada")
+                                setAccionPendiente({
+                                  reserva,
+                                  estado: "completada",
+                                })
                               }
-                              disabled={Boolean(loadingId) || !puedeCompletar}
+                              disabled={Boolean(loadingId)}
                               className="inline-flex h-9 items-center justify-center rounded-xl bg-emerald-600 px-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-45"
-                              title={
-                                puedeCompletar
-                                  ? "Marcar servicio como completado"
-                                  : "Disponible cuando finalice el horario de la cita"
-                              }
+                              title="Marcar como atendida y completada"
                             >
                               {cargandoCompletar ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -671,13 +847,19 @@ export function ReservasPendientesPanel({
                               )}
                             </button>
                           )}
-                          {(estaPendiente || estaConfirmada) && (
+                          {(estaPendiente || estaConfirmada) &&
+                            !inicioPasado && (
                             <button
                               type="button"
-                              onClick={() => cambiarEstado(reserva, "cancelada")}
+                              onClick={() =>
+                                setAccionPendiente({
+                                  reserva,
+                                  estado: "cancelada",
+                                })
+                              }
                               disabled={Boolean(loadingId)}
                               className="inline-flex h-9 items-center justify-center rounded-xl bg-destructive px-3 text-sm font-semibold text-white transition hover:bg-destructive/90 disabled:opacity-60"
-                              title={esVencida ? "Cancelar reserva vencida" : "Cancelar reserva"}
+                              title="Cancelar reserva futura"
                             >
                               {cargandoCancelar ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -686,7 +868,32 @@ export function ReservasPendientesPanel({
                               )}
                             </button>
                           )}
-                          {!estaPendiente && !estaConfirmada && (
+                          {(estaPendiente || estaConfirmada) &&
+                            horarioFinalizado && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setAccionPendiente({
+                                    reserva,
+                                    estado: "no_asistio",
+                                  })
+                                }
+                                disabled={Boolean(loadingId)}
+                                className="inline-flex h-9 items-center justify-center rounded-xl border border-destructive/30 bg-destructive/10 px-3 text-sm font-semibold text-destructive transition hover:bg-destructive/15 disabled:opacity-60"
+                                title="Cerrar como no asistida"
+                              >
+                                {cargandoAusencia ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <XCircle className="h-4 w-4" />
+                                )}
+                              </button>
+                            )}
+                          {!estaPendiente &&
+                            !estaConfirmada &&
+                            !estaCompletada &&
+                            !estaCancelada &&
+                            !noAsistio && (
                             <span className="inline-flex h-9 items-center rounded-xl border bg-muted/40 px-3 text-xs font-bold text-muted-foreground">
                               Gestionada
                             </span>
@@ -701,6 +908,130 @@ export function ReservasPendientesPanel({
           </div>
         </section>
       )}
+
+      <Dialog
+        open={Boolean(accionPendiente)}
+        onOpenChange={(open) => {
+          if (!open && !loadingId) setAccionPendiente(null);
+        }}
+      >
+        <DialogContent
+          showCloseButton={!loadingId}
+          className="overflow-hidden p-0 sm:max-w-lg"
+        >
+          {accionPendiente && (
+            <>
+              <div
+                className={`h-1.5 w-full ${
+                  accionPendiente.estado === "completada"
+                    ? "bg-emerald-500"
+                    : "bg-destructive"
+                }`}
+              />
+              <div className="space-y-5 px-6 pb-6">
+                <DialogHeader>
+                  <div
+                    className={`mb-2 flex size-11 items-center justify-center rounded-2xl ${
+                      accionPendiente.estado === "completada"
+                        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                        : "bg-destructive/10 text-destructive"
+                    }`}
+                  >
+                    {accionPendiente.estado === "completada" ? (
+                      <CheckCircle2 className="size-5" />
+                    ) : (
+                      <AlertTriangle className="size-5" />
+                    )}
+                  </div>
+                  <DialogTitle className="text-xl font-bold">
+                    {accionTitulo(accionPendiente.estado)}
+                  </DialogTitle>
+                  <DialogDescription className="leading-6">
+                    Revisá los datos antes de guardar. Este resultado quedará
+                    como parte del historial de la reserva.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="grid gap-3 rounded-lg border bg-muted/35 p-4 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-muted-foreground">
+                      Cliente
+                    </p>
+                    <p className="mt-1 font-semibold">
+                      {clienteDe(accionPendiente.reserva)?.nombre_completo ??
+                        "Sin cliente"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-muted-foreground">
+                      Resultado
+                    </p>
+                    <p className="mt-1 font-semibold">
+                      {accionLabel(accionPendiente.estado)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-muted-foreground">
+                      Servicio
+                    </p>
+                    <p className="mt-1 font-semibold">
+                      {servicioDe(accionPendiente.reserva)?.nombre ??
+                        "Sin servicio"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-muted-foreground">
+                      Fecha y hora
+                    </p>
+                    <p className="mt-1 font-semibold">
+                      {fechaDisplay(accionPendiente.reserva.fecha)},{" "}
+                      {horaCorta(accionPendiente.reserva.hora_inicio)}
+                    </p>
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <DialogClose
+                    render={
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={Boolean(loadingId)}
+                      />
+                    }
+                  >
+                    Volver
+                  </DialogClose>
+                  <Button
+                    type="button"
+                    onClick={confirmarAccion}
+                    disabled={Boolean(loadingId)}
+                    className={
+                      accionPendiente.estado === "completada"
+                        ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                        : ""
+                    }
+                    variant={
+                      accionPendiente.estado === "completada"
+                        ? "default"
+                        : "destructive"
+                    }
+                  >
+                    {loadingId ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : accionPendiente.estado === "completada" ? (
+                      <CheckCircle2 className="size-4" />
+                    ) : (
+                      <AlertTriangle className="size-4" />
+                    )}
+                    {accionBoton(accionPendiente.estado)}
+                  </Button>
+                </DialogFooter>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

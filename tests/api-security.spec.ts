@@ -11,6 +11,7 @@ type ApiCheck = {
 
 const protectedApiChecks: ApiCheck[] = [
   { method: "GET", path: "/api/dashboard/citas" },
+  { method: "GET", path: "/api/dashboard/reservas" },
   { method: "POST", path: "/api/dashboard/citas", data: {} },
   { method: "PATCH", path: "/api/dashboard/citas/00000000-0000-0000-0000-000000000000", data: {} },
   { method: "DELETE", path: "/api/dashboard/citas/00000000-0000-0000-0000-000000000000" },

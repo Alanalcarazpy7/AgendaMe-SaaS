@@ -1,5 +1,5 @@
 import path from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { loadE2EFixtures } from "./helpers/e2e-fixtures";
 import { supabaseAdmin } from "./helpers/supabase-db";
 
@@ -18,6 +18,16 @@ type OriginalProfile = {
 
 let originalInterval = 30;
 let originalProfile: OriginalProfile | null = null;
+
+async function omitirRecorridoSiAparece(page: Page) {
+  const omitirRecorrido = page.getByRole("button", {
+    name: /Omitir recorrido/i,
+  });
+
+  if (await omitirRecorrido.isVisible()) {
+    await omitirRecorrido.click();
+  }
+}
 
 test.describe.serial("configuracion y cuenta del negocio", () => {
   test.use({ storageState: account.storage });
@@ -58,7 +68,10 @@ test.describe.serial("configuracion y cuenta del negocio", () => {
 
   test("actualiza y restaura el intervalo de reservas", async ({ page }) => {
     await page.goto("/dashboard/configuracion", { waitUntil: "networkidle" });
+    await omitirRecorridoSiAparece(page);
+    await page.getByRole("tab", { name: "Reservas y horarios" }).click();
     const intervalSection = page.locator("section").filter({ hasText: "Intervalo de reservas" });
+    await expect(intervalSection.locator("select")).toHaveValue(String(originalInterval));
     const nextInterval = originalInterval === 35 ? 40 : 35;
     await intervalSection.locator("select").selectOption(String(nextInterval));
     await intervalSection.getByRole("button", { name: /Guardar intervalo/i }).click();
@@ -79,6 +92,7 @@ test.describe.serial("configuracion y cuenta del negocio", () => {
 
   test("sube y quita el logo con confirmaciones", async ({ page }) => {
     await page.goto("/dashboard/configuracion", { waitUntil: "networkidle" });
+    await omitirRecorridoSiAparece(page);
     await page.locator('input[type="file"]').first().setInputFiles(
       path.join(process.cwd(), "public", "brand", "logos-colores.png")
     );
@@ -96,17 +110,20 @@ test.describe.serial("configuracion y cuenta del negocio", () => {
 
   test("guarda los horarios del negocio", async ({ page }) => {
     await page.goto("/dashboard/configuracion", { waitUntil: "networkidle" });
+    await omitirRecorridoSiAparece(page);
+    await page.getByRole("tab", { name: "Reservas y horarios" }).click();
     await page.getByRole("button", { name: /Guardar horarios/i }).click();
     await expect(page.locator("body")).toContainText(/Horarios guardados correctamente/i);
   });
 
   test("actualiza los datos personales y muestra confirmacion", async ({ page }) => {
     await page.goto("/dashboard/mi-cuenta", { waitUntil: "networkidle" });
+    await omitirRecorridoSiAparece(page);
     const newName = "Admin E2E Empresarial Verificado";
     await page.getByLabel(/Nombre visible/i).fill(newName);
     await page.getByLabel(/Telefono|Teléfono/i).fill("0981000099");
     await page.getByLabel(/Cargo/i).fill("Administrador de prueba");
-    await page.getByRole("button", { name: /Guardar cambios/i }).click();
+    await page.getByRole("button", { name: /Guardar perfil/i }).click();
     await expect(page.locator("body")).toContainText(/Cuenta actualizada correctamente/i);
     await page.waitForLoadState("networkidle");
     await expect(page.getByLabel(/Nombre visible/i)).toHaveValue(newName);

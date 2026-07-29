@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
@@ -11,6 +12,8 @@ import {
 import { AgendaMeLogo } from "@/components/brand/agendame-logo";
 import { ReservaPublicaForm } from "@/components/reservas/reserva-publica-form";
 import { nivelPlan } from "@/lib/planes/plan-access";
+import { obtenerNegocioPublico } from "@/lib/reservas/negocio-publico";
+import { getSiteUrl } from "@/lib/site-url";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 type RouteProps = {
@@ -46,21 +49,55 @@ function obtenerObjeto<T>(valor: Relacion<T>): T | null {
   return Array.isArray(valor) ? valor[0] ?? null : valor;
 }
 
+export async function generateMetadata({
+  params,
+}: RouteProps): Promise<Metadata> {
+  const { slug } = await params;
+  const negocio = await obtenerNegocioPublico(slug);
+
+  if (!negocio) {
+    return {
+      title: "Reservas no disponibles | AgendaMe",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const title = `Reservá en ${negocio.nombre} | AgendaMe`;
+  const description =
+    negocio.descripcion?.trim() ||
+    `Elegí servicio, profesional y horario para reservar online en ${negocio.nombre}.`;
+  const canonicalPath = `/reservar/${encodeURIComponent(negocio.slug)}`;
+
+  return {
+    metadataBase: new URL(getSiteUrl()),
+    title,
+    description,
+    alternates: {
+      canonical: canonicalPath,
+    },
+    openGraph: {
+      type: "website",
+      locale: "es_PY",
+      siteName: "AgendaMe",
+      url: canonicalPath,
+      title,
+      description,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
+}
+
 export default async function ReservarPage({ params }: RouteProps) {
   const { slug } = await params;
-  const supabase = createServiceRoleClient();
+  const negocio = await obtenerNegocioPublico(slug);
 
-  const { data: negocio, error: negocioError } = await supabase
-    .from("negocios")
-    .select(
-      "id, nombre, slug, descripcion, telefono, direccion, logo_url, banner_url, estado",
-    )
-    .eq("slug", slug)
-    .eq("estado", "activo")
-    .maybeSingle();
-
-  if (negocioError) throw new Error(negocioError.message);
   if (!negocio) notFound();
+
+  const supabase = createServiceRoleClient();
 
   const { data: suscripcion } = await supabase
     .from("suscripciones")
