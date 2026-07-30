@@ -2,7 +2,14 @@
 -- Patch: revocar EXECUTE público de las 5 RPC administrativas originales
 -- Fecha: 2026-07
 --
--- APLICADO: NO
+-- APLICADO: SI (confirmado en vivo el 2026-07-28 contra producción real,
+-- probando con la clave anon vía el OpenAPI de PostgREST: ninguna de las
+-- 5 funciones de abajo aparece como invocable para el rol "anon"). El
+-- efecto que buscaba este patch quedó cubierto por el barrido más amplio
+-- de supabase/patches/2026-07-security-advisor-hardening.sql, que revocó
+-- EXECUTE anónimo de todas las funciones SECURITY DEFINER, no solo estas
+-- 5. Se deja este archivo igual como documentación de la intención
+-- original y por si se necesita reaplicar puntualmente en otro entorno.
 --
 -- Contexto (auditoría de solo lectura, ver docs/admin-owner-panel-progress.md):
 -- Al leer el schema.sql de respaldo (2026-07-09) se confirmó que estas 5

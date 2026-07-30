@@ -50,7 +50,8 @@
         "test:load:dashboard": "node scripts/run-k6.mjs tests/load/dashboard-read.k6.js",
         "test:load:booking-abuse": "node scripts/run-k6.mjs tests/load/booking-abuse.k6.js",
         "generate:rate-limit-secret": "node scripts/generate-rate-limit-secret.mjs",
-        "verify:rate-limit": "node scripts/verify-rate-limit.mjs"
+        "verify:rate-limit": "node scripts/verify-rate-limit.mjs",
+        "audit:supabase-bootstrap": "node scripts/audit-supabase-bootstrap.mjs"
     },
     "dependencies": {
         "@base-ui/react": "^1.6.0",

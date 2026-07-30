@@ -2,9 +2,10 @@
 -- Patch: vinculo entre accesos de sucursal (login) y plantilla de empleados
 -- Fecha: 2026-07
 --
--- IMPORTANTE: este patch todavia NO fue aplicado. Ejecutarlo manualmente
--- en el editor SQL de Supabase antes de usar la funcionalidad de
--- "vincular personal a empleado" en el dashboard.
+-- APLICADO: SI. Verificado por introspeccion en vivo contra produccion
+-- (columna empleado_id presente y poblada en sucursal_usuarios y
+-- sucursal_invitaciones). Este comentario quedo desactualizado tras
+-- aplicarse; se corrige aca para que no se vuelva a intentar aplicar.
 --
 -- Contexto: sucursal_usuarios (quien puede iniciar sesion en el panel
 -- de una sucursal) y empleados (la plantilla operativa con horarios,

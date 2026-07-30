@@ -1,5 +1,8 @@
 -- =====================================================================
--- APLICADO: NO
+-- APLICADO: SI. Confirmado en vivo: src/lib/dashboard/access-context.ts
+-- ya llama a supabase.rpc("resolver_acceso_dashboard") en produccion (linea
+-- ~336-337) y el dashboard funciona con esa RPC durante toda esta sesion.
+-- Este comentario quedo desactualizado tras aplicarse; se corrige aca.
 -- Patch: consolidar la resolucion de acceso del dashboard en 1 sola RPC
 -- Fecha: 2026-07-22
 --
