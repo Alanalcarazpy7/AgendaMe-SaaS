@@ -91,7 +91,7 @@ export function ClienteForm() {
               id="nombreCompleto"
               value={nombreCompleto}
               onChange={(event) => setNombreCompleto(event.target.value)}
-              placeholder="Ej: Juan Pérez"
+              placeholder="Nombre y apellido del cliente"
               required
             />
           </div>
@@ -103,7 +103,7 @@ export function ClienteForm() {
                 id="telefono"
                 value={telefono}
                 onChange={(event) => setTelefono(event.target.value)}
-                placeholder="Ej: 0981 000 000"
+                placeholder="09XX XXX XXX"
               />
             </div>
 

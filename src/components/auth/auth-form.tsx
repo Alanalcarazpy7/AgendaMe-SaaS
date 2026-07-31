@@ -126,7 +126,7 @@ function AuthFieldShell({
   return (
     <div
       className={cn(
-        "group/auth-field flex h-11 items-center gap-3 rounded-md border-2 bg-background px-3 shadow-sm transition-[border-color,box-shadow,background-color]",
+        "group/auth-field flex h-11 min-w-0 items-center gap-2.5 rounded-md border-2 bg-background px-3 shadow-sm transition-[border-color,box-shadow,background-color]",
         "focus-within:border-primary focus-within:ring-3 focus-within:ring-primary/15",
         invalid
           ? "border-destructive ring-3 ring-destructive/15"
@@ -516,7 +516,7 @@ export function AuthForm({ mode, authErrorMessage = null }: AuthFormProps) {
                       setNombre(event.target.value);
                       clearFieldError("nombre");
                     }}
-                    placeholder="Ej.: Alan Silva"
+                    placeholder="Nombre y apellido"
                     autoComplete="name"
                     autoCapitalize="words"
                     required
@@ -554,7 +554,7 @@ export function AuthForm({ mode, authErrorMessage = null }: AuthFormProps) {
                     setEmail(event.target.value);
                     clearFieldError("email");
                   }}
-                  placeholder="correo@ejemplo.com"
+                  placeholder="tu@correo.com"
                   autoComplete="email"
                   autoCapitalize="none"
                   spellCheck={false}
@@ -592,13 +592,13 @@ export function AuthForm({ mode, authErrorMessage = null }: AuthFormProps) {
                       setPassword(event.target.value);
                       clearFieldError("password");
                     }}
-                    placeholder="Tu contraseña"
+                    placeholder="Contraseña"
                     autoComplete={isRegistro ? "new-password" : "current-password"}
                     minLength={isRegistro ? 8 : undefined}
                     required
                     aria-invalid={errorField === "password"}
                     aria-describedby={errorField === "password" ? "auth-form-error" : undefined}
-                    className="h-10 rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                    className="h-10 min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 text-sm shadow-none placeholder:text-[13px] focus-visible:ring-0"
                   />
                   <PasswordToggle
                     visible={mostrarPassword}
@@ -627,7 +627,7 @@ export function AuthForm({ mode, authErrorMessage = null }: AuthFormProps) {
                         setConfirmarPassword(event.target.value);
                         clearFieldError("confirmarPassword");
                       }}
-                      placeholder="Repetila"
+                      placeholder="Confirmación"
                       autoComplete="new-password"
                       minLength={8}
                       required
@@ -635,7 +635,7 @@ export function AuthForm({ mode, authErrorMessage = null }: AuthFormProps) {
                       aria-describedby={
                         errorField === "confirmarPassword" ? "auth-form-error" : undefined
                       }
-                      className="h-10 rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                      className="h-10 min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 text-sm shadow-none placeholder:text-[13px] focus-visible:ring-0"
                     />
                     {passwordsCoinciden && (
                       <CheckCircle2

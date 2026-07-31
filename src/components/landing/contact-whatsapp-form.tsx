@@ -48,7 +48,7 @@ export function ContactWhatsappForm({ planes }: ContactWhatsappFormProps) {
           <input
             value={nombre}
             onChange={(event) => setNombre(event.target.value)}
-            placeholder="Ej: Ana González"
+            placeholder="Tu nombre y apellido"
             className={inputClass}
           />
         </label>
@@ -78,7 +78,7 @@ export function ContactWhatsappForm({ planes }: ContactWhatsappFormProps) {
           <input
             value={telefono}
             onChange={(event) => setTelefono(event.target.value)}
-            placeholder="Ej: 0994 295092"
+            placeholder="09XX XXX XXX"
             className={inputClass}
           />
         </label>

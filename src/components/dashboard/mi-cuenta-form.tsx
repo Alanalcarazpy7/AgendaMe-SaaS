@@ -332,7 +332,7 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
                   value={nombre}
                   onChange={(event) => setNombre(event.target.value)}
                   className="mt-2 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-3 focus:ring-primary/15"
-                  placeholder="Ej: Juan Pérez"
+                  placeholder="Tu nombre y apellido"
                 />
               </div>
 
@@ -343,7 +343,7 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
                   value={telefono}
                   onChange={(event) => setTelefono(event.target.value)}
                   className="mt-2 h-10 w-full rounded-md border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-3 focus:ring-primary/15"
-                  placeholder="Ej: 0981 000 000"
+                  placeholder="09XX XXX XXX"
                 />
               </div>
 

@@ -329,7 +329,7 @@ where rol_global = 'super_admin';
 ```
 Debe devolver **exactamente 1 fila** (la del propietario). Si devuelve 0 o más de 1, algo salió distinto a lo esperado — no continuar hasta entenderlo.
 
-Comprobación funcional (con `ADMIN_OWNER_USER_ID` ya en el entorno donde se prueba): iniciar sesión real como `solvatech.dev@gmail.com` y entrar a `/admin` — debe mostrar el dashboard, no un 404. Con otra cuenta (o sin sesión), `/admin` debe seguir devolviendo login/404 como hasta ahora.
+Comprobación funcional (con `ADMIN_OWNER_USER_ID` ya en el entorno donde se prueba): iniciar sesión con la cuenta configurada como propietaria y entrar a `/admin` — debe mostrar el dashboard, no un 404. Con otra cuenta (o sin sesión), `/admin` debe seguir devolviendo login/404 como hasta ahora.
 
 **Paso 5 — reversión (si algo sale mal):**
 
@@ -354,12 +354,12 @@ from public.perfiles_usuario
 where id = '<ADMIN_OWNER_USER_ID>' or usuario_id = '<ADMIN_OWNER_USER_ID>';
 ```
 
-Resultado: **1 sola fila**, sin ambigüedad — `id` y `usuario_id` son el mismo valor en esa fila (el problema de claves duplicadas de Fase 1 no aplica a esta cuenta). `email = solvatech.dev@gmail.com` (coincide). **`rol_global` ya es `'super_admin'`**, con `updated_at` de hoy, posterior a `created_at` — es decir, **ya fue cambiado, pero no por esta sesión** (nunca se ejecutó ningún `UPDATE`). Además, se confirmó que `.env.local` **ya tiene** `ADMIN_OWNER_USER_ID` cargada (tampoco agregada por esta sesión).
+Resultado: **1 sola fila**, sin ambigüedad — `id` y `usuario_id` son el mismo valor en esa fila (el problema de claves duplicadas de Fase 1 no aplica a esta cuenta). El correo coincide con la cuenta propietaria configurada. **`rol_global` ya es `'super_admin'`**, con `updated_at` de hoy, posterior a `created_at` — es decir, **ya fue cambiado, pero no por esta sesión** (nunca se ejecutó ningún `UPDATE`). Además, se confirmó que `.env.local` **ya tiene** `ADMIN_OWNER_USER_ID` cargada (tampoco agregada por esta sesión).
 
 Conclusión: las dos piezas de activación (rol_global y la variable de entorno local) ya están en su lugar, hechas fuera de esta sesión. Lo que sigue pendiente, sin verificar todavía:
 - Que el servidor `next dev` en curso haya recargado `.env.local` después de que se agregó la variable (puede requerir reinicio).
 - Agregar `ADMIN_OWNER_USER_ID` al entorno de **producción** (Vercel u otro hosting) — separado del `.env.local` local.
-- La prueba real: iniciar sesión como `solvatech.dev@gmail.com` y confirmar que `/admin` carga el dashboard.
+- La prueba real: iniciar sesión con la cuenta propietaria configurada y confirmar que `/admin` carga el dashboard.
 - Probar con una cuenta normal (o `admin_global` de un negocio) que siga recibiendo 404.
 - Probar al menos una mutación real (cambiar plan, bloquear, aprobar pago) para confirmar que las RPC responden como se espera con una sesión real de super_admin — sigue sin hacerse.
 

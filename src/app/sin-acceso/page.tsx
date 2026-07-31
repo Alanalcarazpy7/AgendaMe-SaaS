@@ -30,36 +30,36 @@ type AccesoSucursal = {
 function contenidoPorMotivo(motivo?: string) {
   if (motivo === "plan_required") {
     return {
-      title: "Este pase todavia no abre esa puerta",
+      title: "Este pase todavía no abre esa puerta",
       description:
-        "La cuenta esta bien, pero esta seccion necesita un plan o permiso que ahora mismo no esta activo.",
-      note: "Pedi al responsable del negocio que revise el plan contratado o tu nivel de acceso.",
+        "La cuenta está bien, pero esta sección necesita un plan o permiso que ahora mismo no está activo.",
+      note: "Pedí al responsable del negocio que revise el plan contratado o tu nivel de acceso.",
     };
   }
 
   if (motivo === "inactive_branch") {
     return {
-      title: "La sucursal esta tomando una pausa",
+      title: "La sucursal está tomando una pausa",
       description:
-        "Tu usuario esta vinculado a una sucursal que figura como inactiva. Por eso frenamos el acceso antes de entrar.",
-      note: "Cuando la sucursal vuelva a estar activa, este acceso deberia funcionar normalmente.",
+        "Tu usuario está vinculado a una sucursal que figura como inactiva. Por eso frenamos el acceso antes de entrar.",
+      note: "Cuando la sucursal vuelva a estar activa, este acceso debería funcionar normalmente.",
     };
   }
 
   if (motivo === "inactive_business") {
     return {
-      title: "El negocio esta fuera de agenda",
+      title: "El negocio está fuera de agenda",
       description:
-        "La cuenta del negocio no esta disponible en este momento. Puede estar pausada, bloqueada o pendiente de revision.",
-      note: "Si crees que esto es un error, contacta al responsable de la cuenta para revisar el estado.",
+        "La cuenta del negocio no está disponible en este momento. Puede estar pausada, bloqueada o pendiente de revisión.",
+      note: "Si creés que esto es un error, contactá al responsable de la cuenta para revisar el estado.",
     };
   }
 
   return {
     title: "Tu llave no encaja en esta agenda",
     description:
-      "Iniciaste sesion correctamente, pero no encontramos un acceso activo para este panel.",
-    note: "Puede faltar una invitacion, una asignacion al negocio o una configuracion pendiente.",
+      "Iniciaste sesión correctamente, pero no encontramos un acceso activo para este panel.",
+    note: "Puede faltar una invitación, una asignación al negocio o una configuración pendiente.",
   };
 }
 
@@ -152,7 +152,7 @@ export default async function SinAccesoPage({ searchParams }: PageProps) {
   const contenido = bloqueo
     ? {
         title: puedeVerMotivoReal
-          ? `${bloqueo.nombre} esta bloqueado temporalmente`
+          ? `${bloqueo.nombre} está bloqueado temporalmente`
           : "Acceso temporalmente no disponible",
         description: puedeVerMotivoReal
           ? "El panel queda en pausa para proteger los datos y evitar nuevas operaciones mientras se resuelve el estado de la cuenta."
@@ -160,8 +160,8 @@ export default async function SinAccesoPage({ searchParams }: PageProps) {
         note: puedeVerMotivoReal
           ? bloqueo.motivo_bloqueo
             ? `Motivo informado: ${bloqueo.motivo_bloqueo}`
-            : "No hay un motivo detallado cargado. Contacta a AgendaMe para revisar el estado de la cuenta."
-          : "Contacta al responsable del negocio o a soporte de AgendaMe para revisar tu acceso.",
+            : "No hay un motivo detallado cargado. Contactá a AgendaMe para revisar el estado de la cuenta."
+          : "Contactá al responsable del negocio o a soporte de AgendaMe para revisar tu acceso.",
       }
     : contenidoPorMotivo(params.motivo);
 

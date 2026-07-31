@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { Globe } from "lucide-react";
 import { AgendaMeLogo } from "@/components/brand/agendame-logo";
-import { FacebookIcon, InstagramIcon, WhatsAppIcon } from "@/components/landing/social-icons";
+import { FacebookIcon, WhatsAppIcon } from "@/components/landing/social-icons";
 import { SectionWave } from "@/components/landing/section-wave";
 import { getWhatsappNumber } from "@/lib/contact/whatsapp";
 
@@ -65,15 +64,6 @@ export function SiteFooter() {
 
               <div className="mt-4 flex gap-3">
                 <a
-                  href="https://www.instagram.com/alandev_py/"
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="Instagram"
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition-all duration-300 ease-[var(--ease-out)] hover:-translate-y-1 hover:scale-110 hover:border-cyan-400/30 hover:bg-white/10 hover:text-white hover:shadow-lg hover:shadow-cyan-500/10"
-                >
-                  <InstagramIcon className="h-4 w-4" />
-                </a>
-                <a
                   href="https://www.facebook.com/profile.php?id=61590114310700&locale=es_LA"
                   target="_blank"
                   rel="noreferrer"
@@ -91,19 +81,7 @@ export function SiteFooter() {
               <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
               AgendaMe · Paraguay
             </p>
-            <p>
-              © 2026 AgendaMe. Desarrollado por{" "}
-              <a
-                href="https://solvatech.com.py/"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 font-semibold text-white transition hover:text-primary"
-              >
-                SolvaTech
-                <Globe className="h-3.5 w-3.5" />
-              </a>
-              .
-            </p>
+            <p>© 2026 AgendaMe. Todos los derechos reservados.</p>
           </div>
         </div>
       </footer>

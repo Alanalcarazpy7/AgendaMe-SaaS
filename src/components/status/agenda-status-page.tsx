@@ -1,15 +1,21 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowLeft,
-  CalendarX2,
   Home,
+  Info,
   LockKeyhole,
   LogIn,
   RotateCcw,
-  Search,
   ShieldAlert,
 } from "lucide-react";
+
+import {
+  AgendaErrorBackdrop,
+  AgendaErrorFooter,
+  AgendaErrorHeader,
+} from "@/components/status/agenda-error-frame";
 
 type StatusAction = {
   href: string;
@@ -26,74 +32,71 @@ type AgendaStatusPageProps = {
   note: string;
   tone?: "blue" | "amber";
   actions: StatusAction[];
+  embedded?: boolean;
 };
 
 function actionClass(variant: StatusAction["variant"]) {
   if (variant === "secondary") {
-    return "border border-border/80 bg-background/75 text-foreground hover:-translate-y-0.5 hover:bg-accent hover:text-accent-foreground";
+    return "border-border/80 bg-card/85 text-foreground hover:-translate-y-0.5 hover:border-primary/30 hover:bg-accent hover:shadow-md";
   }
 
-  return "bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:-translate-y-0.5 hover:bg-primary/90";
+  return "border-primary/35 bg-primary text-primary-foreground shadow-primary/20 hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-lg";
 }
 
-function StatusIllustration({
-  code,
-  tone,
-}: {
-  code: AgendaStatusPageProps["code"];
-  tone: AgendaStatusPageProps["tone"];
-}) {
-  const warm = tone === "amber";
-
+function ForbiddenScene({ compact = false }: { compact?: boolean }) {
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-[25rem]">
-      <div className="absolute inset-3 rounded-[2.25rem] bg-white/12 shadow-2xl shadow-black/20 ring-1 ring-white/15 backdrop-blur-xl" />
-      <div className="absolute inset-x-8 top-10 h-7 rounded-full bg-white/20" />
-      <div className="absolute left-1/2 top-16 h-44 w-56 -translate-x-1/2 rounded-[2rem] border border-white/20 bg-white/92 p-4 text-slate-950 shadow-2xl shadow-black/20">
-        <div className="grid grid-cols-3 gap-2">
-          {Array.from({ length: 9 }).map((_, index) => (
-            <span
-              key={index}
-              className={`h-9 rounded-xl ${
-                index === 4
-                  ? warm
-                    ? "bg-amber-400"
-                    : "bg-cyan-400"
-                  : "bg-slate-100"
-              }`}
-            />
-          ))}
-        </div>
+    <div
+      className={`relative order-1 mx-auto w-full max-w-2xl lg:max-w-none ${
+        compact
+          ? "h-[clamp(7rem,23dvh,14rem)] lg:h-[min(48dvh,29rem)]"
+          : "h-[clamp(8.5rem,29dvh,19rem)] lg:h-[min(64dvh,35rem)]"
+      }`}
+    >
+      <span
+        className="pointer-events-none absolute left-1/2 top-1/2 -z-10 -translate-x-1/2 -translate-y-1/2 select-none text-[9rem] font-black leading-none text-amber-500/[0.075] sm:text-[13rem] lg:text-[20rem] dark:text-amber-300/[0.055]"
+        aria-hidden="true"
+      >
+        403
+      </span>
 
-        <div className="absolute -right-6 -top-6 flex h-16 w-16 rotate-6 items-center justify-center rounded-2xl border border-slate-200 bg-white text-4xl font-black shadow-xl">
-          ?
-        </div>
+      <div
+        className="absolute bottom-[11%] left-[6%] right-[4%] -z-10 hidden h-3 rotate-[-2deg] rounded-lg border border-border/40 shadow-sm sm:block"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(135deg, #06b6d4 0 12px, #f8fafc 12px 24px, #0f172a 24px 36px)",
+        }}
+        aria-hidden="true"
+      />
+
+      <div className="relative mx-auto h-full w-full max-w-[36rem]">
+        <Image
+          src="/status/forbidden-agendame-3d.png"
+          alt="Control de acceso de AgendaMe protegiendo citas, clientes y horarios"
+          fill
+          priority
+          sizes="(max-width: 640px) 272px, (max-width: 1024px) 336px, 576px"
+          className="object-contain drop-shadow-[0_26px_38px_rgb(15_23_42/0.18)] dark:drop-shadow-[0_28px_42px_rgb(6_182_212/0.10)]"
+        />
       </div>
 
-      <div className="absolute bottom-14 left-1/2 flex w-[18rem] -translate-x-1/2 items-center justify-between rounded-[1.75rem] border border-white/20 bg-slate-950/80 px-4 py-3 text-white shadow-2xl shadow-black/25">
-        <div>
-          <p className="text-xs font-semibold text-cyan-100/80">AgendaMe</p>
-          <p className="mt-1 text-sm font-bold">
-            {code === "404" ? "Turno no encontrado" : "Acceso en pausa"}
-          </p>
-        </div>
-        <div
-          className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
-            warm ? "bg-amber-400 text-slate-950" : "bg-cyan-400 text-slate-950"
-          }`}
-        >
-          {code === "404" ? (
-            <CalendarX2 className="h-5 w-5" />
-          ) : (
-            <LockKeyhole className="h-5 w-5" />
-          )}
-        </div>
-      </div>
-
-      <div className="absolute right-7 top-28 h-10 w-10 rounded-full bg-white/25" />
-      <div className="absolute bottom-28 left-7 h-5 w-5 rounded-full bg-white/35" />
-      <div className="absolute left-10 top-28 h-2 w-16 rotate-[-18deg] rounded-full bg-white/25" />
-      <div className="absolute bottom-11 right-10 h-2 w-20 rotate-[14deg] rounded-full bg-white/25" />
+      <span
+        className="ag-animate-float-delayed absolute left-[2%] top-[16%] hidden rounded-lg border border-border/70 bg-card/85 px-3 py-2 text-xs font-bold text-muted-foreground shadow-sm backdrop-blur-md sm:block"
+        aria-hidden="true"
+      >
+        Clientes
+      </span>
+      <span
+        className="ag-animate-float absolute bottom-[18%] right-[1%] hidden rounded-lg border border-amber-500/20 bg-card/85 px-3 py-2 text-xs font-bold text-amber-700 shadow-sm backdrop-blur-md dark:text-amber-300 sm:block"
+        aria-hidden="true"
+      >
+        Acceso protegido
+      </span>
+      <span
+        className="absolute right-[10%] top-[11%] hidden h-9 w-9 rotate-6 items-center justify-center rounded-lg border border-primary/20 bg-card/85 text-primary shadow-sm lg:flex"
+        aria-hidden="true"
+      >
+        <LockKeyhole className="h-4 w-4" />
+      </span>
     </div>
   );
 }
@@ -106,88 +109,76 @@ export function AgendaStatusPage({
   note,
   tone = "blue",
   actions,
+  embedded = false,
 }: AgendaStatusPageProps) {
-  const warm = tone === "amber";
+  const warning = tone === "amber" || code === "403";
 
   return (
     <main
-      className={`relative isolate min-h-screen overflow-hidden ${
-        warm
-          ? "bg-[radial-gradient(circle_at_20%_18%,rgb(245_158_11/0.22),transparent_30%),radial-gradient(circle_at_86%_18%,rgb(34_211_238/0.18),transparent_28%),linear-gradient(180deg,var(--background),var(--muted))]"
-          : "bg-[radial-gradient(circle_at_18%_18%,rgb(34_211_238/0.20),transparent_30%),radial-gradient(circle_at_86%_16%,rgb(59_130_246/0.14),transparent_28%),linear-gradient(180deg,var(--background),var(--muted))]"
-      } px-4 py-8 sm:px-6 lg:px-8`}
+      className={`relative isolate min-h-0 overflow-hidden bg-background text-foreground ${
+        embedded
+          ? "mt-4 h-[calc(100dvh-17rem)] rounded-lg border border-border/70 shadow-sm lg:h-[calc(100dvh-12rem)]"
+          : "h-[100dvh]"
+      }`}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-6xl items-center">
-        <section className="grid w-full overflow-hidden rounded-[2.25rem] border border-border/70 bg-card/90 shadow-[0_28px_90px_rgb(15_23_42/0.13)] ring-1 ring-white/60 backdrop-blur-xl dark:bg-card/82 dark:shadow-black/30 dark:ring-white/5 lg:grid-cols-[1.03fr_0.97fr]">
-          <div className="flex flex-col justify-center p-6 sm:p-9 lg:p-12">
-            <p className="inline-flex w-fit items-center gap-2 rounded-2xl border border-border/70 bg-muted/55 px-3 py-1.5 text-xs font-bold text-muted-foreground">
-              {code === "404" ? (
-                <Search className="h-3.5 w-3.5 text-primary" />
-              ) : (
-                <ShieldAlert className="h-3.5 w-3.5 text-primary" />
-              )}
+      <AgendaErrorBackdrop warning={warning} />
+
+      <div className="mx-auto flex h-full w-full max-w-7xl flex-col px-4 sm:px-6 lg:px-8">
+        {embedded ? null : <AgendaErrorHeader icon={ShieldAlert} label="Acceso controlado" />}
+
+        <section className="grid min-h-0 flex-1 items-center gap-1 py-2 lg:grid-cols-[1.08fr_0.92fr] lg:gap-10 lg:py-4">
+          <ForbiddenScene compact={embedded} />
+
+          <div className="order-2 mx-auto w-full max-w-xl text-center lg:mx-0 lg:text-left">
+            <p className="inline-flex items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-1.5 text-xs font-bold text-amber-700 dark:text-amber-300">
+              <LockKeyhole className="h-3.5 w-3.5" aria-hidden="true" />
               {eyebrow}
             </p>
 
-            <div className="mt-8 flex items-end gap-4">
-              <span className="text-7xl font-black leading-none tracking-tight text-foreground sm:text-8xl">
-                {code}
-              </span>
-              <span
-                className={`mb-3 hidden h-4 w-24 rounded-full sm:block ${
-                  warm ? "bg-amber-400" : "bg-cyan-400"
-                }`}
-              />
-            </div>
-
-            <h1 className="mt-6 max-w-2xl text-4xl font-black leading-[1.02] tracking-tight text-balance sm:text-5xl">
+            <h1 className="mt-2 text-2xl font-black leading-[1.08] sm:text-3xl lg:mt-4 lg:text-5xl [@media(max-height:620px)]:text-xl">
               {title}
             </h1>
-
-            <p className="mt-4 max-w-xl text-base leading-7 text-muted-foreground">
+            <p
+              className={`mx-auto mt-2 max-w-lg text-sm leading-5 text-muted-foreground lg:mx-0 lg:mt-3 lg:text-base lg:leading-7 [@media(max-height:560px)]:hidden ${
+                embedded ? "hidden sm:block" : ""
+              }`}
+            >
               {description}
             </p>
 
-            <div className="mt-7 rounded-[1.5rem] border border-border/70 bg-background/65 p-4">
-              <p className="text-sm font-semibold leading-6 text-foreground">
-                {note}
-              </p>
+            <div className="mx-auto mt-3 flex max-w-lg items-start gap-2 rounded-lg border border-border/75 bg-card/80 px-3 py-2.5 text-left shadow-sm backdrop-blur-md lg:mx-0 lg:mt-4">
+              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-primary/15 bg-primary/8 text-primary">
+                <Info className="h-3.5 w-3.5" aria-hidden="true" />
+              </span>
+              <p className="text-xs font-semibold leading-5 text-foreground sm:text-sm">{note}</p>
             </div>
 
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              {actions.map((action) => {
-                const Icon = action.icon;
+            <nav
+              aria-label="Opciones para continuar"
+              className="mt-3 grid w-full grid-cols-2 gap-2 lg:mt-5"
+            >
+              {actions.map((action, index) => {
+                const ActionIcon = action.icon;
+                const spansRow = actions.length === 3 && index === 0;
 
                 return (
                   <Link
                     key={`${action.href}-${action.label}`}
                     href={action.href}
-                    className={`inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-5 text-sm font-bold transition ${actionClass(
-                      action.variant
-                    )}`}
+                    className={`inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-lg border px-3 text-center text-xs font-bold shadow-sm outline-none transition-[border-color,background-color,box-shadow,transform] duration-200 focus-visible:ring-3 focus-visible:ring-ring/35 sm:text-sm ${
+                      spansRow ? "col-span-2" : ""
+                    } ${actionClass(action.variant)}`}
                   >
-                    <Icon className="h-4 w-4" />
-                    {action.label}
+                    <ActionIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span className="truncate">{action.label}</span>
                   </Link>
                 );
               })}
-            </div>
+            </nav>
           </div>
-
-          <aside
-            className={`relative min-h-[27rem] overflow-hidden ${
-              warm
-                ? "bg-[radial-gradient(circle_at_28%_18%,rgb(251_191_36/0.42),transparent_32%),linear-gradient(145deg,#111827,#0f766e_56%,#111827)]"
-                : "bg-[radial-gradient(circle_at_28%_18%,rgb(34_211_238/0.36),transparent_32%),linear-gradient(145deg,#07111f,#0f766e_56%,#0b1120)]"
-            } p-6 text-white sm:p-8`}
-          >
-            <div className="absolute left-8 top-8 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold text-cyan-50 backdrop-blur-xl">
-              AgendaMe
-            </div>
-            <StatusIllustration code={code} tone={tone} />
-          </aside>
         </section>
+
+        {embedded ? null : <AgendaErrorFooter />}
       </div>
     </main>
   );

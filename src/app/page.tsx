@@ -33,7 +33,7 @@ import { ContactWhatsappForm } from "@/components/landing/contact-whatsapp-form"
 import { Reveal } from "@/components/landing/reveal";
 import { FaqAccordion } from "@/components/landing/faq-accordion";
 import { SiteFooter } from "@/components/landing/site-footer";
-import { FacebookIcon, InstagramIcon, WhatsAppIcon } from "@/components/landing/social-icons";
+import { FacebookIcon, WhatsAppIcon } from "@/components/landing/social-icons";
 import { PlanesPublicosSection } from "@/components/planes/planes-publicos-section";
 import { getPlanesPublicos } from "@/lib/planes/planes-publicos";
 import { getWhatsappNumber } from "@/lib/contact/whatsapp";
@@ -473,15 +473,6 @@ export default async function HomePage() {
                     <p className="text-xs font-semibold uppercase tracking-wide text-background/60">Seguinos</p>
                     <div className="mt-3 flex gap-3">
                       <a
-                        href="https://www.instagram.com/alandev_py/"
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label="Instagram"
-                        className="flex h-11 w-11 items-center justify-center rounded-xl border border-background/20 bg-background/10 transition hover:-translate-y-0.5 hover:bg-background/20"
-                      >
-                        <InstagramIcon className="h-5 w-5" />
-                      </a>
-                      <a
                         href="https://www.facebook.com/profile.php?id=61590114310700&locale=es_LA"
                         target="_blank"
                         rel="noreferrer"
@@ -494,15 +485,10 @@ export default async function HomePage() {
                   </div>
                 </div>
 
-                <a
-                  href="https://solvatech.com.py/"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="relative mt-8 inline-flex items-center gap-1.5 border-t border-background/15 pt-5 text-xs text-background/60 transition hover:text-background"
-                >
+                <p className="relative mt-8 inline-flex items-center gap-1.5 border-t border-background/15 pt-5 text-xs text-background/60">
                   <Globe className="h-3.5 w-3.5" />
-                  Sitio desarrollado por SolvaTech
-                </a>
+                  AgendaMe · Reservas y citas en un solo lugar
+                </p>
               </div>
             </Reveal>
 

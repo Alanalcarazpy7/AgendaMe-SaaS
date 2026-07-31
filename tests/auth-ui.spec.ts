@@ -82,8 +82,8 @@ test("registro guía la contraseña y se mantiene completo en móvil", async ({
   const confirmPassword = page.getByLabel("Repetir contraseña");
 
   await password.fill("abcdefgh");
-  await page.getByLabel("Nombre completo").fill("Alan Silva");
-  await page.getByLabel("Correo electrónico").fill("alan@example.com");
+  await page.getByLabel("Nombre completo").fill("Usuario de Prueba");
+  await page.getByLabel("Correo electrónico").fill("registro@agendame.test");
   await confirmPassword.fill("abcdefgh");
   await page.getByRole("button", { name: "Crear cuenta" }).click();
 

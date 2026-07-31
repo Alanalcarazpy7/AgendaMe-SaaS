@@ -6,10 +6,11 @@ export default function SinPermisoPage() {
       code="403"
       tone="amber"
       eyebrow="Permiso pendiente"
-      title="Esta seccion esta cerrada por ahora"
-      description="Tu cuenta puede entrar al panel, pero este modulo no esta habilitado para tu rol actual."
-      note="Si necesitas usar esta herramienta, pedi al responsable del negocio que revise tus permisos."
+      title="Esta sección está cerrada por ahora"
+      description="Tu cuenta puede entrar al panel, pero este módulo no está habilitado para tu rol actual."
+      note="Si necesitás usar esta herramienta, pedí al responsable del negocio que revise tus permisos."
       actions={[statusActions.dashboard, statusActions.home]}
+      embedded
     />
   );
 }

@@ -129,7 +129,7 @@ export function OnboardingNegocioForm({
                 id="nombreResponsable"
                 value={nombreResponsable}
                 onChange={(event) => setNombreResponsable(event.target.value)}
-                placeholder="Ej: Alan Silva"
+                placeholder="Nombre y apellido del responsable"
                 required
                 className="h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
               />
@@ -195,7 +195,7 @@ export function OnboardingNegocioForm({
                   id="telefono"
                   value={telefono}
                   onChange={(event) => setTelefono(event.target.value)}
-                  placeholder="0981 000 000"
+                  placeholder="09XX XXX XXX"
                   className="h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
                 />
               </div>
