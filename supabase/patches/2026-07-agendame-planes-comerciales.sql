@@ -2,6 +2,10 @@
 -- Patch: planes comerciales (precios mensual/anual, limites, vista publica)
 -- Fecha: 2026-07
 --
+-- HISTORICO / NO EJECUTAR EN INSTALACIONES NUEVAS.
+-- Fue reemplazado por 2026-08-planes-catalogo-unificado.sql, que incluye
+-- estas columnas y aplica el catalogo vigente completo.
+--
 -- IMPORTANTE: este patch ya fue aplicado manualmente en el proyecto de
 -- Supabase de produccion. Este archivo queda en el repo solo como
 -- respaldo/documentacion y para poder reproducir el estado en otro

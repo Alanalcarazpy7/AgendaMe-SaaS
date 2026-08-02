@@ -27,11 +27,11 @@ function DashboardMockup() {
         <span className="ml-3 text-[11px] font-medium text-muted-foreground">app.agendame.com.py/dashboard</span>
       </div>
 
-      <div className="overflow-hidden rounded-[1.5rem] border bg-background">
+      <div className="overflow-hidden rounded-[1.5rem] border bg-background lg:aspect-[2/1]">
         <Image
           src={dashboardPreview}
           alt="Panel de AgendaMe mostrando el calendario de citas de un negocio"
-          className="h-auto w-full"
+          className="h-auto w-full lg:h-full lg:object-cover lg:object-left-top"
           placeholder="blur"
           priority
         />
@@ -74,7 +74,7 @@ export function HeroSection({ planes }: { planes: PlanPublico[] }) {
       <HeroShape />
 
       <div className="relative z-10 mx-auto grid w-full max-w-7xl items-center gap-10 lg:grid-cols-[0.92fr_1.08fr] lg:gap-14 2xl:max-w-[100rem] 2xl:grid-cols-[0.82fr_1.18fr] 2xl:gap-20">
-        <div>
+        <div className="lg:pl-5 xl:pl-6 2xl:pl-8">
           <Reveal>
             <div className="flex flex-wrap gap-2">
               {[gratisBadge(planes), "Sin tarjeta requerida", "Para negocios con turnos y citas"].map((badge) => (
@@ -134,7 +134,10 @@ export function HeroSection({ planes }: { planes: PlanPublico[] }) {
           </Reveal>
         </div>
 
-        <Reveal delay={200} className="relative mt-8 pb-6 sm:mt-10 lg:mt-0 lg:pb-10 2xl:pb-16">
+        <Reveal
+          delay={200}
+          className="relative mt-8 w-full pb-6 sm:mt-10 lg:mt-0 lg:max-w-[44rem] lg:justify-self-end lg:pb-10 xl:max-w-[47rem] 2xl:max-w-[50rem] 2xl:pb-16"
+        >
           <DashboardMockup />
           <MobileBookingMockup />
 

@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { Activity, AlertTriangle, Gauge, PiggyBank, TrendingUp, Wallet } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  BriefcaseBusiness,
+  Gauge,
+  PiggyBank,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 import { requirePlatformOwner } from "@/lib/admin/guard";
 import { obtenerNegociosResumen } from "@/lib/admin/queries/negocios-resumen";
 import { obtenerPlanes } from "@/lib/admin/queries/planes";
@@ -7,6 +15,7 @@ import { obtenerPagosAprobadosRecientes } from "@/lib/admin/queries/pagos";
 import { obtenerConteoSucursalesPorNegocio } from "@/lib/admin/queries/negocio-detalle";
 import {
   calcularDistribucionPorPlan,
+  calcularDistribucionPorRubro,
   calcularIngresosPorMes,
   calcularNegociosNuevosPorMes,
   calcularUsoLimitePlan,
@@ -20,6 +29,7 @@ import {
   IngresosPorMesChart,
   NegociosNuevosChart,
 } from "@/components/admin/charts/admin-charts";
+import { DistribucionRubroChart } from "@/components/admin/charts/distribucion-rubro-chart";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -43,6 +53,7 @@ export default async function AdminAnaliticaPage({ searchParams }: PageProps) {
   const ingresosPorMes = calcularIngresosPorMes(pagosAprobados, meses);
   const negociosNuevosPorMes = calcularNegociosNuevosPorMes(negocios, meses);
   const distribucionPorPlan = calcularDistribucionPorPlan(negocios, planes);
+  const distribucionPorRubro = calcularDistribucionPorRubro(negocios);
 
   const planPorClave = new Map(planes.map((p) => [p.clave, p]));
 
@@ -149,6 +160,12 @@ export default async function AdminAnaliticaPage({ searchParams }: PageProps) {
               icon={TrendingUp}
               help="Cantidad de pagos aprobados dentro del rango de meses seleccionado arriba (6/12/24). Es la base de datos usada para los graficos de ingresos y para saber si hay historial suficiente para calcular retencion."
             />
+            <AdminMetricPill
+              label="Rubros activos"
+              value={formatearNumero(distribucionPorRubro.length)}
+              icon={BriefcaseBusiness}
+              help="Cantidad de rubros distintos representados por los negocios registrados. La distribución completa aparece más abajo."
+            />
           </>
         }
       />
@@ -217,6 +234,7 @@ export default async function AdminAnaliticaPage({ searchParams }: PageProps) {
         <IngresosPorMesChart data={ingresosPorMes} />
         <NegociosNuevosChart data={negociosNuevosPorMes} />
         <DistribucionPlanChart data={distribucionPorPlan} />
+        <DistribucionRubroChart data={distribucionPorRubro} />
 
         <AdminPanel
           title="Top 10 por uso del limite"

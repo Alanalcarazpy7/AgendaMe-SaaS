@@ -2,9 +2,11 @@
 import { redirect } from "next/navigation";
 import { Building2, Settings2 } from "lucide-react";
 import { BrandingNegocioCard } from "@/components/configuracion/branding-negocio-card";
+import { InformacionNegocioCard } from "@/components/configuracion/informacion-negocio-card";
 import { IntervaloReservaCard } from "@/components/configuracion/intervalo-reserva-card";
 import { DashboardModuleHeader } from "@/components/dashboard/dashboard-module-header";
 import { DashboardWorkspaceTabs } from "@/components/dashboard/dashboard-workspace-tabs";
+import { PremiumFeaturePage } from "@/components/premium/premium-feature-page";
 import { createClient } from "@/lib/supabase/server";
 import {
   HorariosNegocioForm,
@@ -38,7 +40,10 @@ export default async function ConfiguracionPage() {
         nombre,
         slug,
         estado,
-        intervalo_reserva_minutos
+        intervalo_reserva_minutos,
+        telefono,
+        direccion,
+        descripcion
       )
     `
     )
@@ -97,7 +102,19 @@ export default async function ConfiguracionPage() {
             label: "Identidad visual",
             description:
               "Actualizá el logo y el banner que verán tus clientes.",
-            content: <BrandingNegocioCard />,
+            content:
+              access.planNivel >= 1 ? (
+                <BrandingNegocioCard />
+              ) : (
+                <PremiumFeaturePage
+                  titulo="Identidad visual del negocio"
+                  descripcion="Personalizá el link público con tu logo y un banner propio. Tus imágenes actuales se conservan si cambiás de plan."
+                  desde="Plan Básico"
+                  activo={false}
+                  estadoActivoTitulo=""
+                  estadoActivoDescripcion=""
+                />
+              ),
           },
           {
             id: "reservas",
@@ -119,37 +136,19 @@ export default async function ConfiguracionPage() {
             id: "informacion",
             label: "Información",
             description:
-              "Consultá los datos internos y el enlace público del negocio.",
+              "Completá los datos que verán tus clientes al reservar.",
             content: (
-              <section className="overflow-hidden rounded-lg border bg-card shadow-sm">
-                <div className="border-b px-4 py-3">
-                  <h2 className="font-bold">Datos del negocio</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Esta información identifica el espacio que estás administrando.
-                  </p>
-                </div>
-
-                <dl className="grid text-sm md:grid-cols-2">
-                  {[
-                    ["Nombre", negocio?.nombre ?? "Sin nombre"],
-                    ["Estado", negocio?.estado ?? "Sin estado"],
-                    ["Link público", `/reservar/${negocio?.slug ?? ""}`],
-                    ["Rol actual", membresia.rol],
-                  ].map(([label, value], index) => (
-                    <div
-                      key={label}
-                      className={`px-4 py-3 ${
-                        index > 0 ? "border-t md:border-t-0" : ""
-                      } ${index % 2 ? "md:border-l" : ""} ${
-                        index >= 2 ? "md:border-t" : ""
-                      }`}
-                    >
-                      <dt className="text-xs text-muted-foreground">{label}</dt>
-                      <dd className="mt-1 break-all font-semibold">{value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </section>
+              <InformacionNegocioCard
+                negocio={{
+                  nombre: negocio?.nombre ?? "Negocio",
+                  slug: negocio?.slug ?? "",
+                  estado: negocio?.estado ?? "Sin estado",
+                  rol: membresia.rol,
+                  telefono: negocio?.telefono ?? null,
+                  direccion: negocio?.direccion ?? null,
+                  descripcion: negocio?.descripcion ?? null,
+                }}
+              />
             ),
           },
         ]}

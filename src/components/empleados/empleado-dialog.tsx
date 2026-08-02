@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Clock, Pencil, Plus } from "lucide-react";
+import { BriefcaseBusiness, Check, Clock, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -145,10 +145,15 @@ export function EmpleadoDialog({
     setEmail(empleado?.email ?? "");
     setTelefono(empleado?.telefono ?? "");
     setColor(empleado?.color_calendario ?? "#2563eb");
-    setServiciosSeleccionados(empleado?.servicios_ids ?? []);
+    const idsActivos = new Set(
+      servicios.filter((servicio) => servicio.estado === "activo").map((servicio) => servicio.id)
+    );
+    setServiciosSeleccionados(
+      (empleado?.servicios_ids ?? []).filter((servicioId) => idsActivos.has(servicioId))
+    );
     setHorarios(normalizarHorariosIniciales(empleado?.horarios));
     setError(null);
-  }, [open, empleado]);
+  }, [open, empleado, servicios]);
 
   function toggleServicio(servicioId: string) {
     setServiciosSeleccionados((actual) => {
@@ -193,8 +198,39 @@ export function EmpleadoDialog({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    setLoading(true);
     setError(null);
+
+    if (serviciosActivos.length === 0) {
+      const message = "Primero creá al menos un servicio activo para poder agregar empleados.";
+      setError(message);
+      toast.error("Falta un servicio activo", { description: message });
+      return;
+    }
+
+    if (serviciosSeleccionados.length === 0) {
+      const message = "Seleccioná al menos un servicio que realizará este empleado.";
+      setError(message);
+      toast.error("Seleccioná un servicio", { description: message });
+      return;
+    }
+
+    const horarioInvalido = horarios.find(
+      (horario) =>
+        horario.activo &&
+        horario.hora_inicio &&
+        horario.hora_fin &&
+        horario.hora_inicio >= horario.hora_fin
+    );
+
+    if (horarioInvalido) {
+      const dia = diasSemana.find((item) => item.dia === horarioInvalido.dia_semana)?.nombre;
+      const message = `En ${dia ?? "un día"}, la hora de salida debe ser posterior a la entrada.`;
+      setError(message);
+      toast.error("Revisá los horarios", { description: message });
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const url = esEditar
@@ -261,243 +297,258 @@ export function EmpleadoDialog({
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="h-[min(92dvh,780px)] max-h-[92dvh] max-w-6xl gap-0 overflow-hidden p-0 sm:max-w-6xl">
+          <DialogHeader className="shrink-0 border-b border-border/70 px-5 py-4 pr-16 sm:px-6">
+            <DialogTitle className="text-lg font-bold">
               {esEditar ? "Editar empleado" : "Nuevo empleado"}
             </DialogTitle>
             <DialogDescription>
               {esEditar
                 ? "Actualizá los datos, servicios y horarios del empleado."
-                : "Cargá una persona que atenderá citas o realizará servicios."}
+                : "Definí qué servicios realiza y cuándo está disponible para recibir citas."}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="nombre">Nombre</Label>
-              <Input
-                id="nombre"
-                value={nombre}
-                onChange={(event) => setNombre(event.target.value)}
-                placeholder="Ej: Nombre del profesional o colaborador"
-                required
-              />
-            </div>
+          <form onSubmit={handleSubmit} className="grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto]">
+            <div className="min-h-0 overflow-y-auto px-4 py-5 sm:px-6">
+              <div className="grid gap-6 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+                <div className="space-y-5">
+                  <section className="space-y-3 border-b border-border/70 pb-5">
+                    <div className="space-y-2">
+                      <Label htmlFor="nombre">Nombre</Label>
+                      <Input
+                        id="nombre"
+                        value={nombre}
+                        onChange={(event) => setNombre(event.target.value)}
+                        placeholder="Nombre del profesional"
+                        className="h-10 rounded-lg"
+                        required
+                      />
+                    </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="email">Correo</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="Opcional"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="telefono">Teléfono</Label>
-                <Input
-                  id="telefono"
-                  value={telefono}
-                  onChange={(event) => setTelefono(event.target.value)}
-                  placeholder="Opcional"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <Label>Color en la agenda</Label>
-
-              <div className="flex flex-wrap items-center gap-3">
-                {coloresRapidos.map((colorItem) => {
-                  const activo = colorItem.toLowerCase() === color.toLowerCase();
-
-                  return (
-                    <button
-                      key={colorItem}
-                      type="button"
-                      onClick={() => setColor(colorItem)}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border shadow-sm transition hover:scale-105"
-                      style={{ backgroundColor: colorItem }}
-                      aria-label={`Elegir color ${colorItem}`}
-                    >
-                      {activo && <Check className="h-4 w-4 text-white" />}
-                    </button>
-                  );
-                })}
-
-                <div className="flex items-center gap-2 rounded-full border px-3 py-2">
-                  <span
-                    className="h-5 w-5 rounded-full border"
-                    style={{ backgroundColor: color }}
-                  />
-                  <Input
-                    type="color"
-                    value={color}
-                    onChange={(event) => setColor(event.target.value)}
-                    className="h-7 w-10 cursor-pointer border-0 bg-transparent p-0"
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    Personalizado
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <Label>Servicios que realiza</Label>
-
-              {serviciosActivos.length === 0 ? (
-                <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-                  Primero cargá al menos un servicio activo en el módulo Servicios.
-                </div>
-              ) : (
-                <div className="grid gap-2 md:grid-cols-2">
-                  {serviciosActivos.map((servicio) => {
-                    const seleccionado = serviciosSeleccionados.includes(servicio.id);
-
-                    return (
-                      <button
-                        key={servicio.id}
-                        type="button"
-                        onClick={() => toggleServicio(servicio.id)}
-                        className={`rounded-xl border px-3 py-2 text-left text-sm transition ${
-                          seleccionado
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "hover:bg-muted"
-                        }`}
-                      >
-                        <span className="flex items-center justify-between gap-2">
-                          {servicio.nombre}
-                          {seleccionado && <Check className="h-4 w-4" />}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <Label className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Horarios de trabajo
-                </Label>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Estos horarios se usarán para calcular disponibilidad de citas y, más adelante, reportes de trabajo.
-                </p>
-              </div>
-
-              <div className="overflow-hidden rounded-2xl border">
-                <div className="divide-y">
-                  {diasSemana.map((dia) => {
-                    const horario = horarios.find((item) => item.dia_semana === dia.dia);
-
-                    if (!horario) return null;
-
-                    return (
-                      <div
-                        key={dia.dia}
-                        className="grid gap-4 p-4 md:grid-cols-[170px_1fr]"
-                      >
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              actualizarHorario(dia.dia, "activo", !horario.activo)
-                            }
-                            className={`relative h-6 w-11 rounded-full transition ${
-                              horario.activo ? "bg-primary" : "bg-muted"
-                            }`}
-                            aria-label={`Activar ${dia.nombre}`}
-                          >
-                            <span
-                              className={`absolute top-1 h-4 w-4 rounded-full bg-white transition ${
-                                horario.activo ? "left-6" : "left-1"
-                              }`}
-                            />
-                          </button>
-
-                          <div>
-                            <p className="font-medium">{dia.nombre}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {horario.activo ? "Trabaja" : "No trabaja"}
-                            </p>
-                          </div>
-                        </div>
-
-                        {horario.activo ? (
-                          <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-center">
-                            <Input
-                              type="time"
-                              value={horaInput(horario.hora_inicio)}
-                              onChange={(event) =>
-                                actualizarHorario(
-                                  dia.dia,
-                                  "hora_inicio",
-                                  event.target.value
-                                )
-                              }
-                              required
-                            />
-
-                            <span className="text-center text-muted-foreground">
-                              a
-                            </span>
-
-                            <Input
-                              type="time"
-                              value={horaInput(horario.hora_fin)}
-                              onChange={(event) =>
-                                actualizarHorario(
-                                  dia.dia,
-                                  "hora_fin",
-                                  event.target.value
-                                )
-                              }
-                              required
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            No se podrán asignar citas a este empleado este día.
-                          </div>
-                        )}
+                    <div className="grid gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Correo <span className="font-normal text-muted-foreground">(opcional)</span></Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={email}
+                          onChange={(event) => setEmail(event.target.value)}
+                          placeholder="profesional@negocio.com"
+                          className="h-10 rounded-lg"
+                        />
                       </div>
-                    );
-                  })}
+
+                      <div className="space-y-2">
+                        <Label htmlFor="telefono">Teléfono <span className="font-normal text-muted-foreground">(opcional)</span></Label>
+                        <Input
+                          id="telefono"
+                          value={telefono}
+                          onChange={(event) => setTelefono(event.target.value)}
+                          placeholder="09XX XXX XXX"
+                          className="h-10 rounded-lg"
+                        />
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="space-y-3 border-b border-border/70 pb-5">
+                    <Label>Color en la agenda</Label>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {coloresRapidos.map((colorItem) => {
+                        const activo = colorItem.toLowerCase() === color.toLowerCase();
+
+                        return (
+                          <button
+                            key={colorItem}
+                            type="button"
+                            onClick={() => setColor(colorItem)}
+                            className={`flex size-8 items-center justify-center rounded-full border transition-[transform,box-shadow] active:scale-95 ${
+                              activo ? "ring-2 ring-ring ring-offset-2 ring-offset-popover" : "hover:shadow-md"
+                            }`}
+                            style={{ backgroundColor: colorItem }}
+                            aria-label={`Elegir color ${colorItem}`}
+                            aria-pressed={activo}
+                          >
+                            {activo && <Check className="size-4 text-white" />}
+                          </button>
+                        );
+                      })}
+
+                      <label className="flex h-8 cursor-pointer items-center gap-2 rounded-lg border px-2.5 text-xs font-medium">
+                        <span className="size-4 rounded-full border" style={{ backgroundColor: color }} />
+                        Personalizado
+                        <Input
+                          type="color"
+                          value={color}
+                          onChange={(event) => setColor(event.target.value)}
+                          className="sr-only"
+                          aria-label="Elegir color personalizado"
+                        />
+                      </label>
+                    </div>
+                  </section>
+
+                  <section className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <Label className="flex items-center gap-2">
+                        <BriefcaseBusiness className="size-4 text-primary" />
+                        Servicios que realiza
+                        <span className="text-destructive">*</span>
+                      </Label>
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {serviciosSeleccionados.length} seleccionado{serviciosSeleccionados.length === 1 ? "" : "s"}
+                      </span>
+                    </div>
+
+                    {serviciosActivos.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-amber-500/40 bg-amber-500/5 p-3 text-sm text-muted-foreground">
+                        Primero creá un servicio activo en el módulo Servicios.
+                      </div>
+                    ) : (
+                      <div
+                        className={`grid max-h-40 gap-2 overflow-y-auto pr-1 sm:grid-cols-2 ${
+                          serviciosSeleccionados.length === 0 ? "rounded-lg ring-1 ring-destructive/35" : ""
+                        }`}
+                        role="group"
+                        aria-label="Servicios obligatorios del empleado"
+                      >
+                        {serviciosActivos.map((servicio) => {
+                          const seleccionado = serviciosSeleccionados.includes(servicio.id);
+
+                          return (
+                            <button
+                              key={servicio.id}
+                              type="button"
+                              onClick={() => toggleServicio(servicio.id)}
+                              aria-pressed={seleccionado}
+                              className={`min-h-10 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-[background-color,border-color,color,transform] active:scale-[0.98] ${
+                                seleccionado
+                                  ? "border-primary bg-primary/10 text-primary"
+                                  : "border-border/80 hover:bg-muted"
+                              }`}
+                            >
+                              <span className="flex items-center justify-between gap-2">
+                                <span className="truncate">{servicio.nombre}</span>
+                                {seleccionado && <Check className="size-4 shrink-0" />}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {serviciosActivos.length > 0 && serviciosSeleccionados.length === 0 ? (
+                      <p className="text-xs font-medium text-destructive">Elegí al menos un servicio.</p>
+                    ) : null}
+                  </section>
                 </div>
+
+                <section className="min-w-0 space-y-3 md:border-l md:border-border/70 md:pl-6">
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <Clock className="size-4 text-primary" />
+                      Horarios de trabajo
+                    </Label>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Activá los días disponibles y definí entrada y salida.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-2 min-[1180px]:grid-cols-2">
+                    {diasSemana.map((dia) => {
+                      const horario = horarios.find((item) => item.dia_semana === dia.dia);
+                      if (!horario) return null;
+
+                      return (
+                        <article key={dia.dia} className="min-w-0 rounded-lg border border-border/80 bg-muted/20 p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold">{dia.nombre}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {horario.activo ? "Disponible" : "Sin atención"}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={horario.activo}
+                              aria-label={`${horario.activo ? "Desactivar" : "Activar"} ${dia.nombre}`}
+                              onClick={() => actualizarHorario(dia.dia, "activo", !horario.activo)}
+                              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                                horario.activo ? "bg-primary" : "bg-muted-foreground/25"
+                              }`}
+                            >
+                              <span
+                                className={`absolute left-1 top-1 size-4 rounded-full bg-white shadow-sm transition-transform ${
+                                  horario.activo ? "translate-x-5" : "translate-x-0"
+                                }`}
+                              />
+                            </button>
+                          </div>
+
+                          {horario.activo ? (
+                            <div className="mt-3 grid min-w-0 grid-cols-2 gap-2">
+                              <label className="min-w-0 space-y-1">
+                                <span className="text-[11px] font-medium text-muted-foreground">Entrada</span>
+                                <Input
+                                  type="time"
+                                  value={horaInput(horario.hora_inicio)}
+                                  onChange={(event) => actualizarHorario(dia.dia, "hora_inicio", event.target.value)}
+                                  aria-label={`${dia.nombre}, hora de entrada`}
+                                  className="h-10 min-w-0 rounded-lg bg-background px-2 text-[13px] font-semibold tabular-nums [color-scheme:light] sm:text-sm dark:[color-scheme:dark]"
+                                  required
+                                />
+                              </label>
+                              <label className="min-w-0 space-y-1">
+                                <span className="text-[11px] font-medium text-muted-foreground">Salida</span>
+                                <Input
+                                  type="time"
+                                  value={horaInput(horario.hora_fin)}
+                                  onChange={(event) => actualizarHorario(dia.dia, "hora_fin", event.target.value)}
+                                  aria-label={`${dia.nombre}, hora de salida`}
+                                  className="h-10 min-w-0 rounded-lg bg-background px-2 text-[13px] font-semibold tabular-nums [color-scheme:light] sm:text-sm dark:[color-scheme:dark]"
+                                  required
+                                />
+                              </label>
+                            </div>
+                          ) : null}
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
               </div>
             </div>
 
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+            <div className="border-t border-border/70 bg-popover px-4 py-3 sm:px-6">
+              {error ? (
+                <Alert variant="destructive" className="mb-3 py-2">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              ) : null}
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                  disabled={loading}
+                  className="rounded-2xl"
+                >
+                  Cancelar
+                </Button>
 
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={loading}
-                className="rounded-2xl"
-              >
-                Cancelar
-              </Button>
-
-              <Button type="submit" disabled={loading} className="rounded-2xl">
-                {loading
-                  ? "Guardando..."
-                  : esEditar
-                    ? "Guardar cambios"
-                    : "Crear empleado"}
-              </Button>
+                <Button
+                  type="submit"
+                  disabled={loading || serviciosActivos.length === 0 || serviciosSeleccionados.length === 0}
+                  className="rounded-2xl"
+                >
+                  {loading
+                    ? "Guardando..."
+                    : esEditar
+                      ? "Guardar cambios"
+                      : "Crear empleado"}
+                </Button>
+              </div>
             </div>
           </form>
         </DialogContent>

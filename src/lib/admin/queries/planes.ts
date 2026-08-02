@@ -1,25 +1,14 @@
 import "server-only";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import type { PlanPublico } from "@/lib/planes/planes-shared";
 
-export type PlanAdminRow = {
-  id: string;
-  clave: string;
-  nombre: string;
-  precio_mensual_gs: number | null;
-  precio_anual_gs: number | null;
+export type PlanAdminRow = PlanPublico & {
   precio_gs: number | null;
-  limite_citas_mensuales: number | null;
-  limite_empleados: number | null;
-  limite_servicios: number | null;
-  limite_clientes: number | null;
-  limite_sucursales: number | null;
   visible_publico: boolean;
-  destacado: boolean;
-  orden: number;
 };
 
 const SELECT_PLAN =
-  "id, clave, nombre, precio_mensual_gs, precio_anual_gs, precio_gs, limite_citas_mensuales, limite_empleados, limite_servicios, limite_clientes, limite_sucursales, visible_publico, destacado, orden";
+  "id, clave, nombre, descripcion_corta, texto_destacado, precio_mensual_gs, precio_anual_gs, precio_gs, ahorro_anual_meses, limite_citas_mensuales, limite_empleados, limite_servicios, limite_clientes, limite_sucursales, visible_publico, destacado, permite_reportes_basicos, permite_reportes_avanzados, permite_personalizacion, permite_exportacion_csv, permite_multiples_sucursales, permite_recordatorios_whatsapp, permite_soporte_prioritario, permite_funcionalidades_a_medida, features, orden";
 
 export async function obtenerPlanes(): Promise<PlanAdminRow[]> {
   const admin = createServiceRoleClient();

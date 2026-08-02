@@ -110,7 +110,9 @@ test.describe.serial("CRUD principal y asignación automática", () => {
     await dialog.getByLabel(/^Nombre$/i).fill(employeeName);
     await dialog.getByLabel(/Correo/i).fill(`empleado.${suffix}@example.com`);
     await dialog.getByLabel(/Teléfono/i).fill(`08${suffix.slice(-8)}`);
+    await expect(dialog.getByRole("button", { name: /Crear empleado/i })).toBeDisabled();
     await dialog.getByRole("button", { name: new RegExp(serviceName, "i") }).click();
+    await expect(dialog.getByRole("button", { name: /Crear empleado/i })).toBeEnabled();
     await dialog.getByRole("button", { name: /Crear empleado/i }).click();
 
     await expect(page.locator("body")).toContainText(/Empleado creado/i);

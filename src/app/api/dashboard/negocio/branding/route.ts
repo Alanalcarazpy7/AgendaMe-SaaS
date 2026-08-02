@@ -107,6 +107,15 @@ export async function POST(request: Request) {
   const guard = await requireAdminGlobalApi();
   if (!guard.ok) return guard.response;
 
+  if (guard.access.planNivel < 1) {
+    return NextResponse.json(
+      {
+        error:
+          "La identidad visual con logo y banner está disponible desde el plan Básico.",
+      },
+      { status: 403 }
+    );
+  }
 
   try {
     const contexto = await obtenerNegocioDelUsuario(guard.access.negocio.id);
@@ -218,6 +227,15 @@ export async function DELETE(request: Request) {
   const guard = await requireAdminGlobalApi();
   if (!guard.ok) return guard.response;
 
+  if (guard.access.planNivel < 1) {
+    return NextResponse.json(
+      {
+        error:
+          "La identidad visual con logo y banner está disponible desde el plan Básico.",
+      },
+      { status: 403 }
+    );
+  }
 
   try {
     const contexto = await obtenerNegocioDelUsuario(guard.access.negocio.id);

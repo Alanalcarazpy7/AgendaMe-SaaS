@@ -18,7 +18,10 @@ const faq = [
   ["¿Los precios se actualizan automáticamente?", "Sí. Los precios, límites y funciones de cada plan siempre están al día en esta página."],
   ["¿Qué significa el plan anual?", "Pagás 10 meses y usás el servicio los 12 meses del año, según el ahorro de cada plan."],
   ["¿Qué pasa si necesito más capacidad que el plan Empresarial?", "Las funcionalidades a medida se evalúan según la necesidad puntual del negocio."],
-  ["¿Puedo solicitar un plan por WhatsApp?", "Sí. Cada card tiene un botón que arma el mensaje con el plan y período elegidos."],
+  ["¿Los recordatorios de WhatsApp son automáticos?", "Por ahora son manuales: AgendaMe prepara el mensaje con los datos de la cita y vos confirmás el envío desde WhatsApp, sin contratar una API paga."],
+  ["¿Qué agrega el plan Profesional?", "Suma reportes avanzados, tendencias y rankings, exportación XLSX/CSV, recordatorios manuales por WhatsApp y soporte prioritario."],
+  ["¿Qué agrega el plan Empresarial?", "Permite operar varias sucursales, crear accesos por rol y consultar reportes, filtros y exportaciones por ubicación."],
+  ["¿Puedo solicitar un plan por WhatsApp?", "Sí. AgendaMe prepara un mensaje con el plan y período elegidos para continuar la contratación por WhatsApp."],
 ] as const;
 
 function AccentWord({ children }: { children: React.ReactNode }) {

@@ -144,6 +144,20 @@ function normalizarHorarios(body: JsonRecord) {
     );
   }
 
+  const horarioActivoInvalido = horarios.find(
+    (horario) =>
+      horario.activo &&
+      horario.hora_inicio &&
+      horario.hora_fin &&
+      horario.hora_inicio >= horario.hora_fin
+  );
+
+  if (horarioActivoInvalido) {
+    throw new Error(
+      `La hora de fin del día ${horarioActivoInvalido.dia_semana} debe ser posterior a la hora de inicio.`
+    );
+  }
+
   return horarios;
 }
 
@@ -271,25 +285,31 @@ export async function PATCH(request: Request, context: RouteContext) {
     const servicioIds = normalizarServicios(body);
     const horarios = normalizarHorarios(body);
 
-    if (servicioIds.length > 0) {
-      const { data: serviciosValidos, error: serviciosError } = await supabase
-        .from("servicios")
-        .select("id")
-        .eq("negocio_id", access.negocio.id)
-        .in("id", servicioIds);
+    if (servicioIds.length === 0) {
+      return NextResponse.json(
+        { error: "Seleccioná al menos un servicio activo para el empleado." },
+        { status: 400 }
+      );
+    }
 
-      if (serviciosError) throw new Error(serviciosError.message);
+    const { data: serviciosValidos, error: serviciosError } = await supabase
+      .from("servicios")
+      .select("id")
+      .eq("negocio_id", access.negocio.id)
+      .eq("estado", "activo")
+      .in("id", servicioIds);
 
-      const idsValidos = new Set((serviciosValidos ?? []).map((item) => item.id));
+    if (serviciosError) throw new Error(serviciosError.message);
 
-      const invalido = servicioIds.find((id) => !idsValidos.has(id));
+    const idsValidos = new Set((serviciosValidos ?? []).map((item) => item.id));
 
-      if (invalido) {
-        return NextResponse.json(
-          { error: "Uno de los servicios seleccionados no pertenece al negocio." },
-          { status: 400 }
-        );
-      }
+    const invalido = servicioIds.find((id) => !idsValidos.has(id));
+
+    if (invalido) {
+      return NextResponse.json(
+        { error: "Uno de los servicios seleccionados no está activo o no pertenece al negocio." },
+        { status: 400 }
+      );
     }
 
     const updateEmpleado: Record<string, unknown> = {
@@ -321,18 +341,16 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     if (deleteServiciosError) throw new Error(deleteServiciosError.message);
 
-    if (servicioIds.length > 0) {
-      const { error: insertServiciosError } = await supabase
-        .from("empleado_servicios")
-        .insert(
-          servicioIds.map((servicioId) => ({
-            empleado_id: empleadoId,
-            servicio_id: servicioId,
-          }))
-        );
+    const { error: insertServiciosError } = await supabase
+      .from("empleado_servicios")
+      .insert(
+        servicioIds.map((servicioId) => ({
+          empleado_id: empleadoId,
+          servicio_id: servicioId,
+        }))
+      );
 
-      if (insertServiciosError) throw new Error(insertServiciosError.message);
-    }
+    if (insertServiciosError) throw new Error(insertServiciosError.message);
 
     // Reemplazar horarios solo si el frontend los envió.
     if (horarios) {
@@ -373,7 +391,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         ? error.message
         : "No se pudo actualizar el empleado.";
 
-    const status = message.includes("horario activo") ? 400 : 500;
+    const status = /horario activo|hora de fin/i.test(message) ? 400 : 500;
 
     return NextResponse.json(
       { error: message || "No se pudo actualizar el empleado." },

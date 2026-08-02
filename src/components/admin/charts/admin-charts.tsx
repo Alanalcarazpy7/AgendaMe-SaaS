@@ -12,7 +12,12 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { BarChart3, PieChart as PieChartIcon, TrendingUp, Users2 } from "lucide-react";
+import {
+  BarChart3,
+  PieChart as PieChartIcon,
+  TrendingUp,
+  Users2,
+} from "lucide-react";
 import type {
   PuntoDistribucionPlan,
   PuntoIngresoMes,

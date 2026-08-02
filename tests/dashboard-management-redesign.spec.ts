@@ -1,4 +1,4 @@
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 
 import {
   adjuntarScreenshot,
@@ -22,6 +22,23 @@ async function expectNoHorizontalOverflow(page: Page) {
   }));
 
   expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport + 1);
+}
+
+async function expectEmployeeDialogFits(dialog: Locator) {
+  const dimensions = await dialog.evaluate((element) => ({
+    visibleWidth: element.clientWidth,
+    contentWidth: element.scrollWidth,
+  }));
+
+  expect(dimensions.contentWidth).toBeLessThanOrEqual(dimensions.visibleWidth + 1);
+
+  const timeInputs = dialog.locator('input[type="time"]');
+  await expect(timeInputs.first()).toBeVisible();
+
+  const widths = await timeInputs.evaluateAll((inputs) =>
+    inputs.map((input) => input.getBoundingClientRect().width),
+  );
+  expect(Math.min(...widths)).toBeGreaterThanOrEqual(100);
 }
 
 async function capture(
@@ -56,6 +73,13 @@ test.describe("rediseño de módulos de gestión", () => {
     await esperarDashboardValido(page);
     await dismissDashboardTour(page);
     await expect(page.getByRole("heading", { name: "Empleados" })).toBeVisible();
+    await page.getByRole("button", { name: /Nuevo empleado/i }).first().click();
+    const employeeDialog = page.getByRole("dialog", { name: /Nuevo empleado/i });
+    await expect(employeeDialog).toBeVisible();
+    await expect(employeeDialog.getByRole("button", { name: /Crear empleado/i })).toBeDisabled();
+    await expectEmployeeDialogFits(employeeDialog);
+    await capture(page, testInfo, "gestion-empleado-dialog-desktop.png");
+    await employeeDialog.getByRole("button", { name: "Cancelar" }).click();
     await page.getByRole("tab", { name: /Asignación por sucursal/i }).click();
     await expect(
       page.getByRole("heading", { name: "Sucursal de trabajo" }),
@@ -115,6 +139,16 @@ test.describe("rediseño de módulos de gestión", () => {
       await page.goto(route, { waitUntil: "domcontentloaded" });
       await esperarDashboardValido(page);
       await dismissDashboardTour(page);
+
+      if (route === "/dashboard/empleados") {
+        await page.getByRole("button", { name: /Nuevo empleado/i }).first().click();
+        const employeeDialog = page.getByRole("dialog", { name: /Nuevo empleado/i });
+        await expect(employeeDialog).toBeVisible();
+        await expectEmployeeDialogFits(employeeDialog);
+        await capture(page, testInfo, "gestion-empleado-dialog-mobile.png");
+        await employeeDialog.getByRole("button", { name: "Cancelar" }).click();
+      }
+
       await capture(
         page,
         testInfo,

@@ -1,19 +1,14 @@
 "use client";
 
-import type { ComponentType } from "react";
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import {
-  CheckCircle2,
-  Clock3,
-  Eye,
-  EyeOff,
-  Layers3,
+  ChevronDown,
   Search,
-  Sparkles,
-  Tag,
 } from "lucide-react";
 import { ServicioDialog, type ServicioItem } from "@/components/servicios/servicio-dialog";
 import { ServicioEstadoButton } from "@/components/servicios/servicio-estado-button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 type ServiciosPanelProps = {
@@ -22,12 +17,12 @@ type ServiciosPanelProps = {
 
 type EstadoFiltro = "todos" | "activo" | "inactivo";
 
+const CANTIDAD_INICIAL = 6;
+
 function formatearPrecio(precio: number | string | null) {
   const numero = Number(precio ?? 0);
 
-  if (numero <= 0) {
-    return "Sin precio";
-  }
+  if (numero <= 0) return "Sin precio";
 
   return new Intl.NumberFormat("es-PY", {
     style: "currency",
@@ -36,62 +31,19 @@ function formatearPrecio(precio: number | string | null) {
   }).format(numero);
 }
 
-function formatearPromedio(valor: number) {
-  if (!Number.isFinite(valor) || valor <= 0) return "0";
-  return Math.round(valor).toLocaleString("es-PY");
-}
-
-function cardBase(extra = "") {
-  return `rounded-[1.5rem] border border-border/80 bg-card/90 shadow-[0_16px_48px_rgb(15_23_42/0.07)] ring-1 ring-white/60 backdrop-blur-xl dark:bg-card/80 dark:shadow-black/20 dark:ring-white/5 ${extra}`;
-}
-
-function StatTile({
-  label,
-  value,
-  detail,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  icon: ComponentType<{ className?: string }>;
-}) {
-  return (
-    <article className="rounded-[1.15rem] border border-white/15 bg-white/10 p-3 text-white">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-medium text-cyan-50/85">{label}</p>
-        <Icon className="h-4 w-4 text-cyan-50/80" />
-      </div>
-      <p className="mt-2 text-2xl font-bold tracking-tight">{value}</p>
-      <p className="mt-1 line-clamp-2 text-xs leading-5 text-cyan-50/75">{detail}</p>
-    </article>
-  );
-}
-
 export function ServiciosPanel({ servicios }: ServiciosPanelProps) {
   const [busqueda, setBusqueda] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>("todos");
+  const [cantidadVisible, setCantidadVisible] = useState(CANTIDAD_INICIAL);
 
   const resumen = useMemo(() => {
-    const activos = servicios.filter((servicio) => servicio.estado === "activo");
-    const inactivos = servicios.length - activos.length;
-    const duracionPromedio =
-      servicios.length > 0
-        ? servicios.reduce((acc, servicio) => acc + Number(servicio.duracion_minutos ?? 0), 0) /
-          servicios.length
-        : 0;
-    const serviciosConPrecio = servicios.filter((servicio) => Number(servicio.precio ?? 0) > 0);
-    const precioPromedio =
-      serviciosConPrecio.length > 0
-        ? serviciosConPrecio.reduce((acc, servicio) => acc + Number(servicio.precio ?? 0), 0) /
-          serviciosConPrecio.length
-        : 0;
+    const activos = servicios.filter((servicio) => servicio.estado === "activo").length;
+    const conImagen = servicios.filter((servicio) => Boolean(servicio.imagen_url)).length;
 
     return {
-      activos: activos.length,
-      inactivos,
-      duracionPromedio,
-      precioPromedio,
+      activos,
+      inactivos: servicios.length - activos,
+      conImagen,
     };
   }, [servicios]);
 
@@ -109,6 +61,8 @@ export function ServiciosPanel({ servicios }: ServiciosPanelProps) {
     });
   }, [servicios, busqueda, estadoFiltro]);
 
+  const serviciosVisibles = serviciosFiltrados.slice(0, cantidadVisible);
+  const restantes = serviciosFiltrados.length - serviciosVisibles.length;
   const filtros: { label: string; value: EstadoFiltro; count: number }[] = [
     { label: "Todos", value: "todos", count: servicios.length },
     { label: "Activos", value: "activo", count: resumen.activos },
@@ -116,206 +70,203 @@ export function ServiciosPanel({ servicios }: ServiciosPanelProps) {
   ];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5">
-      <section className={cardBase("overflow-hidden")}>
-        <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_29rem]">
-          <div className="relative p-5 sm:p-6">
-            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-cyan-500 to-teal-500" />
-
-            <p className="inline-flex items-center gap-2 rounded-2xl border bg-muted/50 px-3 py-1.5 text-xs font-semibold text-muted-foreground">
-              <Layers3 className="h-3.5 w-3.5 text-primary" />
-              Catálogo operativo
+    <div className="mx-auto max-w-7xl space-y-4">
+      <section className="relative overflow-hidden rounded-lg border bg-card p-5 shadow-sm sm:p-6">
+        <span className="absolute inset-y-0 left-0 w-1 bg-primary" aria-hidden="true" />
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="text-xs font-black text-primary">CATÁLOGO DE SERVICIOS</div>
+            <h1 className="mt-2 text-3xl font-black tracking-tight">Servicios</h1>
+            <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
+              Cada ficha reúne imagen, duración, precio y disponibilidad.
             </p>
+          </div>
 
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-balance">
-              Servicios
-            </h1>
-
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Organizá lo que vendés, cuánto dura, cuánto cuesta y si aparece en el link público de reservas.
-            </p>
-
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-              <ServicioDialog variant="crear" />
-
-              <div className="inline-flex items-center gap-2 rounded-2xl border bg-background/65 px-3 py-2 text-xs font-semibold text-muted-foreground">
-                <Sparkles className="h-4 w-4 text-cyan-500" />
-                Los servicios activos quedan disponibles para reservar.
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex items-center divide-x divide-border rounded-lg border bg-background text-center">
+              <div className="min-w-20 px-3 py-2">
+                <strong className="block text-lg leading-none">{servicios.length}</strong>
+                <span className="mt-1 block text-[11px] text-muted-foreground">Total</span>
+              </div>
+              <div className="min-w-20 px-3 py-2">
+                <strong className="block text-lg leading-none text-emerald-600 dark:text-emerald-300">
+                  {resumen.activos}
+                </strong>
+                <span className="mt-1 block text-[11px] text-muted-foreground">Activos</span>
+              </div>
+              <div className="min-w-20 px-3 py-2">
+                <strong className="block text-lg leading-none">{resumen.conImagen}</strong>
+                <span className="mt-1 block text-[11px] text-muted-foreground">Con imagen</span>
               </div>
             </div>
+            <ServicioDialog variant="crear" />
           </div>
+        </div>
+      </section>
 
-          <aside className="border-t border-border/70 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary)_92%,#0b1120),color-mix(in_srgb,var(--ring)_72%,#0b1120))] p-4 xl:border-l xl:border-t-0">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <StatTile
-                label="Total cargados"
-                value={String(servicios.length)}
-                detail="Base completa del catálogo."
-                icon={Layers3}
-              />
-              <StatTile
-                label="Activos"
-                value={String(resumen.activos)}
-                detail="Visibles en agenda pública."
-                icon={CheckCircle2}
-              />
-              <StatTile
-                label="Duración media"
-                value={`${formatearPromedio(resumen.duracionPromedio)} min`}
-                detail="Referencia para capacidad."
-                icon={Clock3}
-              />
-              <StatTile
-                label="Precio medio"
-                value={formatearPrecio(Math.round(resumen.precioPromedio))}
-                detail="Solo servicios con precio."
-                icon={Tag}
+      {servicios.length > 0 && (
+        <section className="rounded-lg border bg-card p-3 shadow-sm">
+          <div className="grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_auto] lg:items-center">
+            <div className="flex h-10 items-center gap-2 rounded-lg border bg-background px-3">
+              <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <Input
+                value={busqueda}
+                onChange={(event) => {
+                  setBusqueda(event.target.value);
+                  setCantidadVisible(CANTIDAD_INICIAL);
+                }}
+                placeholder="Buscar servicio..."
+                className="h-9 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
               />
             </div>
-          </aside>
-        </div>
-      </section>
 
-      <section className={cardBase("p-4")}>
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-          <div className="flex min-h-11 items-center gap-2 rounded-2xl border border-border/80 bg-background/70 px-3">
-            <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-            <Input
-              value={busqueda}
-              onChange={(event) => setBusqueda(event.target.value)}
-              placeholder="Buscar por nombre o descripción..."
-              className="h-10 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-            />
+            <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1">
+              {filtros.map((filtro) => {
+                const activo = estadoFiltro === filtro.value;
+
+                return (
+                  <button
+                    key={filtro.value}
+                    type="button"
+                    onClick={() => {
+                      setEstadoFiltro(filtro.value);
+                      setCantidadVisible(CANTIDAD_INICIAL);
+                    }}
+                    className={`flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-xs font-bold outline-none transition-[background-color,color,box-shadow] focus-visible:ring-3 focus-visible:ring-ring/30 ${
+                      activo
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {filtro.label}
+                    <span className="tabular-nums opacity-70">{filtro.count}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            {filtros.map((filtro) => {
-              const activo = estadoFiltro === filtro.value;
-
-              return (
-                <button
-                  key={filtro.value}
-                  type="button"
-                  onClick={() => setEstadoFiltro(filtro.value)}
-                  className={`inline-flex h-10 items-center gap-2 rounded-2xl border px-3 text-sm font-semibold transition-[background-color,color,border-color,box-shadow,transform] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 ${
-                    activo
-                      ? "border-primary/40 bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                      : "border-border/80 bg-background/70 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                  }`}
-                >
-                  {filtro.label}
-                  <span className={`rounded-xl px-2 py-0.5 text-xs ${activo ? "bg-white/20" : "bg-muted"}`}>
-                    {filtro.count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {servicios.length === 0 ? (
-        <section className={cardBase("p-8 text-center")}>
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-primary/10 text-primary">
-            <Layers3 className="h-7 w-7" />
-          </div>
-          <h2 className="mt-4 text-xl font-bold tracking-tight">Todavía no hay servicios</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-            Cargá el primero con duración, precio y color. Después podés sumarle imagen para el link público.
+        <section className="rounded-lg border border-dashed bg-card px-6 py-10 text-center shadow-sm">
+          <span className="text-4xl font-black text-primary">01</span>
+          <h2 className="mt-3 text-xl font-bold">Creá tu primer servicio</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+            Agregá nombre, duración, precio e imagen en el mismo paso.
           </p>
           <div className="mt-5 flex justify-center">
             <ServicioDialog variant="crear" />
           </div>
         </section>
       ) : serviciosFiltrados.length === 0 ? (
-        <section className={cardBase("p-8 text-center")}>
-          <h2 className="text-xl font-bold tracking-tight">No encontramos servicios</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Probá con otro nombre, descripción o filtro de estado.
-          </p>
+        <section className="rounded-lg border bg-card px-6 py-9 text-center shadow-sm">
+          <Search className="mx-auto size-6 text-muted-foreground" aria-hidden="true" />
+          <h2 className="mt-3 font-bold">No encontramos servicios</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Probá otra búsqueda o filtro.</p>
         </section>
       ) : (
-        <section className="grid gap-4 xl:grid-cols-2">
-          {serviciosFiltrados.map((servicio) => {
-            const activo = servicio.estado === "activo";
+        <>
+          <section className="grid gap-3 xl:grid-cols-2">
+            {serviciosVisibles.map((servicio) => {
+              const activo = servicio.estado === "activo";
 
-            return (
-              <article
-                key={servicio.id}
-                className={`${cardBase("overflow-hidden")} transition-[transform,border-color,box-shadow] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:border-primary/25`}
-              >
-                <div className="grid min-h-full sm:grid-cols-[0.85rem_minmax(0,1fr)]">
-                  <div
-                    className="min-h-2 sm:min-h-full"
+              return (
+                <article
+                  key={servicio.id}
+                  className="group relative grid min-h-36 grid-cols-[6.5rem_minmax(0,1fr)] overflow-hidden rounded-lg border bg-card shadow-[0_10px_30px_rgb(15_23_42/0.06)] transition-[border-color,box-shadow] hover:shadow-[0_14px_36px_rgb(15_23_42/0.1)] sm:grid-cols-[8rem_minmax(0,1fr)]"
+                  style={{
+                    borderColor: `color-mix(in srgb, ${servicio.color ?? "#2563eb"} 28%, var(--border))`,
+                  }}
+                >
+                  <span
+                    className="absolute inset-x-0 top-0 z-10 h-0.5"
                     style={{ backgroundColor: servicio.color ?? "#2563eb" }}
+                    aria-hidden="true"
                   />
+                  <div className="relative min-h-full border-r bg-muted">
+                    {servicio.imagen_url ? (
+                      <Image
+                        src={servicio.imagen_url}
+                        alt={servicio.nombre}
+                        fill
+                        unoptimized
+                        sizes="128px"
+                        className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                      />
+                    ) : (
+                      <div
+                        className="flex h-full flex-col items-center justify-center px-2 text-center"
+                        style={{
+                          color: servicio.color ?? "#2563eb",
+                          backgroundColor: `color-mix(in srgb, ${servicio.color ?? "#2563eb"} 12%, var(--muted))`,
+                        }}
+                      >
+                        <span className="text-3xl font-black">{servicio.nombre.slice(0, 1).toUpperCase()}</span>
+                        <span className="mt-1 text-[10px] font-bold opacity-70">SIN IMAGEN</span>
+                      </div>
+                    )}
+                  </div>
 
-                  <div className="p-4">
+                  <div className="flex min-w-0 flex-col p-3.5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <span
-                            className="h-3 w-3 shrink-0 rounded-full ring-4 ring-primary/10"
+                            className="size-2.5 shrink-0 rounded-full"
                             style={{ backgroundColor: servicio.color ?? "#2563eb" }}
+                            aria-hidden="true"
                           />
-                          <h2 className="truncate text-lg font-bold tracking-tight">
-                            {servicio.nombre}
-                          </h2>
+                          <h2 className="truncate font-bold">{servicio.nombre}</h2>
                         </div>
-
-                        <p className="mt-2 line-clamp-2 text-sm leading-6 text-muted-foreground">
-                          {servicio.descripcion || "Sin descripción cargada."}
+                        <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+                          {servicio.descripcion || "Sin descripción"}
                         </p>
                       </div>
-
                       <span
-                        className={`inline-flex shrink-0 items-center gap-1.5 rounded-2xl px-3 py-1 text-xs font-bold ${
+                        className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-bold ${
                           activo
                             ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300"
                             : "bg-muted text-muted-foreground"
                         }`}
                       >
-                        {activo ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                        <span className={`size-1.5 rounded-full ${activo ? "bg-emerald-500" : "bg-muted-foreground/55"}`} aria-hidden="true" />
                         {activo ? "Activo" : "Inactivo"}
                       </span>
                     </div>
 
-                    <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                      <div className="rounded-2xl border bg-background/60 p-3">
-                        <p className="text-xs font-medium text-muted-foreground">Duración</p>
-                        <p className="mt-1 font-bold">{servicio.duracion_minutos} min</p>
-                      </div>
-                      <div className="rounded-2xl border bg-background/60 p-3">
-                        <p className="text-xs font-medium text-muted-foreground">Precio</p>
-                        <p className="mt-1 truncate font-bold">{formatearPrecio(servicio.precio)}</p>
-                      </div>
-                      <div className="rounded-2xl border bg-background/60 p-3">
-                        <p className="text-xs font-medium text-muted-foreground">Reservas</p>
-                        <p className="mt-1 font-bold">{activo ? "Disponible" : "Oculto"}</p>
-                      </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+                      <span>
+                        <strong className="font-semibold text-foreground">Duración</strong> · {servicio.duracion_minutos} min
+                      </span>
+                      <span className="min-w-0 truncate">
+                        <strong className="font-semibold text-foreground">Precio</strong> · {formatearPrecio(servicio.precio)}
+                      </span>
                     </div>
 
-                    <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t pt-4">
-                      <p className="text-xs leading-5 text-muted-foreground">
-                        {activo
-                          ? "Los clientes pueden elegirlo en el link público."
-                          : "No aparece como opción para nuevas reservas."}
-                      </p>
-
-                      <div className="flex flex-wrap gap-2">
-                        <ServicioDialog variant="editar" servicio={servicio} />
-                        <ServicioEstadoButton
-                          servicioId={servicio.id}
-                          estado={servicio.estado}
-                        />
-                      </div>
+                    <div className="mt-auto flex flex-wrap justify-end gap-2 pt-3">
+                      <ServicioDialog variant="editar" servicio={servicio} />
+                      <ServicioEstadoButton servicioId={servicio.id} estado={servicio.estado} />
                     </div>
                   </div>
-                </div>
-              </article>
-            );
-          })}
-        </section>
+                </article>
+              );
+            })}
+          </section>
+
+          {restantes > 0 && (
+            <div className="flex justify-center pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCantidadVisible((actual) => actual + CANTIDAD_INICIAL)}
+              >
+                Mostrar {Math.min(restantes, CANTIDAD_INICIAL)} más
+                <ChevronDown className="size-4" />
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

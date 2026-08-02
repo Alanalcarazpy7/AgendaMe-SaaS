@@ -1,6 +1,5 @@
 ﻿import { requireDashboardAccess } from "@/lib/dashboard/access-context";
 import { redirect } from "next/navigation";
-import { ServiciosImagenesPanel } from "@/components/servicios/servicios-imagenes-panel";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { ServiciosPanel } from "@/components/servicios/servicios-panel";
 import type { ServicioItem } from "@/components/servicios/servicio-dialog";
@@ -16,7 +15,7 @@ export default async function ServiciosPage() {
   const { data: serviciosData, error: serviciosError } = await supabase
     .from("servicios")
     .select(
-      "id, nombre, descripcion, duracion_minutos, precio, color, estado, created_at"
+      "id, nombre, descripcion, duracion_minutos, precio, color, estado, imagen_url, created_at"
     )
     .eq("negocio_id", access.negocio.id)
     .order("created_at", { ascending: false });
@@ -27,10 +26,5 @@ export default async function ServiciosPage() {
 
   const servicios = (serviciosData ?? []) as ServicioItem[];
 
-  return (
-    <div className="space-y-5">
-      <ServiciosPanel servicios={servicios} />
-      <ServiciosImagenesPanel />
-    </div>
-  );
+  return <ServiciosPanel servicios={servicios} />;
 }

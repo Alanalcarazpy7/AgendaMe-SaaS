@@ -8,7 +8,7 @@ import { editarPlanSchema } from "@/lib/admin/schemas/planes";
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
 /**
- * admin_editar_plan() (aplicada, ver supabase/patches/2026-07-admin-rpc-transaccionales.sql)
+ * admin_editar_plan() (ver supabase/patches/2026-08-planes-catalogo-unificado.sql)
  * hace el update de planes_saas Y el insert en auditoria (con el estado
  * anterior y nuevo) dentro de la misma transacción. Reemplaza el patrón
  * anterior de SELECT + UPDATE + registrarAuditoria() en tres pasos
@@ -29,6 +29,7 @@ export async function editarPlanAction(input: unknown): Promise<ActionResult> {
     p_texto_destacado: data.textoDestacado ?? null,
     p_precio_mensual_gs: data.precioMensualGs,
     p_precio_anual_gs: data.precioAnualGs,
+    p_ahorro_anual_meses: data.ahorroAnualMeses,
     p_limite_citas_mensuales: data.limiteCitasMensuales ?? null,
     p_limite_empleados: data.limiteEmpleados ?? null,
     p_limite_servicios: data.limiteServicios ?? null,
@@ -36,6 +37,15 @@ export async function editarPlanAction(input: unknown): Promise<ActionResult> {
     p_limite_sucursales: data.limiteSucursales ?? null,
     p_visible_publico: data.visiblePublico,
     p_destacado: data.destacado,
+    p_permite_reportes_basicos: data.permiteReportesBasicos,
+    p_permite_reportes_avanzados: data.permiteReportesAvanzados,
+    p_permite_personalizacion: data.permitePersonalizacion,
+    p_permite_exportacion_csv: data.permiteExportacionCsv,
+    p_permite_multiples_sucursales: data.permiteMultiplesSucursales,
+    p_permite_recordatorios_whatsapp: data.permiteRecordatoriosWhatsapp,
+    p_permite_soporte_prioritario: data.permiteSoportePrioritario,
+    p_permite_funcionalidades_a_medida: data.permiteFuncionalidadesAMedida,
+    p_features: data.features,
   });
 
   if (error) return { ok: false, error: error.message };
@@ -43,5 +53,7 @@ export async function editarPlanAction(input: unknown): Promise<ActionResult> {
   revalidatePath("/admin/planes");
   revalidatePath("/admin");
   revalidatePath("/planes");
+  revalidatePath("/");
+  revalidatePath("/dashboard/planes");
   return { ok: true };
 }

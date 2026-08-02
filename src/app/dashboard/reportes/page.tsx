@@ -392,6 +392,33 @@ function EnterpriseOnlyNotice() {
   );
 }
 
+function ProfessionalOnlyNotice() {
+  return (
+    <section className={cardBase("p-4")}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <TrendingUp className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold tracking-tight">Análisis avanzado</h2>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">
+              En Profesional se activan tendencias, horas y días de mayor demanda,
+              clientes frecuentes, rendimiento del equipo y señales para reducir ausencias.
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/dashboard/planes"
+          className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground outline-none transition hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Ver Profesional
+        </Link>
+      </div>
+    </section>
+  );
+}
+
 function InsightCard({
   title,
   description,
@@ -449,6 +476,7 @@ export default async function ReportesPage({ searchParams }: PageProps) {
   const supabase = createServiceRoleClient();
 
   const esPlanEmpresarial = nivelPlan(access.planClave) >= 3;
+  const esPlanProfesional = nivelPlan(access.planClave) >= 2;
   const esAdminEmpresarial = access.scope === "global" && esPlanEmpresarial;
 
   const { data: sucursales } = esAdminEmpresarial
@@ -731,6 +759,7 @@ export default async function ReportesPage({ searchParams }: PageProps) {
         </div>
       </section>
 
+      {esPlanProfesional ? (
       <section className={cardBase("p-4")}>
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -802,6 +831,9 @@ export default async function ReportesPage({ searchParams }: PageProps) {
           </p>
         </div>
       </section>
+      ) : (
+        <ProfessionalOnlyNotice />
+      )}
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <MetricTile
@@ -838,6 +870,8 @@ export default async function ReportesPage({ searchParams }: PageProps) {
         />
       </section>
 
+      {esPlanProfesional ? (
+        <>
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <MetricTile
           title="Hora pico"
@@ -876,16 +910,20 @@ export default async function ReportesPage({ searchParams }: PageProps) {
         <RevenueTrendRechart data={serieIngresos} total={ingresosEstimados} />
         <DemandProfileChart blocks={demandaPorBloque} days={demandaPorDia} />
       </section>
+        </>
+      ) : null}
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <StatusDonutRechart data={estadoItems} total={totalCitas} />
         <ServiceCards items={serviciosClave} />
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-2">
-        <ClientGrid items={clientesClave} />
-        <EmployeeTable items={equipo} />
-      </section>
+      {esPlanProfesional ? (
+        <section className="grid gap-4 xl:grid-cols-2">
+          <ClientGrid items={clientesClave} />
+          <EmployeeTable items={equipo} />
+        </section>
+      ) : null}
 
       {esPlanEmpresarial && access.puedeVerReportesGlobales ? (
         <BranchComparisonChart data={comparativoSucursal} />

@@ -1,4 +1,4 @@
-import { BadgeCheck, Eye, EyeOff, Layers3, Pencil, Users2 } from "lucide-react";
+import { BadgeCheck, Check, Eye, EyeOff, Layers3, Pencil, Users2 } from "lucide-react";
 import { requirePlatformOwner } from "@/lib/admin/guard";
 import { obtenerPlanes } from "@/lib/admin/queries/planes";
 import { obtenerNegociosResumen } from "@/lib/admin/queries/negocios-resumen";
@@ -6,6 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { formatearGuaranies, formatearNumero } from "@/lib/admin/formatters/currency";
 import { PlanEditarDialog } from "@/components/admin/planes/plan-editar-dialog";
 import { AdminMetricPill, AdminPageHeader, AdminPanel } from "@/components/admin/admin-ui";
+import { PlanComparisonTable } from "@/components/planes/plan-comparison-table";
+import {
+  generarFeaturesPlan,
+  getDescripcionPlan,
+  getTextoDestacadoPlan,
+} from "@/lib/planes/planes-shared";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -34,7 +40,7 @@ export default async function AdminPlanesPage() {
       <AdminPageHeader
         eyebrow="Producto y monetizacion"
         title="Planes"
-        description="Edita precios, limites y visibilidad comercial. Cada cambio conserva historial y no elimina datos de los negocios."
+        description="Edita contenido, precios, limites, permisos y visibilidad desde un unico catalogo. Cada cambio conserva historial y no elimina datos de los negocios."
         metrics={
           <>
             <AdminMetricPill label="Planes creados" value={formatearNumero(planes.length)} icon={Layers3} />
@@ -75,6 +81,13 @@ export default async function AdminPlanesPage() {
                 </div>
               </div>
 
+              <p className="mt-4 text-xs font-bold uppercase text-primary">
+                {getTextoDestacadoPlan(plan)}
+              </p>
+              <p className="mt-1 min-h-16 text-sm leading-6 text-muted-foreground">
+                {getDescripcionPlan(plan)}
+              </p>
+
               <div className="mt-5 rounded-[1.25rem] border border-border/70 bg-background/60 p-3">
                 <p className="text-2xl font-black tracking-tight">{formatearGuaranies(plan.precio_mensual_gs)}</p>
                 <p className="mt-1 text-xs font-semibold text-muted-foreground">
@@ -98,6 +111,22 @@ export default async function AdminPlanesPage() {
                 ))}
               </dl>
 
+              <div className="mt-4 border-t pt-4">
+                <p className="text-xs font-bold uppercase text-muted-foreground">
+                  Funciones comunicadas
+                </p>
+                <ul className="mt-2 space-y-2">
+                  {generarFeaturesPlan(plan)
+                    .slice(0, 4)
+                    .map((feature) => (
+                      <li key={feature} className="flex gap-2 text-xs leading-5">
+                        <Check className="mt-0.5 size-3.5 shrink-0 text-chart-4" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                </ul>
+              </div>
+
               <div className="mt-4 flex items-center justify-between gap-3">
                 <p className="text-xs leading-5 text-muted-foreground">
                   {negociosActivos === 0
@@ -109,6 +138,16 @@ export default async function AdminPlanesPage() {
             </article>
           );
         })}
+      </section>
+
+      <section>
+        <div className="mb-4">
+          <h2 className="text-2xl font-bold tracking-tight">Matriz comercial publicada</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Esta misma comparación se muestra en la web y dentro del dashboard del negocio.
+          </p>
+        </div>
+        <PlanComparisonTable planes={planes} />
       </section>
 
       <AdminPanel

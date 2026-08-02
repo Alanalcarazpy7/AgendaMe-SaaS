@@ -43,7 +43,10 @@ test("catálogo de planes tiene límites coherentes", async () => {
   expect(planes.gratis.limite_citas_mensuales).not.toBeNull();
   expect(planes.basico.limite_citas_mensuales).not.toBeNull();
 
-  expect(planes.profesional.limite_citas_mensuales).toBe(500);
+  expect(planes.gratis.limite_citas_mensuales).toBe(20);
+  expect(planes.gratis.limite_servicios).toBe(5);
+  expect(planes.basico.limite_citas_mensuales).toBe(80);
+  expect(planes.profesional.limite_citas_mensuales).toBe(250);
   expect(planes.empresarial.limite_citas_mensuales).toBe(2000);
 });
 
@@ -107,7 +110,7 @@ test("plan básico bloquea la cita extra después de su límite mensual", async 
 
   try {
     const agenda = await prepararAgendaBase(fixture);
-    const limite = Number(fixture.plan.limite_citas_mensuales ?? 100);
+    const limite = Number(fixture.plan.limite_citas_mensuales ?? 80);
 
     test.skip(limite > 250, `Límite demasiado alto para test local: ${limite}`);
 
@@ -150,9 +153,9 @@ test("plan profesional bloquea la cita extra después de su límite mensual", as
 
   try {
     const agenda = await prepararAgendaBase(fixture);
-    const limite = Number(fixture.plan.limite_citas_mensuales ?? 500);
+    const limite = Number(fixture.plan.limite_citas_mensuales ?? 250);
 
-    expect(fixture.plan.limite_citas_mensuales).toBe(500);
+    expect(fixture.plan.limite_citas_mensuales).toBe(250);
     test.skip(limite > 250, `Límite demasiado alto para test local: ${limite}`);
 
     for (let i = 0; i < limite; i++) {

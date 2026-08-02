@@ -5,24 +5,32 @@ import {
   CheckCircle2,
   Crown,
   FileDown,
+  ImageIcon,
+  LifeBuoy,
   MessageSquareText,
+  Sparkles,
   Store,
 } from "lucide-react";
 import { ComprobantePagoForm } from "@/components/planes/comprobante-pago-form";
 import { SolicitarPlanButton } from "@/components/planes/solicitar-plan-button";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
-import { nivelPlan } from "@/lib/planes/plan-access";
 import {
   formatLimit,
   formatPlanPrice,
+  generarFeaturesPlan,
   getAhorroAnualLabel,
   getAhorroAnualMontoLabel,
+  getDescripcionPlan,
+  getTextoDestacadoPlan,
+  planPermite,
+  type PlanFeatureFlag,
   type PlanPublico,
 } from "@/lib/planes/planes-shared";
 import { DashboardPlanUsageOverview } from "@/components/dashboard/dashboard-plan-usage-overview";
 import { obtenerUsoPlanNegocio } from "@/lib/planes/plan-limits";
 import { RegularizarSucursalesCard } from "@/components/planes/regularizar-sucursales-card";
+import { PlanComparisonTable } from "@/components/planes/plan-comparison-table";
 
 type SuscripcionRaw = {
   id: string;
@@ -113,6 +121,10 @@ function PremiumCard({
   );
 }
 
+function primerPlanConFuncion(planes: PlanPublico[], flag: PlanFeatureFlag) {
+  return planes.find((plan) => planPermite(plan, flag))?.nombre ?? "un plan superior";
+}
+
 export default async function DashboardPlanesPage() {
   const access = await requireDashboardAccess();
   if (!access.puedeGestionarPlanes) {
@@ -198,7 +210,6 @@ export default async function DashboardPlanesPage() {
     listaPlanes.find((plan) => plan.clave === "gratis") ??
     null;
   const planActualClave = planActual?.clave ?? "gratis";
-  const nivelActual = nivelPlan(planActualClave);
   const limiteSucursales = planUsage.resources.find(
     (resource) => resource.key === "sucursales"
   );
@@ -291,7 +302,14 @@ export default async function DashboardPlanesPage() {
 
                 <h3 className="mt-5 text-2xl font-bold">{plan.nombre}</h3>
 
-                <p className="mt-4 text-3xl font-bold">
+                <p className="mt-1 text-xs font-bold uppercase text-primary">
+                  {getTextoDestacadoPlan(plan)}
+                </p>
+                <p className="mt-2 min-h-20 text-sm leading-6 text-muted-foreground">
+                  {getDescripcionPlan(plan)}
+                </p>
+
+                <p className="mt-3 text-3xl font-bold">
                   {formatPlanPrice(plan, "mensual")}
                 </p>
                 <p className="text-sm text-muted-foreground">/ mes</p>
@@ -323,13 +341,9 @@ export default async function DashboardPlanesPage() {
                     activo
                     texto={formatLimit(plan.limite_servicios, "servicio activo", "servicios activos")}
                   />
-                  <PlanFeature activo={nivelPlan(plan.clave) >= 1} texto="Reportes básicos" />
-                  <PlanFeature activo={!!plan.permite_reportes_avanzados} texto="Reportes avanzados" />
-                  <PlanFeature activo={!!plan.permite_exportacion_csv} texto="Exportación XLSX / CSV" />
-                  <PlanFeature
-                    activo={!!plan.permite_multiples_sucursales}
-                    texto={formatLimit(plan.limite_sucursales, "sucursal", "sucursales")}
-                  />
+                  {generarFeaturesPlan(plan).map((feature) => (
+                    <PlanFeature key={feature} activo texto={feature} />
+                  ))}
                 </div>
 
                 <div className="mt-6">
@@ -339,6 +353,16 @@ export default async function DashboardPlanesPage() {
             );
           })}
         </div>
+      </section>
+
+      <section>
+        <div className="mb-4">
+          <h2 className="text-2xl font-bold">Compará todas las funciones</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Los límites, reportes, recordatorios y accesos se activan según esta matriz.
+          </p>
+        </div>
+        <PlanComparisonTable planes={listaPlanes} />
       </section>
 
       <section className="rounded-3xl border bg-card p-5 shadow-sm shadow-slate-950/5 ring-1 ring-foreground/5 dark:shadow-black/20 dark:ring-foreground/10">
@@ -351,36 +375,60 @@ export default async function DashboardPlanesPage() {
           Estas funciones se activan según el plan del negocio.
         </p>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <PremiumCard
             titulo="Reportes básicos"
             descripcion="Ingresos, citas por estado y servicios más reservados."
-            desde="Básico"
-            activo={nivelActual >= 1}
+            desde={primerPlanConFuncion(listaPlanes, "permite_reportes_basicos")}
+            activo={!!planActual && planPermite(planActual, "permite_reportes_basicos")}
             icon={BarChart3}
+          />
+
+          <PremiumCard
+            titulo="Identidad visual"
+            descripcion="Logo y banner propios en la experiencia pública de reservas."
+            desde={primerPlanConFuncion(listaPlanes, "permite_personalizacion")}
+            activo={!!planActual && planPermite(planActual, "permite_personalizacion")}
+            icon={ImageIcon}
+          />
+
+          <PremiumCard
+            titulo="Análisis avanzado"
+            descripcion="Tendencias, demanda, inasistencias y rankings del negocio."
+            desde={primerPlanConFuncion(listaPlanes, "permite_reportes_avanzados")}
+            activo={!!planActual && planPermite(planActual, "permite_reportes_avanzados")}
+            icon={Sparkles}
           />
 
           <PremiumCard
             titulo="Exportar XLSX / CSV"
             descripcion="Descargar reportes y datos para análisis externo."
-            desde="Profesional"
-            activo={nivelActual >= 2}
+            desde={primerPlanConFuncion(listaPlanes, "permite_exportacion_csv")}
+            activo={!!planActual && planPermite(planActual, "permite_exportacion_csv")}
             icon={FileDown}
           />
 
           <PremiumCard
-            titulo="Recordatorios"
-            descripcion="Reducir ausencias enviando recordatorios al cliente."
-            desde="Profesional"
-            activo={nivelActual >= 2}
+            titulo="Recordatorios por WhatsApp"
+            descripcion="Mensajes listos para enviar manualmente y reducir ausencias."
+            desde={primerPlanConFuncion(listaPlanes, "permite_recordatorios_whatsapp")}
+            activo={!!planActual && planPermite(planActual, "permite_recordatorios_whatsapp")}
             icon={MessageSquareText}
           />
 
           <PremiumCard
+            titulo="Soporte prioritario"
+            descripcion="Atención preferente para consultas de configuración y operación."
+            desde={primerPlanConFuncion(listaPlanes, "permite_soporte_prioritario")}
+            activo={!!planActual && planPermite(planActual, "permite_soporte_prioritario")}
+            icon={LifeBuoy}
+          />
+
+          <PremiumCard
             titulo="Sucursales"
-            descripcion="Gestión para negocios con más de una ubicación."
-            desde="Empresarial"
-            activo={nivelActual >= 3}
+            descripcion="Ubicaciones, usuarios por rol, reportes y exportación por sucursal."
+            desde={primerPlanConFuncion(listaPlanes, "permite_multiples_sucursales")}
+            activo={!!planActual && planPermite(planActual, "permite_multiples_sucursales")}
             icon={Store}
           />
         </div>

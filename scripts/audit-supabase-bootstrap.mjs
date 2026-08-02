@@ -63,6 +63,7 @@ const requiredTables = [
   "recordatorios_citas",
   "rol_permisos",
   "roles_negocio",
+  "rubros_negocio",
   "servicios",
   "solicitudes_cambio_plan",
   "sucursal_invitaciones",
@@ -109,6 +110,24 @@ const requiredRpcs = [
 ];
 
 const expectedPlanKeys = ["gratis", "basico", "profesional", "empresarial"];
+const expectedRubroKeys = [
+  "barberia",
+  "peluqueria",
+  "estetica-belleza",
+  "unas-manicura",
+  "spa-masajes",
+  "salud-bienestar",
+  "odontologia",
+  "psicologia-terapias",
+  "fitness-deporte",
+  "tatuajes-piercing",
+  "veterinaria-mascotas",
+  "educacion-clases",
+  "servicios-profesionales",
+  "fotografia-eventos",
+  "automotor-taller",
+  "otro",
+];
 const expectedPermissionKeys = [
   "citas.crear",
   "citas.editar",
@@ -209,6 +228,9 @@ async function selectKeys(table, column) {
 
 const planKeys = await selectKeys("planes_saas", "clave");
 const permissionKeys = await selectKeys("permisos", "clave");
+const rubroKeys = definitions.includes("rubros_negocio")
+  ? await selectKeys("rubros_negocio", "clave")
+  : [];
 
 for (const key of expectedPlanKeys) {
   if (!planKeys.includes(key)) failures.push(`Falta el plan ${key}.`);
@@ -216,6 +238,10 @@ for (const key of expectedPlanKeys) {
 
 for (const key of expectedPermissionKeys) {
   if (!permissionKeys.includes(key)) failures.push(`Falta el permiso ${key}.`);
+}
+
+for (const key of expectedRubroKeys) {
+  if (!rubroKeys.includes(key)) failures.push(`Falta el rubro ${key}.`);
 }
 
 const profilesResult = await supabase
@@ -297,6 +323,7 @@ const countTables = [
   "api_rate_limits",
   "roles_negocio",
   "rol_permisos",
+  "rubros_negocio",
 ];
 const counts = {};
 
@@ -326,6 +353,7 @@ console.log(`Proyecto: ${new URL(supabaseUrl).hostname.split(".")[0]}`);
 console.log(`Tablas requeridas: ${requiredTables.length}`);
 console.log(`RPC requeridas: ${requiredRpcs.length}`);
 console.log(`Planes: ${planKeys.join(", ")}`);
+console.log(`Rubros: ${rubroKeys.length}`);
 console.log(`Permisos: ${permissionKeys.length}`);
 console.log(`Usuarios Auth: ${authUsers.length} (${e2eUsers} E2E)`);
 console.log(`Perfiles super_admin: ${superAdminCount}`);

@@ -10,6 +10,21 @@ test("captura visual de reserva pública", async ({ page }, testInfo) => {
   await adjuntarScreenshot(page, testInfo, "reserva-publica.png");
 });
 
+test("capturas visuales de planes", async ({ page }, testInfo) => {
+  for (const viewport of [
+    { width: 1440, height: 900, nombre: "planes-escritorio.png" },
+    { width: 390, height: 844, nombre: "planes-movil.png" },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/planes", { waitUntil: "domcontentloaded" });
+
+    await esperarPaginaSinErrores(page);
+    await expect(page.getByText("Planes para cada etapa de tu negocio")).toBeVisible();
+    await page.waitForTimeout(700);
+    await adjuntarScreenshot(page, testInfo, viewport.nombre);
+  }
+});
+
 test.describe("capturas visuales dashboard admin", () => {
   test.use({ storageState: "tests/.auth/admin.json" });
 

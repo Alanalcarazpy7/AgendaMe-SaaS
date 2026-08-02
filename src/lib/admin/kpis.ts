@@ -2,6 +2,10 @@ import type { NegocioResumenRow } from "@/lib/admin/types/negocio";
 import type { PlanAdminRow } from "@/lib/admin/queries/planes";
 import type { PagoAprobadoRow } from "@/lib/admin/queries/pagos";
 import { anioMesActualAsuncion, anioMesAsuncion, nombreMesCorto, ultimosMeses } from "@/lib/admin/formatters/date";
+import {
+  buscarRubroInicial,
+  normalizarRubroClave,
+} from "@/lib/negocios/rubros";
 
 export type PlatformKpis = {
   negociosTotales: number;
@@ -26,6 +30,7 @@ export type PlatformKpis = {
 export type PuntoIngresoMes = { etiqueta: string; anio: number; mes: number; montoGs: number };
 export type PuntoNegociosMes = { etiqueta: string; anio: number; mes: number; cantidad: number };
 export type PuntoDistribucionPlan = { clave: string; nombre: string; cantidad: number };
+export type PuntoDistribucionRubro = { clave: string; nombre: string; cantidad: number };
 export type PuntoSuscripciones = { estado: string; cantidad: number };
 
 function esPlanGratis(claveOrdenPrecio: { clave: string | null; precioMensual: number }): boolean {
@@ -190,6 +195,33 @@ export function calcularDistribucionPorPlan(
       cantidad,
     }))
     .sort((a, b) => b.cantidad - a.cantidad);
+}
+
+export function calcularDistribucionPorRubro(
+  negocios: NegocioResumenRow[]
+): PuntoDistribucionRubro[] {
+  const totales = new Map<string, { nombre: string; cantidad: number }>();
+
+  for (const negocio of negocios) {
+    const rubroGuardado = negocio.rubro?.trim();
+    const rubroCatalogo = rubroGuardado
+      ? buscarRubroInicial(rubroGuardado)
+      : undefined;
+    const clave = rubroCatalogo?.clave ?? (
+      rubroGuardado ? normalizarRubroClave(rubroGuardado) : "sin-rubro"
+    );
+    const nombre = rubroCatalogo?.nombre ?? rubroGuardado ?? "Sin rubro";
+    const actual = totales.get(clave);
+
+    totales.set(clave, {
+      nombre: actual?.nombre ?? nombre,
+      cantidad: (actual?.cantidad ?? 0) + 1,
+    });
+  }
+
+  return Array.from(totales.entries())
+    .map(([clave, valor]) => ({ clave, ...valor }))
+    .sort((a, b) => b.cantidad - a.cantidad || a.nombre.localeCompare(b.nombre, "es"));
 }
 
 export function calcularDistribucionSuscripciones(kpis: PlatformKpis): PuntoSuscripciones[] {

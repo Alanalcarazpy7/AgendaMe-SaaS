@@ -1,9 +1,21 @@
-﻿export type PlanPeriodo = "mensual" | "anual";
+export type PlanPeriodo = "mensual" | "anual";
+
+export type PlanFeatureFlag =
+  | "permite_reportes_basicos"
+  | "permite_reportes_avanzados"
+  | "permite_personalizacion"
+  | "permite_exportacion_csv"
+  | "permite_multiples_sucursales"
+  | "permite_recordatorios_whatsapp"
+  | "permite_soporte_prioritario"
+  | "permite_funcionalidades_a_medida";
 
 export type PlanPublico = {
   id: string;
   clave: string;
   nombre: string;
+  descripcion_corta: string | null;
+  texto_destacado: string | null;
   precio_mensual_gs: number;
   precio_anual_gs: number;
   ahorro_anual_meses: number;
@@ -12,10 +24,15 @@ export type PlanPublico = {
   limite_servicios: number | null;
   limite_clientes: number | null;
   limite_sucursales: number | null;
+  permite_reportes_basicos: boolean;
   permite_reportes_avanzados: boolean;
   permite_personalizacion: boolean;
   permite_exportacion_csv: boolean;
   permite_multiples_sucursales: boolean;
+  permite_recordatorios_whatsapp: boolean;
+  permite_soporte_prioritario: boolean;
+  permite_funcionalidades_a_medida: boolean;
+  features: string[] | null;
   destacado: boolean;
   orden: number;
 };
@@ -64,7 +81,7 @@ export function getAhorroAnualLabel(plan: PlanPublico) {
 
   if (meses <= 0) return "";
 
-  return `Ahorras ${meses} ${meses === 1 ? "mes" : "meses"}`;
+  return `Ahorrás ${meses} ${meses === 1 ? "mes" : "meses"}`;
 }
 
 export function getAhorroAnualMontoLabel(plan: PlanPublico) {
@@ -72,39 +89,38 @@ export function getAhorroAnualMontoLabel(plan: PlanPublico) {
 
   if (ahorro <= 0) return "";
 
-  return `Ahorras ${formatGs(ahorro)} al año`;
+  return `Ahorrás ${formatGs(ahorro)} al año`;
 }
 
-export function generarFeaturesPlan(plan: PlanPublico): string[] {
-  const features = [
+export function getDescripcionPlan(plan: PlanPublico) {
+  return plan.descripcion_corta?.trim() || "Descripción no disponible.";
+}
+
+export function getTextoDestacadoPlan(plan: PlanPublico) {
+  return plan.texto_destacado?.trim() || "Plan AgendaMe";
+}
+
+export function planPermite(plan: PlanPublico, flag: PlanFeatureFlag) {
+  return plan[flag];
+}
+
+export function generarCapacidadesPlan(plan: PlanPublico): string[] {
+  return [
     formatLimit(plan.limite_citas_mensuales, "cita mensual", "citas mensuales"),
     formatLimit(plan.limite_clientes, "cliente activo", "clientes activos"),
     formatLimit(plan.limite_empleados, "empleado activo", "empleados activos"),
     formatLimit(plan.limite_servicios, "servicio activo", "servicios activos"),
-    "Página pública de reservas",
+    formatLimit(plan.limite_sucursales, "sucursal", "sucursales"),
   ];
+}
 
-  features.push(
-    plan.permite_reportes_avanzados ? "Reportes avanzados" : "Estadísticas básicas"
-  );
-
-  if (plan.permite_exportacion_csv) {
-    features.push("Exportación XLSX / CSV");
-  }
-
-  if (plan.permite_personalizacion) {
-    features.push("Logo, banner e imágenes de servicios");
-  }
-
-  if (plan.permite_multiples_sucursales) {
-    features.push(
-      formatLimit(plan.limite_sucursales, "sucursal", "sucursales")
-    );
-  }
-
-  if (!plan.limite_citas_mensuales && !plan.limite_clientes) {
-    features.push(FUNCIONALIDADES_A_MEDIDA);
-  }
+export function generarFeaturesPlan(plan: PlanPublico): string[] {
+  const features = Array.isArray(plan.features)
+    ? plan.features.filter(
+        (feature): feature is string =>
+          typeof feature === "string" && feature.trim().length > 0
+      )
+    : [];
 
   return features;
 }
@@ -118,4 +134,3 @@ export function generarMensajeWhatsAppPlan(
 
   return `Hola, quiero contratar el Plan ${plan.nombre} de AgendaMe (${frecuencia}, ${precio}). ¿Podemos coordinar el alta?`;
 }
-

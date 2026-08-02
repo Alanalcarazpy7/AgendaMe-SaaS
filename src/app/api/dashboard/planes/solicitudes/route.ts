@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { formatGs } from "@/lib/planes/planes-shared";
 
 type Payload = {
   planClave?: string;
@@ -75,7 +76,7 @@ export async function POST(request: Request) {
 
     const { data: planSolicitado, error: planError } = await supabase
       .from("planes_saas")
-      .select("id, clave, nombre")
+      .select("id, clave, nombre, precio_mensual_gs, precio_anual_gs")
       .eq("clave", planClave)
       .maybeSingle();
 
@@ -143,7 +144,7 @@ export async function POST(request: Request) {
 
     const numero = process.env.NEXT_PUBLIC_CONTACT_WHATSAPP ?? "";
     const texto = encodeURIComponent(
-      `Hola, quiero cambiar mi negocio ${negocio.nombre} al Plan ${planSolicitado.nombre} de AgendaMe.`
+      `Hola, quiero cambiar mi negocio ${negocio.nombre} al Plan ${planSolicitado.nombre} de AgendaMe. Valores vigentes: ${formatGs(planSolicitado.precio_mensual_gs)} mensual o ${formatGs(planSolicitado.precio_anual_gs)} anual.`
     );
 
     const whatsappUrl = numero

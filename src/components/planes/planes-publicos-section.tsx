@@ -29,14 +29,14 @@ export function PlanesPublicosSection({
           </h2>
 
           <p className="mt-4 text-lg text-muted-foreground">
-            AgendaMe te permite gestionar reservas, clientes, empleados,
-            servicios, horarios y reportes según el plan que elijas.
+            Compará capacidad, reportes, identidad visual, exportación,
+            recordatorios por WhatsApp y operación por sucursal.
           </p>
         </Reveal>
 
-        <Reveal delay={100} className="mt-12">
+        <div className="mt-12">
           <PlanPricingCards planes={planes} />
-        </Reveal>
+        </div>
 
         {mostrarEnlaceCompleto ? (
           <Reveal delay={160}>
