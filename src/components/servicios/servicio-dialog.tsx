@@ -86,6 +86,7 @@ export function ServicioDialog({ servicio, variant }: ServicioDialogProps) {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [precioInvalido, setPrecioInvalido] = useState(false);
   const imagenInputRef = useRef<HTMLInputElement | null>(null);
 
   const esEditar = variant === "editar";
@@ -113,6 +114,7 @@ export function ServicioDialog({ servicio, variant }: ServicioDialogProps) {
     setImagenPreviewUrl("");
     setQuitarImagen(false);
     setError(null);
+    setPrecioInvalido(false);
   }, [open, servicio]);
 
   useEffect(() => {
@@ -179,6 +181,14 @@ export function ServicioDialog({ servicio, variant }: ServicioDialogProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    const precioNumero = Number(precio);
+    if (precio.trim() === "" || !Number.isFinite(precioNumero) || precioNumero < 0) {
+      setPrecioInvalido(true);
+      setError("Ingresá el precio del servicio.");
+      return;
+    }
+    setPrecioInvalido(false);
 
     setLoading(true);
     setError(null);
@@ -389,18 +399,36 @@ export function ServicioDialog({ servicio, variant }: ServicioDialogProps) {
                   <div className="space-y-2">
                     <Label htmlFor="precio">Precio</Label>
                     <div className="relative">
-                      <ReceiptText className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <ReceiptText
+                        className={`pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${
+                          precioInvalido ? "text-destructive" : "text-muted-foreground"
+                        }`}
+                      />
                       <Input
                         id="precio"
                         type="number"
                         min="0"
                         step="1000"
                         value={precio}
-                        onChange={(event) => setPrecio(event.target.value)}
+                        onChange={(event) => {
+                          setPrecio(event.target.value);
+                          if (precioInvalido) setPrecioInvalido(false);
+                        }}
                         placeholder="50000"
-                        className="h-11 rounded-lg pl-9"
+                        required
+                        aria-invalid={precioInvalido}
+                        className={`h-11 rounded-lg pl-9 ${
+                          precioInvalido
+                            ? "border-destructive/70 ring-3 ring-destructive/10 focus-visible:ring-destructive/20"
+                            : ""
+                        }`}
                       />
                     </div>
+                    {precioInvalido && (
+                      <p className="text-xs font-medium text-destructive">
+                        Ingresá el precio del servicio.
+                      </p>
+                    )}
                   </div>
                 </div>
 

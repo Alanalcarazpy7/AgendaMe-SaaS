@@ -12,9 +12,10 @@ const servicioUpdateSchema = z.object({
     .int("La duración debe ser un número entero.")
     .min(5, "La duración mínima es de 5 minutos.")
     .optional(),
-  precio: z
-    .union([z.coerce.number().min(0), z.literal("")])
-    .optional(),
+  precio: z.preprocess(
+    (valor) => (typeof valor === "string" && valor.trim() === "" ? undefined : valor),
+    z.coerce.number({ error: "Ingresá el precio del servicio." }).min(0, "El precio no puede ser negativo.")
+  ).optional(),
   color: z.string().optional(),
   estado: z.enum(["activo", "inactivo"]).optional(),
 });
@@ -23,16 +24,6 @@ function limpiarTexto(valor?: string) {
   const limpio = valor?.trim();
 
   return limpio ? limpio : null;
-}
-
-function precioANumero(valor: number | string | undefined) {
-  if (valor === undefined || valor === "") {
-    return null;
-  }
-
-  const numero = Number(valor);
-
-  return Number.isFinite(numero) ? numero : null;
 }
 
 function tieneCampo(objeto: object, campo: string) {
@@ -122,7 +113,7 @@ export async function PATCH(
   }
 
   if (tieneCampo(datos, "precio")) {
-    updateData.precio = precioANumero(datos.precio);
+    updateData.precio = datos.precio ?? null;
   }
 
   if (tieneCampo(datos, "color")) {

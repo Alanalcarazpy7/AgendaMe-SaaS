@@ -11,9 +11,10 @@ const servicioSchema = z.object({
     .number()
     .int("La duración debe ser un número entero.")
     .min(5, "La duración mínima es de 5 minutos."),
-  precio: z
-    .union([z.coerce.number().min(0), z.literal("")])
-    .optional(),
+  precio: z.preprocess(
+    (valor) => (typeof valor === "string" && valor.trim() === "" ? undefined : valor),
+    z.coerce.number({ error: "Ingresá el precio del servicio." }).min(0, "El precio no puede ser negativo.")
+  ),
   color: z.string().optional(),
 });
 
@@ -21,16 +22,6 @@ function limpiarTexto(valor?: string) {
   const limpio = valor?.trim();
 
   return limpio ? limpio : null;
-}
-
-function precioANumero(valor: number | string | undefined) {
-  if (valor === undefined || valor === "") {
-    return null;
-  }
-
-  const numero = Number(valor);
-
-  return Number.isFinite(numero) ? numero : null;
 }
 
 function obtenerMensajeError(errorMessage: string) {
@@ -85,7 +76,7 @@ export async function POST(request: NextRequest) {
       nombre: datos.nombre.trim(),
       descripcion: limpiarTexto(datos.descripcion),
       duracion_minutos: datos.duracionMinutos,
-      precio: precioANumero(datos.precio),
+      precio: datos.precio,
       color: limpiarTexto(datos.color) ?? "#111827",
     })
     .select("id, nombre")
