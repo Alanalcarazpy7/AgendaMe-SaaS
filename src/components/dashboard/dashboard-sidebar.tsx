@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   Bell,
@@ -17,6 +19,8 @@ import {
   Download,
   Home,
   LayoutDashboard,
+  LogOut,
+  MessageCircle,
   Settings,
   Sparkles,
   Store,
@@ -28,9 +32,16 @@ import type {
   DashboardAccessScope,
 } from "@/lib/dashboard/access-context";
 import { AgendaMeIcon, AgendaMeLogo } from "@/components/brand/agendame-logo";
-import { SignOutButton } from "@/components/dashboard/sign-out-button";
 import { UserAvatar } from "@/components/dashboard/user-avatar";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { createClient } from "@/lib/supabase/client";
 
 type Props = {
   collapsed?: boolean;
@@ -129,7 +140,16 @@ export function canSee(
   return false;
 }
 
-export const NAV_ITEMS = [
+type NavItem = {
+  key: NavKey;
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  group: string;
+  hint?: string;
+};
+
+export const NAV_ITEMS: NavItem[] = [
   { key: "inicio" as const, label: "Inicio", href: "/dashboard", icon: Home, group: "Agenda" },
   { key: "reservas" as const, label: "Reservas", href: "/dashboard/reservas", icon: CalendarClock, group: "Agenda" },
   { key: "citas" as const, label: "Citas", href: "/dashboard/citas", icon: CalendarCheck2, group: "Agenda" },
@@ -141,7 +161,14 @@ export const NAV_ITEMS = [
   { key: "recordatorios" as const, label: "Recordatorios", href: "/dashboard/recordatorios", icon: Bell, group: "Crecimiento" },
   { key: "sucursales" as const, label: "Sucursales", href: "/dashboard/sucursales", icon: Building2, group: "Sistema" },
   { key: "planes" as const, label: "Planes", href: "/dashboard/planes", icon: LayoutDashboard, group: "Sistema" },
-  { key: "configuracion" as const, label: "Configuración", href: "/dashboard/configuracion", icon: Settings, group: "Sistema" },
+  {
+    key: "configuracion" as const,
+    label: "Configuración",
+    href: "/dashboard/configuracion",
+    icon: Settings,
+    group: "Sistema",
+    hint: "Configuración del negocio: horarios, datos y presentación pública.",
+  },
 ];
 
 export function getVisibleNavItems(
@@ -168,8 +195,18 @@ export function DashboardSidebar({
   scopeLabel,
 }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
   const nombreVisible = userName || userEmail?.split("@")[0] || "Usuario";
   const compactLabel = collapsed ? "Expandir menú" : "Colapsar menú";
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   const navItems = getVisibleNavItems(accessRole, accessScope, planClave);
 
@@ -180,6 +217,13 @@ export function DashboardSidebar({
   }, {});
 
   const showUpgrade = planClave !== "empresarial";
+
+  const numeroWhatsapp = process.env.NEXT_PUBLIC_CONTACT_WHATSAPP ?? "";
+  const contactoWhatsappUrl = numeroWhatsapp
+    ? `https://wa.me/${numeroWhatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(
+        "Hola, tengo una consulta sobre mi negocio en AgendaMe."
+      )}`
+    : null;
 
   return (
     <aside className="flex h-full flex-col overflow-hidden rounded-[1.75rem] border border-sidebar-border/80 bg-sidebar/95 text-sidebar-foreground shadow-[22px_0_70px_rgb(15_23_42/0.10)] ring-1 ring-white/60 backdrop-blur-xl transition-[border-color,box-shadow] duration-300 dark:bg-sidebar/90 dark:shadow-[20px_0_70px_rgb(0_0_0/0.38)] dark:ring-white/5">
@@ -261,7 +305,7 @@ export function DashboardSidebar({
                     key={item.href}
                     href={item.href}
                     data-tour-id={item.key}
-                    title={collapsed ? item.label : undefined}
+                    title={collapsed ? item.label : item.hint}
                     aria-label={collapsed ? item.label : undefined}
                     className={`group relative flex items-center rounded-2xl text-sm font-medium outline-none transition-[background-color,color,box-shadow,transform] duration-200 ease-[var(--ease-out)] focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
                       collapsed ? "h-10 justify-center px-0" : "min-h-11 gap-3 px-3"
@@ -284,82 +328,113 @@ export function DashboardSidebar({
         ))}
       </nav>
 
-      <div className="border-t border-sidebar-border/70 p-3">
+      <div className="space-y-2 border-t border-sidebar-border/70 p-3">
         <Link
           href="/dashboard/planes"
           title={showUpgrade ? "Actualizar plan" : "Plan activo"}
-          className={`mb-2.5 flex items-center overflow-hidden rounded-2xl border outline-none transition-[box-shadow,transform,border-color] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
+          className={`flex h-11 items-center overflow-hidden rounded-2xl border px-2.5 outline-none transition-[box-shadow,transform,border-color] duration-200 ease-[var(--ease-out)] hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
             showUpgrade
               ? "border-cyan-300/50 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary)_94%,#0b1120),color-mix(in_srgb,var(--ring)_72%,#0b1120))] text-white shadow-md shadow-cyan-950/20"
               : "border-sidebar-border bg-sidebar-accent/50"
-          } ${collapsed ? "justify-center p-2" : "gap-3 p-2.5"}`}
+          } ${collapsed ? "justify-center" : "gap-2.5"}`}
         >
-          <div className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${showUpgrade ? "bg-white/15" : "bg-sidebar text-primary"}`}>
-            <Crown className={`h-4 w-4 ${showUpgrade ? "text-white" : "text-primary"}`} />
-            {showUpgrade && (
-              <Sparkles className="absolute -right-1 -top-1 h-3 w-3 text-cyan-100" />
+          <Crown className={`h-4 w-4 shrink-0 ${showUpgrade ? "text-white" : "text-primary"}`} />
+          {!collapsed && (
+            <span className="truncate text-xs font-bold">
+              {showUpgrade ? "Mejorá tu plan" : "Plan empresarial"}
+            </span>
+          )}
+          {!collapsed && showUpgrade && (
+            <Sparkles className="ml-auto h-3.5 w-3.5 shrink-0 text-cyan-100" />
+          )}
+        </Link>
+
+        {(onOpenTour || contactoWhatsappUrl) && (
+          <div className={collapsed ? "space-y-2" : "grid grid-cols-2 gap-2"}>
+            {onOpenTour && (
+              <Button
+                type="button"
+                variant="outline"
+                size={collapsed ? "icon" : "sm"}
+                className="w-full"
+                onClick={onOpenTour}
+                title="Ver recorrido"
+                aria-label="Ver recorrido guiado"
+              >
+                <Compass className="h-4 w-4" />
+                {!collapsed && <span className="truncate">Recorrido</span>}
+              </Button>
+            )}
+
+            {contactoWhatsappUrl && (
+              <a
+                href={contactoWhatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Contactar a AgendaMe"
+                aria-label="Contactar a AgendaMe por WhatsApp"
+              >
+                <Button
+                  type="button"
+                  variant="outline"
+                  size={collapsed ? "icon" : "sm"}
+                  className="w-full"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  {!collapsed && <span className="truncate">Contacto</span>}
+                </Button>
+              </a>
             )}
           </div>
-
-          {!collapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-bold">
-                {showUpgrade ? "Mejorá tu plan" : "Plan empresarial"}
-              </p>
-              <p className={`truncate text-[11px] ${showUpgrade ? "text-cyan-50/90" : "text-muted-foreground"}`}>
-                {showUpgrade ? "Más capacidad y herramientas" : "Funciones avanzadas activas"}
-              </p>
-            </div>
-          )}
-        </Link>
-
-        {onOpenTour && (
-          <Button
-            type="button"
-            variant="outline"
-            size={collapsed ? "icon" : "default"}
-            className={collapsed ? "mb-3 w-full" : "mb-3 w-full justify-start"}
-            onClick={onOpenTour}
-            title="Ver recorrido"
-            aria-label="Ver recorrido guiado"
-          >
-            <Compass className={collapsed ? "h-4 w-4" : "mr-2 h-4 w-4"} />
-            {!collapsed && "Ver recorrido"}
-          </Button>
         )}
 
-        <Link
-          href="/dashboard/mi-cuenta"
-          title="Mi cuenta"
-          className={`mb-3 flex items-center rounded-2xl border border-sidebar-border/80 bg-sidebar-accent/40 outline-none transition-[background-color,box-shadow,color] duration-200 ease-[var(--ease-out)] hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
-            collapsed ? "justify-center p-2" : "gap-3 p-2.5"
-          } ${pathname === "/dashboard/mi-cuenta" ? "bg-sidebar-accent shadow-sm" : ""}`}
-        >
-          <UserAvatar
-            src={userAvatarUrl}
-            alt={nombreVisible}
-            size={36}
-            color={userColor ?? "var(--sidebar-primary)"}
-            iniciales={iniciales(nombreVisible, userEmail)}
-            imgClassName="h-9 w-9 rounded-2xl border object-cover"
-            fallbackClassName="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-xs font-bold text-white"
-          />
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            title="Cuenta"
+            className={`flex w-full cursor-pointer items-center rounded-2xl border border-sidebar-border/80 bg-sidebar-accent/40 outline-none transition-[background-color,box-shadow,color] duration-200 ease-[var(--ease-out)] hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
+              collapsed ? "justify-center p-2" : "gap-3 p-2.5"
+            }`}
+          >
+            <UserAvatar
+              src={userAvatarUrl}
+              alt={nombreVisible}
+              size={36}
+              color={userColor ?? "var(--sidebar-primary)"}
+              iniciales={iniciales(nombreVisible, userEmail)}
+              imgClassName="h-9 w-9 rounded-2xl border object-cover"
+              fallbackClassName="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-xs font-bold text-white"
+            />
 
-          {!collapsed && (
-            <>
-              <div className="min-w-0 flex-1">
+            {!collapsed && (
+              <div className="min-w-0 flex-1 text-left">
                 <p className="truncate text-xs font-bold">{nombreVisible}</p>
                 <p className="truncate text-[11px] text-muted-foreground">
-                  {rolLabel(accessRole)} · Mi cuenta
+                  {rolLabel(accessRole)} · Cuenta personal
                 </p>
               </div>
+            )}
+          </DropdownMenuTrigger>
 
-              <UserCircle2 className="h-4 w-4 text-muted-foreground" />
-            </>
-          )}
-        </Link>
-
-        <SignOutButton compact={collapsed} />
+          <DropdownMenuContent side="top" align="start" sideOffset={8} className="w-56">
+            <DropdownMenuItem
+              render={<Link href="/dashboard/mi-cuenta" />}
+              className="cursor-pointer hover:bg-accent hover:text-accent-foreground"
+            >
+              <UserCircle2 className="h-4 w-4" />
+              Mi cuenta
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={signingOut}
+              onSelect={handleSignOut}
+              className="cursor-pointer hover:bg-destructive/10 hover:text-destructive"
+            >
+              <LogOut className="h-4 w-4" />
+              {signingOut ? "Saliendo..." : "Cerrar sesión"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </aside>
   );

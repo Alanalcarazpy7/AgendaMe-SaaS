@@ -172,7 +172,7 @@ export default async function NegocioDetallePage({ params }: PageProps) {
           icon: TrendingUp,
         }
       : null,
-    !resumen?.fecha_vencimiento
+    !resumen?.fecha_vencimiento && resumen?.plan_clave !== "gratis"
       ? {
           title: "Definir vencimiento",
           detail: "El negocio no tiene fecha de vencimiento visible en el ciclo actual.",
@@ -313,7 +313,14 @@ export default async function NegocioDetallePage({ params }: PageProps) {
             </div>
             <div className="rounded-[1.15rem] border border-border/70 bg-background/60 p-3">
               <p className="text-xs font-semibold text-muted-foreground">Vencimiento</p>
-              <p className="mt-2 text-xl font-black">{formatearFechaCorta(resumen?.fecha_vencimiento)}</p>
+              <p className="mt-2 text-xl font-black">
+                {!resumen?.fecha_vencimiento && resumen?.plan_clave === "gratis"
+                  ? "Sin vencimiento"
+                  : formatearFechaCorta(resumen?.fecha_vencimiento)}
+              </p>
+              {!resumen?.fecha_vencimiento && resumen?.plan_clave === "gratis" ? (
+                <p className="mt-1 text-xs text-muted-foreground">Plan gratis, no requiere pago.</p>
+              ) : null}
             </div>
             <div className="rounded-[1.15rem] border border-border/70 bg-background/60 p-3">
               <p className="text-xs font-semibold text-muted-foreground">Ultimo pago</p>

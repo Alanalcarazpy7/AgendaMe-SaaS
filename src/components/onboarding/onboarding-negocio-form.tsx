@@ -383,6 +383,7 @@ export function OnboardingNegocioForm({
   const responsableInvalido = intentoContinuar && nombreResponsable.trim().length < 2;
   const nombreInvalido = intentoContinuar && nombre.trim().length < 2;
   const rubroInvalido = intentoContinuar && !rubro;
+  const telefonoInvalido = intentoContinuar && telefono.trim().length < 6;
   const rubrosRapidos = (() => {
     const destacados = rubros
       .filter((item) =>
@@ -451,8 +452,13 @@ export function OnboardingNegocioForm({
     setIntentoContinuar(true);
     setError(null);
 
-    if (nombreResponsable.trim().length < 2 || nombre.trim().length < 2 || !rubro) {
-      setError("Completá los tres campos para continuar.");
+    if (
+      nombreResponsable.trim().length < 2 ||
+      nombre.trim().length < 2 ||
+      !rubro ||
+      telefono.trim().length < 6
+    ) {
+      setError("Completá todos los campos, incluido el WhatsApp de contacto, para continuar.");
       return;
     }
 
@@ -668,10 +674,8 @@ export function OnboardingNegocioForm({
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label htmlFor="telefono" className="flex w-full justify-between">
-                        WhatsApp <OptionalLabel />
-                      </Label>
-                      <FieldFrame icon={Phone}>
+                      <Label htmlFor="telefono">WhatsApp de contacto</Label>
+                      <FieldFrame icon={Phone} invalid={telefonoInvalido}>
                         <Input
                           id="telefono"
                           value={telefono}
@@ -679,6 +683,8 @@ export function OnboardingNegocioForm({
                           placeholder="0981 234 567"
                           inputMode="tel"
                           autoComplete="tel"
+                          required
+                          aria-invalid={telefonoInvalido}
                           className="h-full border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
                         />
                       </FieldFrame>

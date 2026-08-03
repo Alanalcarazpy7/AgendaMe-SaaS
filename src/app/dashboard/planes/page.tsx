@@ -6,12 +6,15 @@ import {
   Crown,
   FileDown,
   ImageIcon,
+  LayoutGrid,
   LifeBuoy,
   MessageSquareText,
+  ReceiptText,
   Sparkles,
   Store,
 } from "lucide-react";
 import { ComprobantePagoForm } from "@/components/planes/comprobante-pago-form";
+import { MediosPagoInfo, type MedioPagoPublico } from "@/components/planes/medios-pago-info";
 import { SolicitarPlanButton } from "@/components/planes/solicitar-plan-button";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
@@ -31,6 +34,7 @@ import { DashboardPlanUsageOverview } from "@/components/dashboard/dashboard-pla
 import { obtenerUsoPlanNegocio } from "@/lib/planes/plan-limits";
 import { RegularizarSucursalesCard } from "@/components/planes/regularizar-sucursales-card";
 import { PlanComparisonTable } from "@/components/planes/plan-comparison-table";
+import { DashboardWorkspaceTabs } from "@/components/dashboard/dashboard-workspace-tabs";
 
 type SuscripcionRaw = {
   id: string;
@@ -125,6 +129,9 @@ function primerPlanConFuncion(planes: PlanPublico[], flag: PlanFeatureFlag) {
   return planes.find((plan) => planPermite(plan, flag))?.nombre ?? "un plan superior";
 }
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function DashboardPlanesPage() {
   const access = await requireDashboardAccess();
   if (!access.puedeGestionarPlanes) {
@@ -162,6 +169,7 @@ export default async function DashboardPlanesPage() {
     { data: pagosRecientes },
     { data: sucursalesActivas },
     planUsage,
+    { data: mediosPagoData },
   ] = await Promise.all([
     supabase.from("negocios").select("id, nombre").eq("id", membresia.negocio_id).maybeSingle(),
 
@@ -195,6 +203,14 @@ export default async function DashboardPlanesPage() {
       supabase,
       negocioId: membresia.negocio_id,
     }),
+
+    supabase
+      .from("medios_pago_plataforma")
+      .select(
+        "id, tipo, nombre, titular, banco, identificador_principal, identificador_secundario, alias_tipo, qr_url, logo_url, notas"
+      )
+      .eq("activo", true)
+      .order("orden", { ascending: true }),
   ]);
 
   if (!negocio) {
@@ -205,6 +221,7 @@ export default async function DashboardPlanesPage() {
   const listaPlanes = (planes ?? []) as PlanPublico[];
   const listaPagosRecientes = (pagosRecientes ?? []) as PagoNegocioRaw[];
   const listaSucursalesActivas = (sucursalesActivas ?? []) as SucursalRegularizacionRaw[];
+  const listaMediosPago = (mediosPagoData ?? []) as MedioPagoPublico[];
   const planActual =
     listaPlanes.find((plan) => plan.id === suscripcion?.plan_id) ??
     listaPlanes.find((plan) => plan.clave === "gratis") ??
@@ -265,12 +282,53 @@ export default async function DashboardPlanesPage() {
         />
       ) : null}
 
-      <ComprobantePagoForm
-        planes={listaPlanes}
-        planActualId={suscripcion?.plan_id ?? null}
-        pagos={listaPagosRecientes}
-      />
+      <DashboardWorkspaceTabs
+        ariaLabel="Planes y pagos"
+        tabs={[
+          {
+            id: "planes",
+            label: "Planes",
+            icon: <LayoutGrid />,
+            content: <PlanesTabContent
+              listaPlanes={listaPlanes}
+              planActual={planActual}
+              planActualClave={planActualClave}
+            />,
+          },
+          {
+            id: "pagos",
+            label: "Pagos",
+            icon: <ReceiptText />,
+            count: listaPagosRecientes.filter((p) => p.estado === "pendiente").length || undefined,
+            content: (
+              <div className="space-y-5">
+                <MediosPagoInfo medios={listaMediosPago} />
 
+                <ComprobantePagoForm
+                  planes={listaPlanes}
+                  planActualId={suscripcion?.plan_id ?? null}
+                  pagos={listaPagosRecientes}
+                />
+              </div>
+            ),
+          },
+        ]}
+      />
+    </div>
+  );
+}
+
+function PlanesTabContent({
+  listaPlanes,
+  planActual,
+  planActualClave,
+}: {
+  listaPlanes: PlanPublico[];
+  planActual: PlanPublico | null;
+  planActualClave: string;
+}) {
+  return (
+    <div className="space-y-8">
       <section>
         <h2 className="text-2xl font-bold">Planes disponibles</h2>
         <p className="mt-1 text-sm text-muted-foreground">

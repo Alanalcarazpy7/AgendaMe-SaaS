@@ -955,7 +955,7 @@ export function CitasPanel({
                             id={`cita-panorama-${cita.id}`}
                             type="button"
                             onClick={() => abrirDetalle(cita)}
-                            className={`w-full cursor-pointer rounded-xl border bg-background/80 p-2 text-left transition hover:-translate-y-0.5 hover:shadow-md ${
+                            className={`w-full min-w-0 cursor-pointer overflow-hidden rounded-xl border bg-background/80 p-2 text-left transition hover:-translate-y-0.5 hover:shadow-md ${
                               estaResaltada
                                 ? "border-cyan-300 ring-2 ring-cyan-300/70"
                                 : "border-border/80"
@@ -966,12 +966,12 @@ export function CitasPanel({
                             }}
                             title={`${hora(cita.hora_inicio)} - ${hora(cita.hora_fin)} · ${cliente?.nombre_completo ?? "Cliente"} · ${servicio?.nombre ?? "Servicio"}`}
                           >
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-[12px] font-black tabular-nums">
+                            <div className="flex min-w-0 items-center justify-between gap-1.5">
+                              <span className="shrink-0 text-[12px] font-black tabular-nums">
                                 {hora(cita.hora_inicio)}
                               </span>
                               <span
-                                className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${estadoClass(
+                                className={`min-w-0 truncate rounded-full px-1.5 py-0.5 text-[10px] font-bold ${estadoClass(
                                   cita.estado
                                 )}`}
                               >

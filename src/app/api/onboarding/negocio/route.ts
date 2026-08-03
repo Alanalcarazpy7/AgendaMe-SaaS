@@ -31,7 +31,11 @@ const schema = z.object({
     .string()
     .trim()
     .min(2, "Elegí el rubro que mejor representa a tu negocio."),
-  telefono: z.string().trim().max(40, "El teléfono es demasiado largo.").optional(),
+  telefono: z
+    .string()
+    .trim()
+    .min(6, "Ingresá un WhatsApp de contacto válido.")
+    .max(40, "El teléfono es demasiado largo."),
   direccion: z.string().trim().max(180, "La dirección es demasiado larga.").optional(),
   descripcion: z.string().trim().max(280, "La descripción no puede superar los 280 caracteres.").optional(),
 });

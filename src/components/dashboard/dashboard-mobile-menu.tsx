@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Compass, UserCircle2, X } from "lucide-react";
+import { Compass, MessageCircle, UserCircle2, X } from "lucide-react";
 import type {
   DashboardAccessRole,
   DashboardAccessScope,
@@ -75,6 +75,13 @@ export function DashboardMobileMenu({
   const pathname = usePathname();
 
   const nombreVisible = userName || userEmail?.split("@")[0] || "Usuario";
+
+  const numeroWhatsapp = process.env.NEXT_PUBLIC_CONTACT_WHATSAPP ?? "";
+  const contactoWhatsappUrl = numeroWhatsapp
+    ? `https://wa.me/${numeroWhatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(
+        "Hola, tengo una consulta sobre mi negocio en AgendaMe."
+      )}`
+    : null;
   const navItems = getVisibleNavItems(accessRole, accessScope, planClave);
 
   return (
@@ -216,15 +223,30 @@ export function DashboardMobileMenu({
             </nav>
 
             <div className="space-y-2 border-t p-4">
-              {onOpenTour && (
-                <button
-                  type="button"
-                  onClick={onOpenTour}
-                  className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border bg-card text-sm font-semibold shadow-sm outline-none transition-[background-color,box-shadow,color] duration-200 ease-[var(--ease-out)] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                >
-                  <Compass className="h-4 w-4" />
-                  Ver recorrido
-                </button>
+              {(onOpenTour || contactoWhatsappUrl) && (
+                <div className="grid grid-cols-2 gap-2">
+                  {onOpenTour && (
+                    <button
+                      type="button"
+                      onClick={onOpenTour}
+                      className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border bg-card text-sm font-semibold shadow-sm outline-none transition-[background-color,box-shadow,color] duration-200 ease-[var(--ease-out)] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    >
+                      <Compass className="h-4 w-4" />
+                      Recorrido
+                    </button>
+                  )}
+                  {contactoWhatsappUrl && (
+                    <a
+                      href={contactoWhatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border bg-card text-sm font-semibold shadow-sm outline-none transition-[background-color,box-shadow,color] duration-200 ease-[var(--ease-out)] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Contacto
+                    </a>
+                  )}
+                </div>
               )}
               <SignOutButton />
             </div>
