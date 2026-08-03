@@ -2,6 +2,7 @@
 import { requireDashboardAccess } from "@/lib/dashboard/access-context";
 import { applySucursalScope, requirePermission } from "@/lib/dashboard/scope-helpers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { construirLimiteRecursoInfo } from "@/lib/planes/limite-recurso";
 
 type Relacion<T> = T | T[] | null;
 
@@ -244,6 +245,7 @@ export default async function CitasPage({ searchParams }: PageProps) {
     { data: empleados, error: empleadosError },
     { data: servicios, error: serviciosError },
     clientes,
+    limiteCitas,
   ] = await Promise.all([
     citasQuery,
 
@@ -256,6 +258,14 @@ export default async function CitasPage({ searchParams }: PageProps) {
       .eq("estado", "activo")
       .order("nombre", { ascending: true }),
     clientesPromise,
+    construirLimiteRecursoInfo({
+      supabase,
+      negocioId: access.negocio.id,
+      recurso: "citas",
+      tituloRecurso: "citas este mes",
+      etiquetaUso: "Citas este mes",
+      fechaCitas: params.fecha,
+    }),
   ]);
 
   if (citasError) throw new Error(citasError.message);
@@ -307,6 +317,7 @@ export default async function CitasPage({ searchParams }: PageProps) {
       initialFecha={params.fecha}
       initialHora={params.hora}
       highlightCitaId={params.cita}
+      limiteCitas={limiteCitas}
     />
   );
 }

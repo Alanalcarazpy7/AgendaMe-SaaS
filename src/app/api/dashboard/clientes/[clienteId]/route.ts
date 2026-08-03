@@ -1,8 +1,12 @@
 ﻿import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { requireApiDashboardAccess } from "@/lib/dashboard/api-access";
-import { validarCapacidadPlan } from "@/lib/planes/plan-limits";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+
+type ActivarClienteResultado = {
+  ok: boolean;
+  mensaje: string | null;
+};
 
 const clienteUpdateSchema = z.object({
   nombreCompleto: z.string().min(2, "Ingresá el nombre del cliente.").optional(),
@@ -110,33 +114,31 @@ export async function PATCH(
   }
 
   if (datos.estado === "activo") {
-    const { data: clienteActual, error: clienteActualError } = await supabase
-      .from("clientes")
-      .select("estado")
-      .eq("id", clienteId)
-      .eq("negocio_id", negocioId)
-      .maybeSingle();
+    // Chequeo + activación en una sola transacción con lock por negocio,
+    // para evitar que dos activaciones simultáneas superen el límite del
+    // plan (ver supabase/patches/2026-08-activar-empleado-cliente-atomico.sql).
+    const { data: rpcData, error: rpcError } = await supabase.rpc(
+      "activar_cliente_con_limite",
+      { p_cliente_id: clienteId, p_negocio_id: negocioId }
+    );
 
-    if (clienteActualError) {
-      return NextResponse.json(
-        { error: clienteActualError.message },
-        { status: 500 }
-      );
+    if (rpcError) {
+      return NextResponse.json({ error: rpcError.message }, { status: 500 });
     }
 
-    if (clienteActual?.estado !== "activo") {
-      const capacidad = await validarCapacidadPlan({
-        supabase,
-        negocioId,
-        recurso: "clientes",
-      });
+    const resultado = (Array.isArray(rpcData) ? rpcData[0] : rpcData) as
+      | ActivarClienteResultado
+      | undefined;
 
-      if (!capacidad.ok) {
-        return NextResponse.json(
-          { error: capacidad.message },
-          { status: 403 }
-        );
-      }
+    if (!resultado?.ok) {
+      return NextResponse.json(
+        {
+          error:
+            resultado?.mensaje ??
+            "No podés activar más clientes con tu plan actual.",
+        },
+        { status: 403 }
+      );
     }
   }
 

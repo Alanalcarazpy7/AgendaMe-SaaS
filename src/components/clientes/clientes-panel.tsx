@@ -5,9 +5,11 @@ import { ChevronLeft, ChevronRight, Search, UsersRound } from "lucide-react";
 import { ClienteDialog, type ClienteItem } from "@/components/clientes/cliente-dialog";
 import { ClienteEstadoButton } from "@/components/clientes/cliente-estado-button";
 import { Input } from "@/components/ui/input";
+import type { LimiteRecursoInfo } from "@/lib/planes/limite-recurso";
 
 type ClientesPanelProps = {
   clientes: ClienteItem[];
+  limiteClientes: LimiteRecursoInfo;
 };
 
 type EstadoFiltro = "todos" | "activo" | "inactivo";
@@ -24,7 +26,7 @@ function iniciales(nombre: string) {
   return letras || "CL";
 }
 
-export function ClientesPanel({ clientes }: ClientesPanelProps) {
+export function ClientesPanel({ clientes, limiteClientes }: ClientesPanelProps) {
   const [busqueda, setBusqueda] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>("todos");
   const [pagina, setPagina] = useState(1);
@@ -95,7 +97,7 @@ export function ClientesPanel({ clientes }: ClientesPanelProps) {
             </p>
 
             <div className="mt-5">
-              <ClienteDialog variant="crear" />
+              <ClienteDialog variant="crear" limiteInfo={limiteClientes} />
             </div>
           </div>
 
@@ -189,7 +191,7 @@ export function ClientesPanel({ clientes }: ClientesPanelProps) {
             Carga clientes para reutilizarlos en reservas, citas y seguimiento.
           </p>
           <div className="mt-5 flex justify-center">
-            <ClienteDialog variant="crear" />
+            <ClienteDialog variant="crear" limiteInfo={limiteClientes} />
           </div>
         </section>
       ) : clientesFiltrados.length === 0 ? (
@@ -288,7 +290,11 @@ export function ClientesPanel({ clientes }: ClientesPanelProps) {
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
                           <ClienteDialog variant="editar" cliente={cliente} />
-                          <ClienteEstadoButton clienteId={cliente.id} estado={cliente.estado} />
+                          <ClienteEstadoButton
+                            clienteId={cliente.id}
+                            estado={cliente.estado}
+                            limiteInfo={limiteClientes}
+                          />
                         </div>
                       </td>
                     </tr>

@@ -1,10 +1,10 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Building2, UserCircle2 } from "lucide-react";
 import type {
   DashboardAccessRole,
   DashboardAccessScope,
 } from "@/lib/dashboard/access-context";
+import { UserAvatar } from "@/components/dashboard/user-avatar";
 
 type Props = {
   userName: string;
@@ -61,23 +61,15 @@ export function DashboardUserContextCard({
     <section className="mb-5 rounded-[1.75rem] border border-border/80 bg-card/90 px-4 py-3 shadow-[0_18px_55px_rgb(15_23_42/0.07)] ring-1 ring-white/70 backdrop-blur-xl dark:bg-card/80 dark:shadow-black/25 dark:ring-white/5">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex min-w-0 items-center gap-3">
-          {userAvatarUrl ? (
-            <Image
-                src={userAvatarUrl}
-                alt={userName}
-                width={44}
-                height={44}
-                unoptimized
-                className="h-11 w-11 rounded-2xl border object-cover shadow-sm"
-              />
-          ) : (
-            <div
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-sm"
-              style={{ backgroundColor: userColor ?? "var(--primary)" }}
-            >
-              {iniciales(userName, userEmail)}
-            </div>
-          )}
+          <UserAvatar
+            src={userAvatarUrl}
+            alt={userName}
+            size={44}
+            color={userColor}
+            iniciales={iniciales(userName, userEmail)}
+            imgClassName="h-11 w-11 rounded-2xl border object-cover shadow-sm"
+            fallbackClassName="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white shadow-sm"
+          />
 
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">

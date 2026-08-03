@@ -9,10 +9,13 @@ import {
 } from "@/components/empleados/empleado-dialog";
 import { EmpleadoEstadoButton } from "@/components/empleados/empleado-estado-button";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { LimiteRecursoInfo } from "@/lib/planes/limite-recurso";
 
 type EmpleadosPanelProps = {
   empleados: EmpleadoItem[];
   servicios: ServicioParaEmpleado[];
+  limiteEmpleados: LimiteRecursoInfo;
 };
 
 type EstadoFiltro = "todos" | "activo" | "inactivo";
@@ -93,7 +96,7 @@ function iniciales(nombre: string) {
   return partes.map((parte) => parte[0]).join("").toUpperCase() || "EM";
 }
 
-export function EmpleadosPanel({ empleados, servicios }: EmpleadosPanelProps) {
+export function EmpleadosPanel({ empleados, servicios, limiteEmpleados }: EmpleadosPanelProps) {
   const [busqueda, setBusqueda] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>("todos");
   const [pagina, setPagina] = useState(1);
@@ -160,7 +163,7 @@ export function EmpleadosPanel({ empleados, servicios }: EmpleadosPanelProps) {
               Cada empleado puede tener servicios y disponibilidad propios.
             </p>
           </div>
-          <EmpleadoDialog variant="crear" servicios={servicios} />
+          <EmpleadoDialog variant="crear" servicios={servicios} limiteInfo={limiteEmpleados} />
         </div>
 
         <dl className="grid grid-cols-2 border-t bg-muted/20 sm:grid-cols-4">
@@ -248,7 +251,7 @@ export function EmpleadosPanel({ empleados, servicios }: EmpleadosPanelProps) {
             Carga personas del equipo para asignarles servicios y horarios de atencion.
           </p>
           <div className="mt-5 flex justify-center">
-            <EmpleadoDialog variant="crear" servicios={servicios} />
+            <EmpleadoDialog variant="crear" servicios={servicios} limiteInfo={limiteEmpleados} />
           </div>
         </section>
       ) : empleadosFiltrados.length === 0 ? (
@@ -352,9 +355,17 @@ export function EmpleadosPanel({ empleados, servicios }: EmpleadosPanelProps) {
                             ))
                           )}
                           {serviciosAsignados.length > 3 && (
-                            <span className="rounded-xl bg-muted px-2 py-1 text-xs text-muted-foreground">
-                              +{serviciosAsignados.length - 3}
-                            </span>
+                            <Tooltip>
+                              <TooltipTrigger className="rounded-xl bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground outline-none transition hover:bg-accent hover:text-accent-foreground focus-visible:ring-3 focus-visible:ring-ring/40">
+                                +{serviciosAsignados.length - 3}
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {serviciosAsignados
+                                  .slice(3)
+                                  .map((servicio) => servicio.nombre)
+                                  .join(", ")}
+                              </TooltipContent>
+                            </Tooltip>
                           )}
                         </div>
                       </td>
@@ -375,7 +386,11 @@ export function EmpleadosPanel({ empleados, servicios }: EmpleadosPanelProps) {
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
                           <EmpleadoDialog variant="editar" empleado={empleado} servicios={servicios} />
-                          <EmpleadoEstadoButton empleadoId={empleado.id} estado={empleado.estado} />
+                          <EmpleadoEstadoButton
+                            empleadoId={empleado.id}
+                            estado={empleado.estado}
+                            limiteInfo={limiteEmpleados}
+                          />
                         </div>
                       </td>
                     </tr>

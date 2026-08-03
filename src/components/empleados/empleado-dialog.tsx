@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BriefcaseBusiness, Check, Clock, Pencil, Plus } from "lucide-react";
+import { BriefcaseBusiness, Check, Clock, Lock, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { LimiteRecursoContent } from "@/components/planes/limite-recurso-card";
+import type { LimiteRecursoInfo } from "@/lib/planes/limite-recurso";
 
 export type ServicioParaEmpleado = {
   id: string;
@@ -45,6 +47,7 @@ type EmpleadoDialogProps = {
   empleado?: EmpleadoItem;
   servicios: ServicioParaEmpleado[];
   variant: "crear" | "editar";
+  limiteInfo?: LimiteRecursoInfo;
 };
 
 const coloresRapidos = [
@@ -116,9 +119,13 @@ export function EmpleadoDialog({
   empleado,
   servicios,
   variant,
+  limiteInfo,
 }: EmpleadoDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+
+  const esEditar = variant === "editar";
+  const limiteAlcanzado = !esEditar && Boolean(limiteInfo?.alcanzado);
 
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
@@ -129,8 +136,6 @@ export function EmpleadoDialog({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const esEditar = variant === "editar";
 
   const serviciosActivos = useMemo(() => {
     return servicios.filter((servicio) => servicio.estado === "activo");
@@ -289,6 +294,16 @@ export function EmpleadoDialog({
           <Pencil className="h-4 w-4" />
           Editar
         </Button>
+      ) : limiteAlcanzado ? (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setOpen(true)}
+          className="rounded-2xl border-amber-500/40 bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
+        >
+          <Lock className="h-4 w-4" />
+          Actualizar plan
+        </Button>
       ) : (
         <Button type="button" onClick={() => setOpen(true)} className="rounded-2xl">
           <Plus className="h-4 w-4" />
@@ -297,6 +312,11 @@ export function EmpleadoDialog({
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
+        {limiteAlcanzado && limiteInfo ? (
+          <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
+            <LimiteRecursoContent info={limiteInfo} onCerrar={() => setOpen(false)} />
+          </DialogContent>
+        ) : (
         <DialogContent className="h-[min(92dvh,780px)] max-h-[92dvh] max-w-6xl gap-0 overflow-hidden p-0 sm:max-w-6xl">
           <DialogHeader className="shrink-0 border-b border-border/70 px-5 py-4 pr-16 sm:px-6">
             <DialogTitle className="text-lg font-bold">
@@ -552,6 +572,7 @@ export function EmpleadoDialog({
             </div>
           </form>
         </DialogContent>
+        )}
       </Dialog>
     </>
   );

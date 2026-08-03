@@ -1,12 +1,16 @@
 ﻿import { NextResponse } from "next/server";
 import { requireApiDashboardAccess } from "@/lib/dashboard/api-access";
-import { validarCapacidadPlan } from "@/lib/planes/plan-limits";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 type RouteContext = {
   params: Promise<{
     empleadoId: string;
   }>;
+};
+
+type ActivarEmpleadoResultado = {
+  ok: boolean;
+  mensaje: string | null;
 };
 
 function limpiar(valor: unknown) {
@@ -237,15 +241,29 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     if (estado === "activo" && empleadoActual.estado !== "activo") {
-      const capacidad = await validarCapacidadPlan({
-        supabase,
-        negocioId: access.negocio.id,
-        recurso: "empleados",
-      });
+      // Chequeo + activación en una sola transacción con lock por negocio,
+      // para evitar que dos activaciones simultáneas superen el límite del
+      // plan (ver supabase/patches/2026-08-activar-empleado-cliente-atomico.sql).
+      const { data: rpcData, error: rpcError } = await supabase.rpc(
+        "activar_empleado_con_limite",
+        { p_empleado_id: empleadoId, p_negocio_id: access.negocio.id }
+      );
 
-      if (!capacidad.ok) {
+      if (rpcError) {
+        return NextResponse.json({ error: rpcError.message }, { status: 500 });
+      }
+
+      const resultado = (Array.isArray(rpcData) ? rpcData[0] : rpcData) as
+        | ActivarEmpleadoResultado
+        | undefined;
+
+      if (!resultado?.ok) {
         return NextResponse.json(
-          { error: capacidad.message },
+          {
+            error:
+              resultado?.mensaje ??
+              "No podés activar más empleados con tu plan actual.",
+          },
           { status: 403 }
         );
       }

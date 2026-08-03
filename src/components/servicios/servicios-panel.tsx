@@ -6,13 +6,18 @@ import {
   ChevronDown,
   Search,
 } from "lucide-react";
-import { ServicioDialog, type ServicioItem } from "@/components/servicios/servicio-dialog";
+import {
+  ServicioDialog,
+  type ServicioItem,
+} from "@/components/servicios/servicio-dialog";
 import { ServicioEstadoButton } from "@/components/servicios/servicio-estado-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { LimiteRecursoInfo } from "@/lib/planes/limite-recurso";
 
 type ServiciosPanelProps = {
   servicios: ServicioItem[];
+  limiteServicios: LimiteRecursoInfo;
 };
 
 type EstadoFiltro = "todos" | "activo" | "inactivo";
@@ -31,9 +36,9 @@ function formatearPrecio(precio: number | string | null) {
   }).format(numero);
 }
 
-export function ServiciosPanel({ servicios }: ServiciosPanelProps) {
+export function ServiciosPanel({ servicios, limiteServicios }: ServiciosPanelProps) {
   const [busqueda, setBusqueda] = useState("");
-  const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>("todos");
+  const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>("activo");
   const [cantidadVisible, setCantidadVisible] = useState(CANTIDAD_INICIAL);
 
   const resumen = useMemo(() => {
@@ -99,7 +104,7 @@ export function ServiciosPanel({ servicios }: ServiciosPanelProps) {
                 <span className="mt-1 block text-[11px] text-muted-foreground">Con imagen</span>
               </div>
             </div>
-            <ServicioDialog variant="crear" />
+            <ServicioDialog variant="crear" limiteInfo={limiteServicios} />
           </div>
         </div>
       </section>
@@ -156,7 +161,7 @@ export function ServiciosPanel({ servicios }: ServiciosPanelProps) {
             Agregá nombre, duración, precio e imagen en el mismo paso.
           </p>
           <div className="mt-5 flex justify-center">
-            <ServicioDialog variant="crear" />
+            <ServicioDialog variant="crear" limiteInfo={limiteServicios} />
           </div>
         </section>
       ) : serviciosFiltrados.length === 0 ? (
@@ -246,7 +251,11 @@ export function ServiciosPanel({ servicios }: ServiciosPanelProps) {
 
                     <div className="mt-auto flex flex-wrap justify-end gap-2 pt-3">
                       <ServicioDialog variant="editar" servicio={servicio} />
-                      <ServicioEstadoButton servicioId={servicio.id} estado={servicio.estado} />
+                      <ServicioEstadoButton
+                        servicioId={servicio.id}
+                        estado={servicio.estado}
+                        limiteInfo={limiteServicios}
+                      />
                     </div>
                   </div>
                 </article>

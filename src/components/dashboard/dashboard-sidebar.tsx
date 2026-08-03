@@ -29,6 +29,7 @@ import type {
 } from "@/lib/dashboard/access-context";
 import { AgendaMeIcon, AgendaMeLogo } from "@/components/brand/agendame-logo";
 import { SignOutButton } from "@/components/dashboard/sign-out-button";
+import { UserAvatar } from "@/components/dashboard/user-avatar";
 import { Button } from "@/components/ui/button";
 
 type Props = {
@@ -334,23 +335,15 @@ export function DashboardSidebar({
             collapsed ? "justify-center p-2" : "gap-3 p-2.5"
           } ${pathname === "/dashboard/mi-cuenta" ? "bg-sidebar-accent shadow-sm" : ""}`}
         >
-          {userAvatarUrl ? (
-            <Image
-                src={userAvatarUrl}
-                alt={nombreVisible}
-                width={36}
-                height={36}
-                unoptimized
-                className="h-9 w-9 rounded-2xl border object-cover"
-              />
-          ) : (
-            <div
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-xs font-bold text-white"
-              style={{ backgroundColor: userColor ?? "var(--sidebar-primary)" }}
-            >
-              {iniciales(nombreVisible, userEmail)}
-            </div>
-          )}
+          <UserAvatar
+            src={userAvatarUrl}
+            alt={nombreVisible}
+            size={36}
+            color={userColor ?? "var(--sidebar-primary)"}
+            iniciales={iniciales(nombreVisible, userEmail)}
+            imgClassName="h-9 w-9 rounded-2xl border object-cover"
+            fallbackClassName="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl text-xs font-bold text-white"
+          />
 
           {!collapsed && (
             <>

@@ -2,6 +2,7 @@
 import { requireDashboardAccess } from "@/lib/dashboard/access-context";
 import { requirePermission } from "@/lib/dashboard/scope-helpers";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { construirLimiteRecursoInfo } from "@/lib/planes/limite-recurso";
 
 type Relacion<T> = T | T[] | null;
 
@@ -44,11 +45,20 @@ export default async function ClientesPage() {
 
   let clientes: ClienteRaw[] = [];
 
+  const limiteClientesPromise = construirLimiteRecursoInfo({
+    supabase,
+    negocioId: access.negocio.id,
+    recurso: "clientes",
+    tituloRecurso: "clientes",
+    etiquetaUso: "Clientes activos",
+  });
+
   if (access.scope === "sucursal" && access.sucursalId) {
-    const { data, error } = await supabase
-      .from("cliente_sucursales")
-      .select(
-        `
+    const [{ data, error }, limiteClientes] = await Promise.all([
+      supabase
+        .from("cliente_sucursales")
+        .select(
+          `
         clientes (
           id,
           nombre_completo,
@@ -59,29 +69,44 @@ export default async function ClientesPage() {
           updated_at
         )
       `
-      )
-      .eq("negocio_id", access.negocio.id)
-      .eq("sucursal_id", access.sucursalId)
-      .order("created_at", { ascending: false })
-      .limit(LIMITE_CLIENTES);
+        )
+        .eq("negocio_id", access.negocio.id)
+        .eq("sucursal_id", access.sucursalId)
+        .order("created_at", { ascending: false })
+        .limit(LIMITE_CLIENTES),
+      limiteClientesPromise,
+    ]);
 
     if (error) throw new Error(error.message);
 
     clientes = ((data ?? []) as ClienteSucursalRow[])
       .map((row) => obtenerObjeto(row.clientes))
       .filter(Boolean) as ClienteRaw[];
-  } else {
-    const { data, error } = await supabase
+
+    const clientesCompatibles = clientes.map((cliente) => ({
+      ...cliente,
+      estado: cliente.estado === "inactivo" ? "inactivo" as const : "activo" as const,
+      documento: null,
+      notas_internas: null,
+      notas: null,
+    }));
+
+    return <ClientesPanel clientes={clientesCompatibles} limiteClientes={limiteClientes} />;
+  }
+
+  const [{ data, error }, limiteClientes] = await Promise.all([
+    supabase
       .from("clientes")
       .select("id, nombre_completo, telefono, email, estado, created_at, updated_at")
       .eq("negocio_id", access.negocio.id)
       .order("created_at", { ascending: false })
-      .limit(LIMITE_CLIENTES);
+      .limit(LIMITE_CLIENTES),
+    limiteClientesPromise,
+  ]);
 
-    if (error) throw new Error(error.message);
+  if (error) throw new Error(error.message);
 
-    clientes = (data ?? []) as ClienteRaw[];
-  }
+  clientes = (data ?? []) as ClienteRaw[];
 
   const clientesCompatibles = clientes.map((cliente) => ({
     ...cliente,
@@ -91,5 +116,5 @@ export default async function ClientesPage() {
     notas: null,
   }));
 
-  return <ClientesPanel clientes={clientesCompatibles} />;
+  return <ClientesPanel clientes={clientesCompatibles} limiteClientes={limiteClientes} />;
 }

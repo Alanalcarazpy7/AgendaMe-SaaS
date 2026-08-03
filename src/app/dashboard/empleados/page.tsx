@@ -7,6 +7,7 @@ import { requireDashboardAccess } from "@/lib/dashboard/access-context";
 import { applySucursalScope, requirePermission } from "@/lib/dashboard/scope-helpers";
 import { nivelPlan } from "@/lib/planes/plan-access";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { construirLimiteRecursoInfo } from "@/lib/planes/limite-recurso";
 
 type EmpleadoRaw = {
   id: string;
@@ -75,6 +76,7 @@ export default async function EmpleadosPage() {
     { data: empleados, error: empleadosError },
     { data: servicios, error: serviciosError },
     { data: sucursalesData, error: sucursalesError },
+    limiteEmpleados,
   ] = await Promise.all([
     empleadosQuery,
 
@@ -92,6 +94,13 @@ export default async function EmpleadosPage() {
           .order("es_principal", { ascending: false })
           .order("created_at", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
+    construirLimiteRecursoInfo({
+      supabase,
+      negocioId: access.negocio.id,
+      recurso: "empleados",
+      tituloRecurso: "empleados",
+      etiquetaUso: "Empleados activos",
+    }),
   ]);
 
   if (empleadosError) throw new Error(empleadosError.message);
@@ -155,6 +164,7 @@ export default async function EmpleadosPage() {
               <EmpleadosPanel
                 empleados={empleadosNormalizados}
                 servicios={servicios ?? []}
+                limiteEmpleados={limiteEmpleados}
               />
             ),
           },

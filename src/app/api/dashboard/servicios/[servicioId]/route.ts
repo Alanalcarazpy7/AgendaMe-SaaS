@@ -1,8 +1,12 @@
 ﻿import { requireAdminGlobalApi } from "@/lib/dashboard/api-guards";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { validarCapacidadPlan } from "@/lib/planes/plan-limits";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
+
+type ActivarServicioResultado = {
+  ok: boolean;
+  mensaje: string | null;
+};
 
 const servicioUpdateSchema = z.object({
   nombre: z.string().min(2, "Ingresá el nombre del servicio.").optional(),
@@ -68,33 +72,31 @@ export async function PATCH(
   const negocioId = guard.access.negocio.id;
 
   if (datos.estado === "activo") {
-    const { data: servicioActual, error: servicioActualError } = await admin
-      .from("servicios")
-      .select("estado")
-      .eq("id", servicioId)
-      .eq("negocio_id", negocioId)
-      .maybeSingle();
+    // Chequeo + activación en una sola transacción con lock por negocio,
+    // para evitar que dos activaciones simultáneas superen el límite del
+    // plan (ver supabase/patches/2026-08-activar-servicio-atomico.sql).
+    const { data: rpcData, error: rpcError } = await admin.rpc(
+      "activar_servicio_con_limite",
+      { p_servicio_id: servicioId, p_negocio_id: negocioId }
+    );
 
-    if (servicioActualError) {
-      return NextResponse.json(
-        { error: servicioActualError.message },
-        { status: 500 }
-      );
+    if (rpcError) {
+      return NextResponse.json({ error: rpcError.message }, { status: 500 });
     }
 
-    if (servicioActual?.estado !== "activo") {
-      const capacidad = await validarCapacidadPlan({
-        supabase: admin,
-        negocioId,
-        recurso: "servicios",
-      });
+    const resultado = (Array.isArray(rpcData) ? rpcData[0] : rpcData) as
+      | ActivarServicioResultado
+      | undefined;
 
-      if (!capacidad.ok) {
-        return NextResponse.json(
-          { error: capacidad.message },
-          { status: 403 }
-        );
-      }
+    if (!resultado?.ok) {
+      return NextResponse.json(
+        {
+          error:
+            resultado?.mensaje ??
+            "No podés activar más servicios con tu plan actual.",
+        },
+        { status: 403 }
+      );
     }
   }
 

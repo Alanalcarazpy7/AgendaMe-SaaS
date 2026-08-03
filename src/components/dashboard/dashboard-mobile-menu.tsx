@@ -10,6 +10,7 @@ import type {
 } from "@/lib/dashboard/access-context";
 import { AgendaMeIcon, AgendaMeLogo } from "@/components/brand/agendame-logo";
 import { SignOutButton } from "@/components/dashboard/sign-out-button";
+import { UserAvatar } from "@/components/dashboard/user-avatar";
 import { getVisibleNavItems } from "@/components/dashboard/dashboard-sidebar";
 
 type Props = {
@@ -111,23 +112,15 @@ export function DashboardMobileMenu({
             aria-label="Mi cuenta"
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-card shadow-sm outline-none transition-[background-color,box-shadow,color] duration-200 ease-[var(--ease-out)] hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            {userAvatarUrl ? (
-              <Image
-                src={userAvatarUrl}
-                alt={nombreVisible}
-                width={40}
-                height={40}
-                unoptimized
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span
-                className="flex h-full w-full items-center justify-center text-xs font-bold text-white"
-                style={{ backgroundColor: userColor ?? "var(--primary)" }}
-              >
-                {iniciales(nombreVisible, userEmail)}
-              </span>
-            )}
+            <UserAvatar
+              src={userAvatarUrl}
+              alt={nombreVisible}
+              size={40}
+              color={userColor}
+              iniciales={iniciales(nombreVisible, userEmail)}
+              imgClassName="h-full w-full object-cover"
+              fallbackClassName="flex h-full w-full items-center justify-center text-xs font-bold text-white"
+            />
           </Link>
         </div>
       </header>

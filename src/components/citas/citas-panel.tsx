@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarPlus, ChevronLeft, ChevronRight, Plus, Save } from "lucide-react";
+import { CalendarPlus, ChevronLeft, ChevronRight, Lock, Plus, Save } from "lucide-react";
 import { toast } from "sonner";
 import {
   CitaDialog,
@@ -21,6 +21,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { LimiteRecursoDialog } from "@/components/planes/limite-recurso-dialog";
+import type { LimiteRecursoInfo } from "@/lib/planes/limite-recurso";
 
 export type CitaItem = {
   id: string;
@@ -44,6 +46,7 @@ type CitasPanelProps = {
   initialFecha?: string;
   initialHora?: string;
   highlightCitaId?: string;
+  limiteCitas?: LimiteRecursoInfo;
 };
 
 const START_HOUR = 7;
@@ -261,6 +264,7 @@ export function CitasPanel({
   initialFecha,
   initialHora,
   highlightCitaId,
+  limiteCitas,
 }: CitasPanelProps) {
   const router = useRouter();
   const hoy = new Date();
@@ -277,6 +281,7 @@ export function CitasPanel({
   const [modalOpen, setModalOpen] = useState(false);
   const [fechaSeleccionada, setFechaSeleccionada] = useState(toIsoDate(hoy));
   const [horaSeleccionada, setHoraSeleccionada] = useState("09:00");
+  const [mostrarLimite, setMostrarLimite] = useState(false);
 
   const [detalleOpen, setDetalleOpen] = useState(false);
   const [citaSeleccionada, setCitaSeleccionada] = useState<CitaItem | null>(null);
@@ -385,6 +390,11 @@ export function CitasPanel({
   function abrirNuevaCita(fecha: string, horaInicio: string) {
     if (esFechaHoraPasada(fecha, horaInicio)) {
       toast.error("No podés crear una cita en una fecha u hora que ya pasó.");
+      return;
+    }
+
+    if (limiteCitas?.alcanzado) {
+      setMostrarLimite(true);
       return;
     }
 
@@ -575,14 +585,26 @@ export function CitasPanel({
             ))}
           </select>
 
-          <Button
-            type="button"
-            className="cursor-pointer"
-            onClick={abrirNuevaCitaDesdeBoton}
-          >
-            <CalendarPlus className="mr-2 h-4 w-4" />
-            Nueva cita
-          </Button>
+          {limiteCitas?.alcanzado ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="cursor-pointer rounded-2xl border-amber-500/40 bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
+              onClick={() => setMostrarLimite(true)}
+            >
+              <Lock className="mr-2 h-4 w-4" />
+              Actualizar plan
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              className="cursor-pointer"
+              onClick={abrirNuevaCitaDesdeBoton}
+            >
+              <CalendarPlus className="mr-2 h-4 w-4" />
+              Nueva cita
+            </Button>
+          )}
         </div>
       </section>
 
@@ -990,6 +1012,14 @@ export function CitasPanel({
         empleadoServicios={empleadoServicios ?? []}
         onSaved={() => router.refresh()}
       />
+
+      {limiteCitas && (
+        <LimiteRecursoDialog
+          open={mostrarLimite}
+          onOpenChange={setMostrarLimite}
+          info={limiteCitas}
+        />
+      )}
 
       <Dialog open={detalleOpen} onOpenChange={setDetalleOpen}>
         <DialogContent className="max-w-2xl">

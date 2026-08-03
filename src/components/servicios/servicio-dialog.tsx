@@ -10,6 +10,7 @@ import {
   Check,
   Clock3,
   Loader2,
+  Lock,
   Palette,
   Pencil,
   Plus,
@@ -30,6 +31,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { LimiteRecursoContent } from "@/components/planes/limite-recurso-card";
+import type { LimiteRecursoInfo } from "@/lib/planes/limite-recurso";
 
 export type ServicioItem = {
   id: string;
@@ -46,6 +49,7 @@ export type ServicioItem = {
 type ServicioDialogProps = {
   servicio?: ServicioItem;
   variant: "crear" | "editar";
+  limiteInfo?: LimiteRecursoInfo;
 };
 
 const coloresRapidos = [
@@ -71,7 +75,7 @@ function formatPrecioPreview(precio: string) {
   }).format(numero);
 }
 
-export function ServicioDialog({ servicio, variant }: ServicioDialogProps) {
+export function ServicioDialog({ servicio, variant, limiteInfo }: ServicioDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -90,6 +94,7 @@ export function ServicioDialog({ servicio, variant }: ServicioDialogProps) {
   const imagenInputRef = useRef<HTMLInputElement | null>(null);
 
   const esEditar = variant === "editar";
+  const limiteAlcanzado = !esEditar && Boolean(limiteInfo?.alcanzado);
   const nombrePreview = nombre.trim() || "Nombre del servicio";
   const descripcionPreview =
     descripcion.trim() || "Descripción opcional del servicio.";
@@ -259,6 +264,16 @@ export function ServicioDialog({ servicio, variant }: ServicioDialogProps) {
           <Pencil className="h-4 w-4" />
           Editar
         </Button>
+      ) : limiteAlcanzado ? (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setOpen(true)}
+          className="rounded-lg border-amber-500/40 bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
+        >
+          <Lock className="h-4 w-4" />
+          Actualizar plan
+        </Button>
       ) : (
         <Button type="button" onClick={() => setOpen(true)} className="rounded-lg">
           <Plus className="h-4 w-4" />
@@ -267,6 +282,11 @@ export function ServicioDialog({ servicio, variant }: ServicioDialogProps) {
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
+        {limiteAlcanzado && limiteInfo ? (
+          <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
+            <LimiteRecursoContent info={limiteInfo} onCerrar={() => setOpen(false)} />
+          </DialogContent>
+        ) : (
         <DialogContent className="w-[calc(100vw-1rem)] !max-w-[calc(100vw-1rem)] overflow-hidden p-0 sm:w-[calc(100vw-2rem)] sm:!max-w-[calc(100vw-2rem)] xl:w-[58rem] xl:!max-w-[58rem]">
           <div className="max-h-[92dvh] overflow-y-auto overflow-x-hidden">
             <div className="grid min-w-0 xl:grid-cols-[20rem_minmax(0,1fr)]">
@@ -561,6 +581,7 @@ export function ServicioDialog({ servicio, variant }: ServicioDialogProps) {
             </div>
           </div>
         </DialogContent>
+        )}
       </Dialog>
     </>
   );

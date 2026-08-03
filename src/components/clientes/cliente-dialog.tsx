@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus } from "lucide-react";
+import { Lock, Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { LimiteRecursoContent } from "@/components/planes/limite-recurso-card";
+import type { LimiteRecursoInfo } from "@/lib/planes/limite-recurso";
 
 export type ClienteItem = {
   id: string;
@@ -31,11 +33,14 @@ export type ClienteItem = {
 type ClienteDialogProps = {
   cliente?: ClienteItem;
   variant: "crear" | "editar";
+  limiteInfo?: LimiteRecursoInfo;
 };
 
-export function ClienteDialog({ cliente, variant }: ClienteDialogProps) {
+export function ClienteDialog({ cliente, variant, limiteInfo }: ClienteDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const esEditar = variant === "editar";
+  const limiteAlcanzado = !esEditar && Boolean(limiteInfo?.alcanzado);
 
   const [nombreCompleto, setNombreCompleto] = useState("");
   const [telefono, setTelefono] = useState("");
@@ -45,8 +50,6 @@ export function ClienteDialog({ cliente, variant }: ClienteDialogProps) {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const esEditar = variant === "editar";
 
   useEffect(() => {
     if (!open) return;
@@ -115,6 +118,16 @@ export function ClienteDialog({ cliente, variant }: ClienteDialogProps) {
           <Pencil className="h-4 w-4" />
           Editar
         </Button>
+      ) : limiteAlcanzado ? (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setOpen(true)}
+          className="rounded-2xl border-amber-500/40 bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
+        >
+          <Lock className="h-4 w-4" />
+          Actualizar plan
+        </Button>
       ) : (
         <Button type="button" onClick={() => setOpen(true)} className="rounded-2xl">
           <Plus className="h-4 w-4" />
@@ -123,6 +136,11 @@ export function ClienteDialog({ cliente, variant }: ClienteDialogProps) {
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
+        {limiteAlcanzado && limiteInfo ? (
+          <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
+            <LimiteRecursoContent info={limiteInfo} onCerrar={() => setOpen(false)} />
+          </DialogContent>
+        ) : (
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{esEditar ? "Editar cliente" : "Nuevo cliente"}</DialogTitle>
@@ -206,6 +224,7 @@ export function ClienteDialog({ cliente, variant }: ClienteDialogProps) {
             </div>
           </form>
         </DialogContent>
+        )}
       </Dialog>
     </>
   );
