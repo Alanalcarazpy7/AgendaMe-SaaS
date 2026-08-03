@@ -2,14 +2,31 @@
 import { requireDashboardAccess } from "@/lib/dashboard/access-context";
 import { UserRound } from "lucide-react";
 import { DashboardModuleHeader } from "@/components/dashboard/dashboard-module-header";
+import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service-role";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+const NOMBRES_PROVEEDOR: Record<string, string> = {
+  google: "Google",
+  email: "Correo y contraseña",
+};
+
 export default async function MiCuentaPage() {
   const access = await requireDashboardAccess();
   const supabase = createServiceRoleClient();
+
+  const supabaseSesion = await createClient();
+  const {
+    data: { user: authUser },
+  } = await supabaseSesion.auth.getUser();
+
+  const proveedores = (authUser?.app_metadata?.providers as string[] | undefined) ?? [];
+  const tieneContrasena = proveedores.includes("email");
+  const proveedoresVisibles = proveedores.map(
+    (proveedor) => NOMBRES_PROVEEDOR[proveedor] ?? proveedor
+  );
 
   const { data: perfilExistente, error } = await supabase
     .from("perfiles_usuario")
@@ -67,6 +84,8 @@ export default async function MiCuentaPage() {
           scope: access.scope,
           sucursalNombre: access.sucursalNombre,
           email: access.user.email,
+          tieneContrasena,
+          proveedores: proveedoresVisibles,
         }}
       />
     </div>

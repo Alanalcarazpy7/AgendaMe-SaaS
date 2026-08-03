@@ -98,7 +98,7 @@ function iniciales(nombre: string) {
 
 export function EmpleadosPanel({ empleados, servicios, limiteEmpleados }: EmpleadosPanelProps) {
   const [busqueda, setBusqueda] = useState("");
-  const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>("todos");
+  const [estadoFiltro, setEstadoFiltro] = useState<EstadoFiltro>("activo");
   const [pagina, setPagina] = useState(1);
 
   function obtenerServicios(serviciosIds: string[]) {

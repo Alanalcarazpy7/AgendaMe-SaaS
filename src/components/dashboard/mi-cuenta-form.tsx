@@ -1,16 +1,18 @@
 ﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import {
   Camera,
   KeyRound,
+  Link2,
   Loader2,
   Palette,
   Save,
   ShieldCheck,
+  Sparkles,
   UserRound,
 } from "lucide-react";
+import { UserAvatar } from "@/components/dashboard/user-avatar";
 
 type Perfil = {
   usuario_id: string;
@@ -31,6 +33,8 @@ type Contexto = {
   scope: string;
   sucursalNombre: string | null;
   email: string | null;
+  tieneContrasena: boolean;
+  proveedores: string[];
 };
 
 type Props = {
@@ -207,7 +211,11 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
       setPassword("");
       setConfirmPassword("");
       setPasswordFieldsUnlocked(false);
-      setMensaje("Contraseña actualizada correctamente.");
+      setMensaje(
+        contexto.tieneContrasena
+          ? "Contraseña actualizada correctamente."
+          : "Contraseña agregada correctamente. Ya podés iniciar sesión con tu correo y contraseña."
+      );
     } catch {
       setError("No se pudo cambiar la contraseña.");
     } finally {
@@ -253,25 +261,19 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
       </nav>
 
       <section className="grid gap-4 lg:grid-cols-[260px_1fr]">
-        <aside className="rounded-lg border bg-card p-4 shadow-sm">
-          <div className="flex flex-col items-center text-center">
-            {avatarUrl ? (
-              <Image
-                  src={avatarUrl}
-                  alt={nombre}
-                  width={112}
-                  height={112}
-                  unoptimized
-                  className="h-24 w-24 rounded-lg border object-cover shadow-sm"
-                />
-            ) : (
-              <div
-                className="flex h-24 w-24 items-center justify-center rounded-lg text-2xl font-bold text-white shadow-sm"
-                style={{ backgroundColor: colorAcento }}
-              >
-                {iniciales(nombre, contexto.email)}
-              </div>
-            )}
+        <aside className="relative overflow-hidden rounded-[1.5rem] border border-border/80 bg-card/90 shadow-[0_18px_55px_rgb(15_23_42/0.07)] ring-1 ring-white/60 backdrop-blur-xl dark:bg-card/80 dark:shadow-black/25 dark:ring-white/5">
+          <div className="absolute inset-x-0 top-0 h-16 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary)_85%,#0b1120),color-mix(in_srgb,var(--ring)_65%,#0b1120))]" />
+
+          <div className="relative flex flex-col items-center p-4 pt-8 text-center">
+            <UserAvatar
+              src={avatarUrl}
+              alt={nombre || "Usuario"}
+              size={96}
+              color={colorAcento}
+              iniciales={iniciales(nombre, contexto.email)}
+              imgClassName="h-24 w-24 rounded-2xl border-4 border-card object-cover shadow-lg"
+              fallbackClassName="flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-card text-2xl font-bold text-white shadow-lg"
+            />
 
             <h2 className="mt-4 text-lg font-bold">{nombre || "Usuario"}</h2>
             <p className="mt-1 text-xs text-muted-foreground">{contexto.email}</p>
@@ -312,6 +314,20 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
               <p className="mt-1 truncate text-muted-foreground">
                 {contexto.negocioNombre}
               </p>
+
+              {contexto.proveedores.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {contexto.proveedores.map((proveedor) => (
+                    <span
+                      key={proveedor}
+                      className="inline-flex items-center gap-1 rounded-full border bg-muted/50 px-2 py-1 font-medium text-muted-foreground"
+                    >
+                      <Link2 className="h-3 w-3" />
+                      {proveedor}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </aside>
@@ -446,11 +462,15 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Acceso</p>
-                    <h2 className="text-lg font-bold">Seguridad</h2>
+                    <h2 className="text-lg font-bold">
+                      {contexto.tieneContrasena ? "Seguridad" : "Agregar contraseña"}
+                    </h2>
                   </div>
                 </div>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
-                  La contraseña no se muestra ni se precarga. Escribi una nueva solo cuando quieras cambiarla.
+                  {contexto.tieneContrasena
+                    ? "La contraseña no se muestra ni se precarga. Escribí una nueva solo cuando quieras cambiarla."
+                    : `Iniciás sesión con ${contexto.proveedores.join(" y ") || "Google"}, así que todavía no tenés una contraseña propia. Podés crear una para además poder entrar con tu correo y contraseña, sin depender de ${contexto.proveedores.join(" y ") || "Google"}.`}
                 </p>
               </div>
 
@@ -458,6 +478,13 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
                 Mínimo 8 caracteres
               </div>
             </div>
+
+            {!contexto.tieneContrasena && (
+              <div className="mt-4 flex items-start gap-2 rounded-lg border border-primary/25 bg-primary/5 p-3 text-xs leading-5 text-muted-foreground">
+                <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                Esto no reemplaza tu acceso con {contexto.proveedores.join(" y ") || "Google"}: vas a poder seguir usando ambos para entrar.
+              </div>
+            )}
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <div>
@@ -512,7 +539,7 @@ export function MiCuentaForm({ perfil, contexto }: Props) {
               ) : (
                 <KeyRound className="mr-2 h-4 w-4" />
               )}
-              Cambiar contraseña
+              {contexto.tieneContrasena ? "Cambiar contraseña" : "Agregar contraseña"}
             </button>
           </section>
           ) : null}

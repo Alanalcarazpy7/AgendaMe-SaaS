@@ -60,6 +60,21 @@ function comoRegistro(valor: unknown): JsonRecord {
     : {};
 }
 
+function tieneCampo(objeto: object, campo: string) {
+  return Object.prototype.hasOwnProperty.call(objeto, campo);
+}
+
+function tieneServiciosProvistos(body: JsonRecord) {
+  return (
+    tieneCampo(body, "serviciosIds") ||
+    tieneCampo(body, "servicioIds") ||
+    tieneCampo(body, "servicio_ids") ||
+    tieneCampo(body, "servicios_ids") ||
+    tieneCampo(body, "serviciosSeleccionados") ||
+    tieneCampo(body, "servicios")
+  );
+}
+
 function normalizarServicios(body: JsonRecord) {
   const raw =
     body.serviciosIds ??
@@ -222,18 +237,20 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
-    const nombre = limpiar(body.nombre);
+    const nombreProvisto = tieneCampo(body, "nombre");
+    const nombre = nombreProvisto ? limpiar(body.nombre) : null;
 
-    if (!nombre) {
+    if (nombreProvisto && !nombre) {
       return NextResponse.json(
         { error: "El nombre del empleado es obligatorio." },
         { status: 400 }
       );
     }
 
-    const estado = limpiar(body.estado || "activo");
+    const estadoProvisto = tieneCampo(body, "estado");
+    const estado = estadoProvisto ? limpiar(body.estado) : empleadoActual.estado;
 
-    if (!["activo", "inactivo"].includes(estado)) {
+    if (estadoProvisto && !["activo", "inactivo"].includes(estado)) {
       return NextResponse.json(
         { error: "Estado inválido." },
         { status: 400 }
@@ -300,48 +317,57 @@ export async function PATCH(request: Request, context: RouteContext) {
       }
     }
 
-    const servicioIds = normalizarServicios(body);
+    const serviciosProvistos = tieneServiciosProvistos(body);
+    const servicioIds = serviciosProvistos ? normalizarServicios(body) : null;
     const horarios = normalizarHorarios(body);
 
-    if (servicioIds.length === 0) {
+    if (servicioIds !== null && servicioIds.length === 0) {
       return NextResponse.json(
         { error: "Seleccioná al menos un servicio activo para el empleado." },
         { status: 400 }
       );
     }
 
-    const { data: serviciosValidos, error: serviciosError } = await supabase
-      .from("servicios")
-      .select("id")
-      .eq("negocio_id", access.negocio.id)
-      .eq("estado", "activo")
-      .in("id", servicioIds);
+    if (servicioIds !== null) {
+      const { data: serviciosValidos, error: serviciosError } = await supabase
+        .from("servicios")
+        .select("id")
+        .eq("negocio_id", access.negocio.id)
+        .eq("estado", "activo")
+        .in("id", servicioIds);
 
-    if (serviciosError) throw new Error(serviciosError.message);
+      if (serviciosError) throw new Error(serviciosError.message);
 
-    const idsValidos = new Set((serviciosValidos ?? []).map((item) => item.id));
+      const idsValidos = new Set((serviciosValidos ?? []).map((item) => item.id));
 
-    const invalido = servicioIds.find((id) => !idsValidos.has(id));
+      const invalido = servicioIds.find((id) => !idsValidos.has(id));
 
-    if (invalido) {
-      return NextResponse.json(
-        { error: "Uno de los servicios seleccionados no está activo o no pertenece al negocio." },
-        { status: 400 }
-      );
+      if (invalido) {
+        return NextResponse.json(
+          { error: "Uno de los servicios seleccionados no está activo o no pertenece al negocio." },
+          { status: 400 }
+        );
+      }
     }
 
     const updateEmpleado: Record<string, unknown> = {
-      nombre,
-      email: normalizarTexto(body.email),
-      telefono: normalizarTexto(body.telefono),
-      color_calendario: normalizarTexto(body.color_calendario ?? body.colorCalendario ?? body.color ?? body.color),
-      estado,
       updated_at: new Date().toISOString(),
     };
 
-    if (sucursalId) {
-      updateEmpleado.sucursal_id = sucursalId;
+    if (nombreProvisto) updateEmpleado.nombre = nombre;
+    if (tieneCampo(body, "email")) updateEmpleado.email = normalizarTexto(body.email);
+    if (tieneCampo(body, "telefono")) updateEmpleado.telefono = normalizarTexto(body.telefono);
+    if (
+      tieneCampo(body, "color_calendario") ||
+      tieneCampo(body, "colorCalendario") ||
+      tieneCampo(body, "color")
+    ) {
+      updateEmpleado.color_calendario = normalizarTexto(
+        body.color_calendario ?? body.colorCalendario ?? body.color
+      );
     }
+    if (estadoProvisto) updateEmpleado.estado = estado;
+    if (sucursalId) updateEmpleado.sucursal_id = sucursalId;
 
     const { error: empleadoError } = await supabase
       .from("empleados")
@@ -351,24 +377,26 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     if (empleadoError) throw new Error(empleadoError.message);
 
-    // Reemplazar servicios del empleado.
-    const { error: deleteServiciosError } = await supabase
-      .from("empleado_servicios")
-      .delete()
-      .eq("empleado_id", empleadoId);
+    // Reemplazar servicios del empleado solo si el frontend los envió.
+    if (servicioIds !== null) {
+      const { error: deleteServiciosError } = await supabase
+        .from("empleado_servicios")
+        .delete()
+        .eq("empleado_id", empleadoId);
 
-    if (deleteServiciosError) throw new Error(deleteServiciosError.message);
+      if (deleteServiciosError) throw new Error(deleteServiciosError.message);
 
-    const { error: insertServiciosError } = await supabase
-      .from("empleado_servicios")
-      .insert(
-        servicioIds.map((servicioId) => ({
-          empleado_id: empleadoId,
-          servicio_id: servicioId,
-        }))
-      );
+      const { error: insertServiciosError } = await supabase
+        .from("empleado_servicios")
+        .insert(
+          servicioIds.map((servicioId) => ({
+            empleado_id: empleadoId,
+            servicio_id: servicioId,
+          }))
+        );
 
-    if (insertServiciosError) throw new Error(insertServiciosError.message);
+      if (insertServiciosError) throw new Error(insertServiciosError.message);
+    }
 
     // Reemplazar horarios solo si el frontend los envió.
     if (horarios) {
