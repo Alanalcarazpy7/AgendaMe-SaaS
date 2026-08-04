@@ -214,8 +214,33 @@ export default async function HomePage() {
   const whatsappNumero = getWhatsappNumber();
   const whatsappVisible = whatsappNumero.replace(/^595/, "0").replace(/(\d{4})(\d{6})/, "$1 $2");
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "AgendaMe",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    description:
+      "Sistema de reservas y citas online para barberías, peluquerías, spas, clínicas y estéticas en Paraguay.",
+    areaServed: {
+      "@type": "Country",
+      name: "Paraguay",
+    },
+    offers: planes.map((plan) => ({
+      "@type": "Offer",
+      name: plan.nombre,
+      priceCurrency: "PYG",
+      price: plan.precio_mensual_gs,
+      priceValidUntil: `${new Date().getFullYear() + 1}-12-31`,
+    })),
+  };
+
   return (
     <main className="min-h-screen overflow-x-clip bg-background">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <SiteNavbar />
       <HeroSection planes={planes} />
       <RubrosMarquee />

@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
 import { MonitoringProviders } from "@/components/monitoring/monitoring-providers";
+import { getSiteUrl } from "@/lib/site-url";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -12,10 +13,42 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const TITULO = "AgendaMe | Sistema de reservas y citas online para Paraguay";
+const DESCRIPCION =
+  "Agenda online para barberías, peluquerías, spas, clínicas y estéticas en Paraguay. Recibí reservas, gestioná citas, clientes, empleados y recordatorios desde un panel profesional. Gratis hasta 20 citas al mes.";
+
 export const metadata: Metadata = {
-  title: "AgendaMe | Reservas y citas online para negocios",
-  description:
-    "AgendaMe es un SaaS para recibir reservas online, gestionar citas, clientes, empleados, servicios, recordatorios y planes desde un panel profesional.",
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: TITULO,
+    template: "%s | AgendaMe",
+  },
+  description: DESCRIPCION,
+  keywords: [
+    "sistema de reservas online",
+    "agenda online Paraguay",
+    "software para barbería",
+    "software para peluquería",
+    "sistema de citas para clínicas",
+    "agenda para spa y estética",
+    "reservas online negocios Paraguay",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: "es_PY",
+    siteName: "AgendaMe",
+    url: "/",
+    title: TITULO,
+    description: DESCRIPCION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITULO,
+    description: DESCRIPCION,
+  },
   icons: {
     icon: "/brand/icon-agendame.svg",
     shortcut: "/brand/icon-agendame.svg",

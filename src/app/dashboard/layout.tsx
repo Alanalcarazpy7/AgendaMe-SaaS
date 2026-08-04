@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { DashboardBranchInactive } from "@/components/dashboard/dashboard-branch-inactive";
 import { DashboardBusinessBlocked } from "@/components/dashboard/dashboard-business-blocked";
@@ -9,6 +10,9 @@ import { resolveDashboardAccess } from "@/lib/dashboard/access-context";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 type DashboardLayoutProps = {
   children: React.ReactNode;
