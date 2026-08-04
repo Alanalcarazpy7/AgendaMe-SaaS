@@ -142,6 +142,13 @@ export type PagoNegocioRow = {
   aprobado_at: string | null;
   rechazado_at: string | null;
   created_at: string;
+  planes_saas: {
+    clave: string;
+    nombre: string;
+    orden: number;
+    precio_mensual_gs: number;
+    precio_anual_gs: number;
+  } | null;
 };
 
 export async function obtenerPagosNegocio(negocioId: string): Promise<PagoNegocioRow[]> {
@@ -150,7 +157,7 @@ export async function obtenerPagosNegocio(negocioId: string): Promise<PagoNegoci
   const { data, error } = await admin
     .from("pagos_manuales")
     .select(
-      "id, suscripcion_id, plan_id, monto_gs, metodo, estado, fecha_pago, periodo_inicio, periodo_fin, ciclo_facturacion, comprobante_url, notas_cliente, notas_admin, aprobado_at, rechazado_at, created_at"
+      "id, suscripcion_id, plan_id, monto_gs, metodo, estado, fecha_pago, periodo_inicio, periodo_fin, ciclo_facturacion, comprobante_url, notas_cliente, notas_admin, aprobado_at, rechazado_at, created_at, planes_saas(clave, nombre, orden, precio_mensual_gs, precio_anual_gs)"
     )
     .eq("negocio_id", negocioId)
     .order("created_at", { ascending: false });
@@ -159,7 +166,7 @@ export async function obtenerPagosNegocio(negocioId: string): Promise<PagoNegoci
     throw new Error(`No se pudo obtener los pagos del negocio: ${error.message}`);
   }
 
-  return (data ?? []) as PagoNegocioRow[];
+  return (data ?? []) as unknown as PagoNegocioRow[];
 }
 
 export type SolicitudCambioPlanRow = {

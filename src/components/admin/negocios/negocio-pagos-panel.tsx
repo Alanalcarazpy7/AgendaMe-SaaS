@@ -23,19 +23,24 @@ import type { PagoNegocioRow } from "@/lib/admin/queries/negocio-detalle";
 import { registrarPagoAction } from "@/lib/admin/actions/negocios";
 import { AprobarPagoDialog, RechazarPagoDialog } from "@/components/admin/pagos/pago-acciones";
 import { PagoComprobanteDialog } from "@/components/admin/pagos/pago-comprobante-dialog";
+import { EditarPagoDialog } from "@/components/admin/pagos/editar-pago-dialog";
+import type { ContextoPago } from "@/lib/admin/pagos-contexto";
 import { AdminEmptyState, AdminTableShell } from "@/components/admin/admin-ui";
 
 type PlanOpcion = {
   id: string;
   clave: string;
   nombre: string;
+  orden: number;
   precio_mensual_gs: number | null;
   precio_anual_gs: number | null;
 };
 
+type PagoNegocioConContexto = PagoNegocioRow & { contexto?: ContextoPago };
+
 type Props = {
   negocioId: string;
-  pagos: PagoNegocioRow[];
+  pagos: PagoNegocioConContexto[];
   planes: PlanOpcion[];
   /** Vencimiento de la suscripción activa hoy, para sugerir la fecha al aprobar un pago. */
   fechaVencimientoActual?: string | null;
@@ -305,43 +310,49 @@ export function NegocioPagosPanel({ negocioId, pagos, planes, fechaVencimientoAc
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pagos.map((pago) => (
-                <TableRow key={pago.id} className="hover:bg-muted/35">
-                  <TableCell className="text-xs">{formatearFechaCorta(pago.fecha_pago ?? pago.created_at)}</TableCell>
-                  <TableCell className="text-xs font-bold">{formatearGuaranies(pago.monto_gs)}</TableCell>
-                  <TableCell className="text-xs">{pago.metodo ?? "-"}</TableCell>
-                  <TableCell className="text-xs">
-                    {pago.periodo_inicio || pago.periodo_fin
-                      ? `${formatearFechaCorta(pago.periodo_inicio)} - ${formatearFechaCorta(pago.periodo_fin)}`
-                      : "-"}
-                  </TableCell>
-                  <TableCell>{badgeEstadoPago(pago.estado)}</TableCell>
-                  <TableCell className="text-xs">
-                    <PagoComprobanteDialog pagoId={pago.id} comprobanteUrl={pago.comprobante_url} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {pago.estado === "pendiente" ? (
-                      <div className="flex justify-end gap-2">
-                        <AprobarPagoDialog
-                          pago={{
-                            id: pago.id,
-                            negocioId,
-                            fechaPago: pago.fecha_pago,
-                            periodoFin: pago.periodo_fin,
-                            cicloFacturacion: pago.ciclo_facturacion,
-                            fechaVencimientoActual,
-                          }}
-                        />
-                        <RechazarPagoDialog pago={{ id: pago.id, negocioId }} />
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        {pago.estado === "aprobado" ? formatearFechaCorta(pago.aprobado_at) : formatearFechaCorta(pago.rechazado_at)}
-                      </span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {pagos.map((pago) => {
+                const pagoRef = {
+                  id: pago.id,
+                  negocioId,
+                  planId: pago.plan_id,
+                  fechaPago: pago.fecha_pago,
+                  periodoFin: pago.periodo_fin,
+                  cicloFacturacion: pago.ciclo_facturacion,
+                  fechaVencimientoActual,
+                  montoGs: pago.monto_gs,
+                  contexto: pago.contexto,
+                };
+
+                return (
+                  <TableRow key={pago.id} className="hover:bg-muted/35">
+                    <TableCell className="text-xs">{formatearFechaCorta(pago.fecha_pago ?? pago.created_at)}</TableCell>
+                    <TableCell className="text-xs font-bold">{formatearGuaranies(pago.monto_gs)}</TableCell>
+                    <TableCell className="text-xs">{pago.metodo ?? "-"}</TableCell>
+                    <TableCell className="text-xs">
+                      {pago.periodo_inicio || pago.periodo_fin
+                        ? `${formatearFechaCorta(pago.periodo_inicio)} - ${formatearFechaCorta(pago.periodo_fin)}`
+                        : "-"}
+                    </TableCell>
+                    <TableCell>{badgeEstadoPago(pago.estado)}</TableCell>
+                    <TableCell className="text-xs">
+                      <PagoComprobanteDialog pagoId={pago.id} comprobanteUrl={pago.comprobante_url} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {pago.estado === "pendiente" ? (
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <EditarPagoDialog pago={pagoRef} planes={planes} />
+                          <RechazarPagoDialog pago={pagoRef} />
+                          <AprobarPagoDialog pago={pagoRef} />
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          {pago.estado === "aprobado" ? formatearFechaCorta(pago.aprobado_at) : formatearFechaCorta(pago.rechazado_at)}
+                        </span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </AdminTableShell>

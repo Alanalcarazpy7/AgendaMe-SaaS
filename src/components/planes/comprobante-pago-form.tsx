@@ -1,9 +1,20 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { AlertCircle, CheckCircle2, Clock3, ExternalLink, FileUp, ReceiptText, XCircle } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Clock3,
+  ExternalLink,
+  FileText,
+  FileUp,
+  ReceiptText,
+  Trash2,
+  XCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,9 +84,29 @@ export function ComprobantePagoForm({ planes, planActualId, pagos }: Props) {
   const [monto, setMonto] = useState("");
   const [metodo, setMetodo] = useState("transferencia");
   const [notas, setNotas] = useState("");
-  const [fileName, setFileName] = useState("");
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  function seleccionarArchivo(file: File) {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setArchivo(file);
+    setPreviewUrl(file.type.startsWith("image/") ? URL.createObjectURL(file) : null);
+  }
+
+  function quitarArchivo() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setArchivo(null);
+    setPreviewUrl(null);
+    if (inputRef.current) inputRef.current.value = "";
+  }
 
   const planSeleccionado = useMemo(() => opcionesPlan.find((plan) => plan.id === planId) ?? null, [opcionesPlan, planId]);
   const montoSugerido = planSeleccionado
@@ -89,8 +120,7 @@ export function ComprobantePagoForm({ planes, planActualId, pagos }: Props) {
   }
 
   function enviar() {
-    const file = inputRef.current?.files?.[0];
-    if (!file) {
+    if (!archivo) {
       toast.error("Adjunta el comprobante");
       return;
     }
@@ -102,7 +132,7 @@ export function ComprobantePagoForm({ planes, planActualId, pagos }: Props) {
       formData.set("metodo", metodo);
       formData.set("ciclo", ciclo);
       formData.set("notasCliente", notas);
-      formData.set("file", file);
+      formData.set("file", archivo);
 
       const response = await fetch("/api/dashboard/pagos/comprobante", {
         method: "POST",
@@ -121,8 +151,7 @@ export function ComprobantePagoForm({ planes, planActualId, pagos }: Props) {
         description: data.message ?? "Queda pendiente de revision por AgendaMe.",
       });
       setNotas("");
-      setFileName("");
-      if (inputRef.current) inputRef.current.value = "";
+      quitarArchivo();
       router.refresh();
     });
   }
@@ -218,22 +247,84 @@ export function ComprobantePagoForm({ planes, planActualId, pagos }: Props) {
           </div>
 
           <div className="mt-4 grid gap-4">
-            <label className="flex cursor-pointer items-center gap-3 rounded-[1.3rem] border border-dashed border-primary/35 bg-background/70 p-4 transition hover:bg-background">
-              <span className="rounded-2xl bg-primary/10 p-3 text-primary">
-                <FileUp className="h-5 w-5" />
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-black">{fileName || "Seleccionar comprobante"}</span>
-                <span className="block text-xs text-muted-foreground">JPG, PNG, WEBP o PDF hasta 5 MB.</span>
-              </span>
-              <input
-                ref={inputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,application/pdf"
-                className="sr-only"
-                onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
-              />
-            </label>
+            {archivo ? (
+              <div className="rounded-[1.3rem] border border-primary/35 bg-background/70 p-3">
+                {previewUrl ? (
+                  <div className="overflow-hidden rounded-2xl border bg-muted/20">
+                    <Image
+                      src={previewUrl}
+                      alt="Vista previa del comprobante"
+                      width={1200}
+                      height={1600}
+                      unoptimized
+                      className="max-h-[420px] w-full object-contain sm:max-h-[560px]"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-40 w-full items-center justify-center rounded-2xl bg-primary/10 text-primary sm:h-56">
+                    <FileText className="h-10 w-10" />
+                  </div>
+                )}
+
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black">{archivo.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {previewUrl
+                        ? "Así se ve la imagen que vas a enviar. Fijate que se lea bien antes de continuar."
+                        : "Archivo PDF listo para enviar."}
+                    </p>
+                  </div>
+
+                  <div className="flex shrink-0 gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="rounded-xl"
+                      onClick={() => inputRef.current?.click()}
+                    >
+                      Reemplazar
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="rounded-xl text-destructive hover:text-destructive"
+                      onClick={quitarArchivo}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Quitar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <label
+                htmlFor="comprobante-archivo"
+                className="flex cursor-pointer items-center gap-3 rounded-[1.3rem] border border-dashed border-primary/35 bg-background/70 p-4 transition hover:bg-background"
+              >
+                <span className="rounded-2xl bg-primary/10 p-3 text-primary">
+                  <FileUp className="h-5 w-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-black">Seleccionar comprobante</span>
+                  <span className="block text-xs text-muted-foreground">JPG, PNG, WEBP o PDF hasta 5 MB.</span>
+                </span>
+              </label>
+            )}
+
+            <input
+              ref={inputRef}
+              id="comprobante-archivo"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) seleccionarArchivo(file);
+              }}
+            />
 
             <div className="grid gap-2">
               <Label htmlFor="nota-pago">Nota para AgendaMe (opcional)</Label>

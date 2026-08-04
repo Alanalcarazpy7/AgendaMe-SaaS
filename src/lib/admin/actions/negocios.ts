@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requirePlatformOwner } from "@/lib/admin/guard";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/service-role";
 import { registrarAuditoria } from "@/lib/admin/audit";
 import {
   agregarNotaSchema,
@@ -11,6 +12,7 @@ import {
   bloquearNegocioSchema,
   cambiarPlanSchema,
   desbloquearNegocioSchema,
+  editarPagoPendienteSchema,
   rechazarPagoSchema,
   rechazarSolicitudCambioPlanSchema,
   registrarPagoSchema,
@@ -140,6 +142,44 @@ export async function rechazarPagoAction(input: unknown): Promise<ActionResult> 
 
   revalidarNegocio(negocioId);
   return { ok: true };
+}
+
+/**
+ * Corrige plan/ciclo/monto de un pago mientras sigue pendiente, para el caso
+ * en que el negocio se equivocó al elegir el plan o el ciclo al subir el
+ * comprobante. Usa service role porque es un UPDATE directo sobre
+ * pagos_manuales sin una RPC propia (a diferencia de aprobar/rechazar); el
+ * filtro `.eq("estado", "pendiente")` evita tocar pagos ya resueltos.
+ */
+export async function editarPagoPendienteAction(input: unknown): Promise<ActionResult> {
+  const owner = await requirePlatformOwner();
+  const parsed = editarPagoPendienteSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Datos inválidos." };
+  const { pagoId, negocioId, planId, cicloFacturacion, montoGs } = parsed.data;
+
+  const admin = createServiceRoleClient();
+  const { data, error } = await admin
+    .from("pagos_manuales")
+    .update({ plan_id: planId, ciclo_facturacion: cicloFacturacion, monto_gs: montoGs })
+    .eq("id", pagoId)
+    .eq("estado", "pendiente")
+    .select("id")
+    .maybeSingle();
+
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "Este pago ya fue resuelto, no se puede editar." };
+
+  const auditOk = await registrarAuditoria({
+    usuarioId: owner.id,
+    negocioId,
+    accion: "editar_pago_pendiente",
+    tablaAfectada: "pagos_manuales",
+    registroId: pagoId,
+    detalles: { planId, cicloFacturacion, montoGs },
+  });
+
+  revalidarNegocio(negocioId);
+  return auditOk ? { ok: true } : { ok: true, auditWarning: AUDIT_WARNING };
 }
 
 export async function aprobarSolicitudCambioPlanAction(input: unknown): Promise<ActionResult> {

@@ -3,13 +3,15 @@ import { CheckCircle2, Clock3, Download, ReceiptText, Wallet, XCircle } from "lu
 import { requirePlatformOwner } from "@/lib/admin/guard";
 import { obtenerTodosPagos } from "@/lib/admin/queries/pagos";
 import { obtenerNegociosResumen } from "@/lib/admin/queries/negocios-resumen";
+import { obtenerPlanes } from "@/lib/admin/queries/planes";
+import { calcularContextoPago } from "@/lib/admin/pagos-contexto";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatearFechaCorta } from "@/lib/admin/formatters/date";
 import { formatearGuaranies, formatearNumero } from "@/lib/admin/formatters/currency";
 import { KpiCard } from "@/components/admin/kpi-card";
-import { AprobarPagoDialog, RechazarPagoDialog } from "@/components/admin/pagos/pago-acciones";
+import { PagoPendienteCard } from "@/components/admin/pagos/pago-pendiente-card";
 import { PagoComprobanteDialog } from "@/components/admin/pagos/pago-comprobante-dialog";
 import { PagosBuscador } from "@/components/admin/pagos/pagos-buscador";
 import { AdminEmptyState, AdminPageHeader, AdminPanel, AdminTableShell } from "@/components/admin/admin-ui";
@@ -48,14 +50,54 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
   const paginaActual = Math.max(1, Number(params.pagina ?? 1) || 1);
   const porPagina = 25;
 
-  const [pagos, negocios] = await Promise.all([obtenerTodosPagos(500), obtenerNegociosResumen()]);
+  const [pagos, negocios, planes] = await Promise.all([
+    obtenerTodosPagos(500),
+    obtenerNegociosResumen(),
+    obtenerPlanes(),
+  ]);
   const vencimientoPorNegocio = new Map(negocios.map((n) => [n.negocio_id, n.fecha_vencimiento]));
+  const planActualPorNegocio = new Map(negocios.map((n) => [n.negocio_id, n]));
+  const ordenPorClave = new Map(planes.map((p) => [p.clave, p.orden]));
+  const planesParaEdicion = planes.map((p) => ({
+    id: p.id,
+    clave: p.clave,
+    nombre: p.nombre,
+    precio_mensual_gs: p.precio_mensual_gs,
+    precio_anual_gs: p.precio_anual_gs,
+  }));
 
   const pendientes = pagos.filter((p) => p.estado === "pendiente");
   const aprobados = pagos.filter((p) => p.estado === "aprobado");
   const rechazados = pagos.filter((p) => p.estado === "rechazado");
   const cobradoTotal = aprobados.reduce((acc, p) => acc + p.monto_gs, 0);
   const ticketPromedio = aprobados.length > 0 ? Math.round(cobradoTotal / aprobados.length) : 0;
+
+  function construirPagoRef(pago: (typeof pagos)[number]) {
+    const negocioActual = planActualPorNegocio.get(pago.negocio_id);
+    const contexto = calcularContextoPago({
+      pago,
+      planActualClave: negocioActual?.plan_clave,
+      planActualNombre: negocioActual?.plan_nombre,
+      ordenPorClave,
+    });
+
+    return {
+      id: pago.id,
+      negocioId: pago.negocio_id,
+      negocioNombre: pago.negocios?.nombre,
+      planId: pago.plan_id,
+      fechaPago: pago.fecha_pago,
+      periodoFin: pago.periodo_fin,
+      cicloFacturacion: pago.ciclo_facturacion,
+      fechaVencimientoActual: vencimientoPorNegocio.get(pago.negocio_id),
+      montoGs: pago.monto_gs,
+      contexto,
+      fecha: pago.fecha_pago ?? pago.created_at,
+      metodo: pago.metodo,
+      notasCliente: pago.notas_cliente,
+      comprobanteUrl: pago.comprobante_url,
+    };
+  }
 
   let filtradas = pagos;
   if (estadoFiltro !== "todos") filtradas = filtradas.filter((p) => p.estado === estadoFiltro);
@@ -68,9 +110,15 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
     );
   }
 
-  const totalPaginas = Math.max(1, Math.ceil(filtradas.length / porPagina));
+  const pendientesFiltrados = (estadoFiltro === "todos" || estadoFiltro === "pendiente"
+    ? filtradas.filter((p) => p.estado === "pendiente")
+    : []
+  ).map(construirPagoRef);
+
+  const historico = filtradas.filter((p) => p.estado !== "pendiente");
+  const totalPaginas = Math.max(1, Math.ceil(historico.length / porPagina));
   const pagina = Math.min(paginaActual, totalPaginas);
-  const filas = filtradas.slice((pagina - 1) * porPagina, pagina * porPagina);
+  const filas = historico.slice((pagina - 1) * porPagina, pagina * porPagina);
 
   const tabs: { key: EstadoFiltro; label: string; cantidad: number }[] = [
     { key: "todos", label: "Todos", cantidad: pagos.length },
@@ -152,14 +200,29 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
         </div>
       </div>
 
+      {pendientesFiltrados.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-sm font-black text-muted-foreground">
+            Pendientes de revisar ({pendientesFiltrados.length})
+          </h2>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            {pendientesFiltrados.map((pago) => (
+              <PagoPendienteCard key={pago.id} pago={pago} planes={planesParaEdicion} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {filas.length === 0 ? (
-        <AdminEmptyState title="Sin pagos" description="No hay pagos que coincidan con el filtro actual." />
+        pendientesFiltrados.length === 0 && (
+          <AdminEmptyState title="Sin pagos" description="No hay pagos que coincidan con el filtro actual." />
+        )
       ) : (
         <AdminTableShell
           footer={
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p>
-                {formatearNumero(filtradas.length)} pago{filtradas.length === 1 ? "" : "s"} - pagina {pagina} de {totalPaginas}
+                {formatearNumero(historico.length)} pago{historico.length === 1 ? "" : "s"} - pagina {pagina} de {totalPaginas}
               </p>
               <div className="flex gap-2">
                 <Link className={`rounded-xl border px-3 py-2 font-bold ${pagina <= 1 ? "pointer-events-none opacity-40" : "hover:bg-muted"}`} href={buildHref({ estado: estadoFiltro, q: params.q }, pagina - 1)}>
@@ -183,7 +246,7 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
                   <TableHead>Estado</TableHead>
                   <TableHead>Observacion</TableHead>
                   <TableHead>Comprobante</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
+                  <TableHead className="text-right">Resuelto</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -212,26 +275,9 @@ export default async function AdminPagosPage({ searchParams }: PageProps) {
                     <PagoComprobanteDialog pagoId={pago.id} comprobanteUrl={pago.comprobante_url} />
                   </TableCell>
                   <TableCell className="text-right">
-                    {pago.estado === "pendiente" ? (
-                      <div className="flex justify-end gap-2">
-                        <AprobarPagoDialog
-                          pago={{
-                            id: pago.id,
-                            negocioId: pago.negocio_id,
-                            negocioNombre: pago.negocios?.nombre,
-                            fechaPago: pago.fecha_pago,
-                            periodoFin: pago.periodo_fin,
-                            cicloFacturacion: pago.ciclo_facturacion,
-                            fechaVencimientoActual: vencimientoPorNegocio.get(pago.negocio_id),
-                          }}
-                        />
-                        <RechazarPagoDialog pago={{ id: pago.id, negocioId: pago.negocio_id, negocioNombre: pago.negocios?.nombre }} />
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        {pago.estado === "aprobado" ? formatearFechaCorta(pago.aprobado_at) : formatearFechaCorta(pago.rechazado_at)}
-                      </span>
-                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {pago.estado === "aprobado" ? formatearFechaCorta(pago.aprobado_at) : formatearFechaCorta(pago.rechazado_at)}
+                    </span>
                   </TableCell>
                 </TableRow>
               ))}

@@ -51,7 +51,13 @@ export type PagoConNegocioRow = {
   rechazado_at: string | null;
   created_at: string;
   negocios: { nombre: string; slug: string | null } | null;
-  planes_saas: { clave: string; nombre: string } | null;
+  planes_saas: {
+    clave: string;
+    nombre: string;
+    orden: number;
+    precio_mensual_gs: number;
+    precio_anual_gs: number;
+  } | null;
 };
 
 /** Todos los pagos (cualquier negocio), para /admin/pagos. Limitado a los más recientes. */
@@ -61,7 +67,7 @@ export async function obtenerTodosPagos(limite = 500): Promise<PagoConNegocioRow
   const { data, error } = await admin
     .from("pagos_manuales")
     .select(
-      "id, negocio_id, suscripcion_id, plan_id, monto_gs, metodo, estado, fecha_pago, periodo_inicio, periodo_fin, ciclo_facturacion, comprobante_url, notas_cliente, notas_admin, aprobado_at, rechazado_at, created_at, negocios(nombre, slug), planes_saas(clave, nombre)"
+      "id, negocio_id, suscripcion_id, plan_id, monto_gs, metodo, estado, fecha_pago, periodo_inicio, periodo_fin, ciclo_facturacion, comprobante_url, notas_cliente, notas_admin, aprobado_at, rechazado_at, created_at, negocios(nombre, slug), planes_saas(clave, nombre, orden, precio_mensual_gs, precio_anual_gs)"
     )
     .order("created_at", { ascending: false })
     .limit(limite);

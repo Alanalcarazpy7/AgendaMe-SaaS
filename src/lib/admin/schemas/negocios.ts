@@ -39,6 +39,16 @@ export const rechazarPagoSchema = z.object({
 
 export type RechazarPagoInput = z.infer<typeof rechazarPagoSchema>;
 
+export const editarPagoPendienteSchema = z.object({
+  pagoId: z.string().uuid(),
+  negocioId: z.string().uuid(),
+  planId: z.string().uuid(),
+  cicloFacturacion: z.enum(["mensual", "anual"]),
+  montoGs: z.coerce.number().int().positive(),
+});
+
+export type EditarPagoPendienteInput = z.infer<typeof editarPagoPendienteSchema>;
+
 export const aprobarSolicitudCambioPlanSchema = z.object({
   solicitudId: z.string().uuid(),
   negocioId: z.string().uuid(),

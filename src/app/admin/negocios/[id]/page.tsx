@@ -18,6 +18,7 @@ import {
 import { requirePlatformOwner } from "@/lib/admin/guard";
 import { obtenerNegociosResumen } from "@/lib/admin/queries/negocios-resumen";
 import { obtenerPlanes } from "@/lib/admin/queries/planes";
+import { calcularContextoPago } from "@/lib/admin/pagos-contexto";
 import {
   obtenerNegocioBase,
   obtenerHistorialSuscripciones,
@@ -117,6 +118,7 @@ export default async function NegocioDetallePage({ params }: PageProps) {
 
   const resumen = resumenLista.find((n) => n.negocio_id === id) ?? null;
   const planActual = planes.find((p) => p.clave === resumen?.plan_clave) ?? null;
+  const ordenPorClave = new Map(planes.map((p) => [p.clave, p.orden]));
   const totalPagado = pagos.filter((p) => p.estado === "aprobado").reduce((acc, p) => acc + p.monto_gs, 0);
   const pagosPendientes = pagos.filter((p) => p.estado === "pendiente").length;
   const solicitudesPendientes = solicitudes.filter((s) => s.estado === "pendiente").length;
@@ -406,11 +408,23 @@ export default async function NegocioDetallePage({ params }: PageProps) {
       <AdminPanel title="Pagos del negocio" description="Registro manual, aprobacion y rechazo de pagos asociados.">
         <NegocioPagosPanel
           negocioId={id}
-          pagos={pagos}
+          pagos={pagos.map((pago) => ({
+            ...pago,
+            contexto:
+              pago.estado === "pendiente"
+                ? calcularContextoPago({
+                    pago,
+                    planActualClave: resumen?.plan_clave,
+                    planActualNombre: planActual?.nombre,
+                    ordenPorClave,
+                  })
+                : undefined,
+          }))}
           planes={planes.map((p) => ({
             id: p.id,
             clave: p.clave,
             nombre: p.nombre,
+            orden: p.orden,
             precio_mensual_gs: p.precio_mensual_gs,
             precio_anual_gs: p.precio_anual_gs,
           }))}
